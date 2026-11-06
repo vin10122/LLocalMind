@@ -52,5 +52,5 @@ begin
   Result := WizardSilent and (ExpandConstant('{param:RELAUNCH|0}') = '1');
 end;
 
-; No [InstallDelete] or [UninstallDelete]: user data and external GGUFs
-; are never deleted. All releases retain the same per-user AppId.
+// No [InstallDelete] or [UninstallDelete]: user data and external GGUFs
+// are never deleted. All releases retain the same per-user AppId.

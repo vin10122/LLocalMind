@@ -210,6 +210,9 @@ class UpdaterTests(unittest.TestCase):
         self.assertIn(r'DefaultDirName={localappdata}\Programs\LLocalMind', recipe)
         self.assertIn('AppId={{B644D036-5385-40F5-9D76-B6A08E0527EC}', recipe)
         self.assertNotIn('\n[UninstallDelete]', recipe)
+        # [Code] is Pascal Script, where semicolons are not comment markers.
+        code = recipe.split('[Code]', 1)[1]
+        self.assertFalse(any(line.lstrip().startswith(';') for line in code.splitlines()))
 
     def test_no_inference_imports(self):
         self.assertTrue({'numpy', 'gguf', 'openvino'}.isdisjoint(sys.modules))
