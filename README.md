@@ -12,6 +12,18 @@ high-memory discrete graphics card.
 > prompts, but speed, answer quality, and stability still need more testing.
 > Expect long wait times, changes, and possible issues.
 
+## Download LLocalMind for Windows
+
+The first Windows preview is available in [release v0.1.0](https://github.com/vin10122/Intel-optimized-MoE-streaming/releases/tag/v0.1.0):
+
+- [Windows installer (.exe)](https://github.com/vin10122/Intel-optimized-MoE-streaming/releases/download/v0.1.0/LLocalMind-Setup-0.1.0-windows-x64.exe): install or update the application without installing Python.
+- [Portable ZIP](https://github.com/vin10122/Intel-optimized-MoE-streaming/releases/download/v0.1.0/LLocalMind-0.1.0-windows-x64-portable.zip): extract the entire folder and open `LLocalMind/LLocalMind.exe`.
+
+GGUF model files are not included. Select your compatible local GGUF in the
+app's settings. This preview includes CPU/native/installer smoke checks on
+Windows, not a full-model quality or performance certification. SHA-256
+sidecars are attached to the release; the preview is not code-signed.
+
 ## Inspiration
 
 This project was inspired by Apple's **Flash-MoE** app, as seen in
