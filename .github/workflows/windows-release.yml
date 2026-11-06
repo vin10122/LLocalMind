@@ -75,23 +75,27 @@ jobs:
         run: |
           .\tools\smoke_windows.ps1 -Executable .\dist\LLocalMind\LLocalMind-Diagnostics.exe -Report .\build\diagnostic-smoke.json -Screenshot .\build\diagnostic-gui.png
           .\tools\smoke_windows.ps1 -Executable .\dist\LLocalMind\LLocalMind.exe -Report .\build\portable-smoke.json -Screenshot .\build\portable-gui.png
-      - name: Install Inno Setup if needed
+      - name: Install current Inno Setup
         shell: pwsh
         run: |
-          $candidates = @("${env:ProgramFiles(x86)}\Inno Setup*\ISCC.exe", "$env:ProgramFiles\Inno Setup*\ISCC.exe")
-          $compiler = Get-ChildItem $candidates -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $compiler) {
-            choco install innosetup --yes --no-progress
-            if ($LASTEXITCODE -ne 0) { throw "Inno Setup installation failed" }
-          }
+          choco upgrade innosetup --yes --no-progress
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup installation failed" }
       - name: Build installer
         shell: pwsh
         run: |
           $candidates = @("${env:ProgramFiles(x86)}\Inno Setup*\ISCC.exe", "$env:ProgramFiles\Inno Setup*\ISCC.exe")
           $compiler = Get-ChildItem $candidates | Select-Object -First 1
           if (-not $compiler) { throw "ISCC.exe not found" }
-          python tools/build_windows_installer.py --app-dir .\dist\LLocalMind --iscc $compiler.FullName
-          if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
+          $output = python tools/build_windows_installer.py --app-dir .\dist\LLocalMind --iscc $compiler.FullName 2>&1
+          $code = $LASTEXITCODE
+          $output | Write-Output
+          if ($code -ne 0) {
+            $details = ($output | Out-String)
+            if ($details.Length -gt 6000) { $details = $details.Substring($details.Length - 6000) }
+            $message = $details.Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+            Write-Output "::error title=Windows installer compiler::$message"
+            throw "Installer build failed"
+          }
       - name: Test installed application
         shell: pwsh
         run: |
