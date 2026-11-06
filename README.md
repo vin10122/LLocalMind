@@ -1,4 +1,6 @@
-# INTEL-OPTIMIZED-MOE
+![LLocalMind — Local AI, on your PC.](docs/llocalmind-banner.png)
+
+# LLocalMind
 
 **An experimental project for running MoE language models locally on Intel
 hardware with OpenVINO.**
@@ -12,17 +14,108 @@ high-memory discrete graphics card.
 > prompts, but speed, answer quality, and stability still need more testing.
 > Expect long wait times, changes, and possible issues.
 
-## Download LLocalMind for Windows
+**[Install](#install-on-windows) · [Update](#update-llocalmind) · [Desktop app](#llocalmind-desktop-app) · [Results](#status-and-results)**
+
+## Install on Windows
 
 The first Windows preview is available in [release v0.1.0](https://github.com/vin10122/Intel-optimized-MoE-streaming/releases/tag/v0.1.0):
 
-- [Windows installer (.exe)](https://github.com/vin10122/Intel-optimized-MoE-streaming/releases/download/v0.1.0/LLocalMind-Setup-0.1.0-windows-x64.exe): install or update the application without installing Python.
-- [Portable ZIP](https://github.com/vin10122/Intel-optimized-MoE-streaming/releases/download/v0.1.0/LLocalMind-0.1.0-windows-x64-portable.zip): extract the entire folder and open `LLocalMind/LLocalMind.exe`.
+### Recommended: Windows installer
 
-GGUF model files are not included. Select your compatible local GGUF in the
-app's settings. This preview includes CPU/native/installer smoke checks on
-Windows, not a full-model quality or performance certification. SHA-256
-sidecars are attached to the release; the preview is not code-signed.
+1. Download **[LLocalMind-Setup-0.1.0-windows-x64.exe](https://github.com/vin10122/Intel-optimized-MoE-streaming/releases/download/v0.1.0/LLocalMind-Setup-0.1.0-windows-x64.exe)**.
+2. Run the installer, then open **LLocalMind** from the Start menu.
+3. Open **Impostazioni → Sfoglia**, select your compatible local **GGUF** file,
+   and save. Wait for the model status to become **Pronto**, then send a message.
+
+**No Python installation, Visual Studio or DLL compilation is needed.** The
+installer includes the application runtime, OpenVINO, fonts and native kernels.
+The application is installed for your Windows user. Keep the GGUF in a separate
+model folder or on another drive; the app remembers the path you selected.
+
+Use 64-bit Windows 10/11 and current Intel drivers for the GPU/NPU. The default
+configuration uses CPU experts and GPU projections. If the GPU is unavailable,
+select CPU for DeltaNet and Full attention under advanced settings.
+
+### Portable version
+
+1. Download **[LLocalMind-0.1.0-windows-x64-portable.zip](https://github.com/vin10122/Intel-optimized-MoE-streaming/releases/download/v0.1.0/LLocalMind-0.1.0-windows-x64-portable.zip)**.
+2. Extract the **whole ZIP**, then open `LLocalMind\LLocalMind.exe`.
+3. Select the GGUF in settings as described above.
+
+Keep the `_internal` directory and the other bundled files beside the EXE;
+copying only `LLocalMind.exe` will not work. The portable version also includes
+Python and the libraries, so it requires no Python setup.
+
+GGUF model files are **not included**. This preview passed GUI, CPU OpenVINO,
+native-kernel and installer startup checks on Windows; full-model quality,
+Intel GPU/NPU support and performance still need testing on the target PC.
+SHA-256 sidecars are attached to the release; the preview is not code-signed.
+
+## Update LLocalMind
+
+### Installed app: update without uninstalling
+
+For a newer **stable release**, open **Impostazioni → Controlla aggiornamenti**,
+choose the download, then confirm installation. LLocalMind verifies the
+installer's SHA-256, saves the conversation, closes the model and exits. The
+installer updates the same application and reopens it when complete.
+
+**v0.1.0 is a preview.** The in-app checker offers stable releases only; it
+does not offer newer previews. To install another preview, or to update
+manually, download the new setup EXE from [Releases](https://github.com/vin10122/Intel-optimized-MoE-streaming/releases),
+close LLocalMind and run it over the existing installation. **Do not uninstall
+first.** Settings, conversations and external GGUFs are preserved; the model
+does not need to be downloaded again.
+
+### Portable app: replace the application folder
+
+Close LLocalMind, download the newer portable ZIP and extract it into a **new
+folder**. Open the new `LLocalMind.exe`. Settings and conversations are stored
+outside the portable folder and will be reused by the same Windows user.
+Keep the previous folder until you have checked that the new version works.
+
+The in-app updater downloads an **installer**, not a portable ZIP. To remain
+portable, use the ZIP procedure above; accepting the in-app installer creates
+the normal installed application instead of updating the portable folder.
+
+### Source checkout: update through Git
+
+From PowerShell in the repository folder:
+
+```powershell
+git pull --ff-only origin master
+py -3.14 -m pip install -r requirements-gui.txt
+```
+
+If the update changes native C++ code, close the app and rebuild the kernels
+before launching it:
+
+```powershell
+.\scripts\compile_dequant_k.bat
+.\scripts\compile_native_expert.bat
+```
+
+Then launch the GUI:
+
+```powershell
+py -3.14 gui.py
+```
+
+Rebuilding is not necessary merely because you reopened PowerShell. The
+GUI updater does not update a Git checkout. For a CLI-only checkout, use
+`requirements.txt` and launch `py -3.14 chat.py default` instead.
+
+### Where your files are stored
+
+| Files | Location |
+|---|---|
+| Installed program | `%LOCALAPPDATA%\Programs\LLocalMind` |
+| Settings and conversations | `%LOCALAPPDATA%\LLocalMind\data` |
+| Downloaded updates | `%LOCALAPPDATA%\LLocalMind\updates` |
+| Packaged-app logs | `%LOCALAPPDATA%\LLocalMind\logs` |
+| GGUF models | The external path you choose in settings |
+
+Application updates replace program files separately from user data and models.
 
 ## Inspiration
 
@@ -33,7 +126,7 @@ sponsored by Apple.
 
 ## At a glance
 
-- Reads models in GGUF format and lets you chat with them from PowerShell.
+- Reads models in GGUF format and lets you chat through the desktop GUI or PowerShell.
 - Uses OpenVINO to run calculations on the CPU or a supported Intel device.
 - The model uses a **Mixture of Experts (MoE)** architecture: for each step,
   it activates only some groups of model weights, called *experts*, rather
@@ -245,7 +338,8 @@ outside the program directory. The existing PowerShell chat remains available.
 
 ![LLocalMind desktop preview](docs/llocalmind-desktop.png)
 
-Install GUI dependencies once, then open the app:
+To run the GUI **from source**, install its dependencies once, then open it
+(installer and portable users can skip this step):
 
 ```powershell
 py -3.14 -m pip install -r requirements-gui.txt
@@ -269,7 +363,7 @@ The preview uses temporary conversations and labels its status as an
 **anteprima**; it reports no fabricated live performance. Normal sessions
 display measured effective decode speed and time to the first token.
 
-### Windows EXE and updates
+### Windows EXE builds (developers)
 
 GitHub Actions builds Windows downloads on pushes to `master` and matching
 `vMAJOR.MINOR.PATCH` tags. Each build compiles the kernels, runs source tests,
@@ -292,9 +386,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build_desktop.
 The executable is `dist\LLocalMind\LLocalMind.exe`; distribute the **whole
 LLocalMind folder**, not just the EXE. With Inno Setup 6.3+ installed, add
 `-Installer` to the build script to also create the per-user setup EXE and
-its checksum. GUI tests run offscreen with synthetic model operations; actual
-Windows packaging, native drivers and full-GGUF GUI performance still need
-validation on the target Windows PC. No Windows EXE is built by Linux tests.
+its checksum. GitHub Actions verifies both packaged and installed startup on
+Windows, including a CPU OpenVINO graph and native kernels. Full-GGUF GUI
+performance and Intel GPU/NPU driver behavior still need validation on the
+target PC. The Windows EXE is built on a Windows runner, not cross-compiled
+by the Linux tests.
 
 **Impostazioni → Controlla aggiornamenti** checks stable GitHub releases,
 downloads with SHA-256 verification and, in the frozen Windows app, offers
@@ -307,12 +403,15 @@ application release without loading the model. This does not replace `git pull`
 for source updates. See [Windows packaging and updates](packaging/windows/README.md)
 for release assets, checksum verification and installer details.
 
-## Requirements
+## Source requirements
+
+The following requirements are for running or building from a source checkout.
+The installer and portable downloads already include Python and the libraries.
 
 - 64-bit Windows 10 or 11.
-- Python 3.14 and the packages listed in `requirements.txt`. The tests used
-  Python 3.14.7; other versions may work, but have not been checked with the
-  same setup.
+- Python 3.14 and the packages listed in `requirements.txt` for the CLI,
+  `requirements-gui.txt` for the desktop GUI, or `requirements-build.txt`
+  for packaging. Windows release builds use Python 3.14 x64 and bundle it.
 - A compatible GGUF model file. The model used in testing is described
   below.
 - Up-to-date Intel drivers if you want to use integrated graphics.
@@ -326,6 +425,9 @@ py -3.14 -m pip install -r requirements.txt
 If the `py` command is not available, use `python` instead.
 
 ## Set up the model
+
+For the desktop GUI, select the GGUF in settings. The following discovery and
+environment-variable instructions apply to the command-line client.
 
 If the GGUF file is in the project directory, the program will try to find it
 automatically. Otherwise, set its path before starting the chat:
