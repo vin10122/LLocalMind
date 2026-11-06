@@ -619,16 +619,41 @@ class MainWindow(QMainWindow):
 def main(argv=None):
     parser=argparse.ArgumentParser(description='LLocalMind · chat locale')
     parser.add_argument('--demo',action='store_true',help='Anteprima della GUI senza caricare il modello')
+    parser.add_argument('--smoke-test',action='store_true',help=argparse.SUPPRESS)
+    parser.add_argument('--smoke-report',help=argparse.SUPPRESS)
+    parser.add_argument('--smoke-screenshot',help=argparse.SUPPRESS)
     args=parser.parse_args(argv)
+    if (args.smoke_report or args.smoke_screenshot) and not args.smoke_test:
+        parser.error('--smoke-report e --smoke-screenshot richiedono --smoke-test')
     application=QApplication.instance() or QApplication(sys.argv[:1])
     application.setApplicationName('LLocalMind')
     application.setOrganizationName('LLocalMind')
     apply_theme(application)
-    temporary=tempfile.TemporaryDirectory(prefix='llocalmind-preview-') if args.demo else None
+    preview=args.demo or args.smoke_test
+    temporary=tempfile.TemporaryDirectory(prefix='llocalmind-preview-') if preview else None
     state=LocalState(temporary.name) if temporary else LocalState()
-    window=MainWindow(state=state,demo=args.demo)
+    window=MainWindow(state=state,demo=preview)
     window.show()
+    smoke_result=[]
+    if args.smoke_test:
+        def run_smoke():
+            from .smoke import probe,write_report
+            try:
+                details=probe()
+                if args.smoke_screenshot:
+                    path=Path(args.smoke_screenshot)
+                    path.parent.mkdir(parents=True,exist_ok=True)
+                    if not window.grab().save(str(path)):
+                        raise RuntimeError('GUI screenshot failed')
+                write_report(args.smoke_report,dict(ok=True,gui=True,**details))
+                smoke_result.append(0)
+            except Exception as error:
+                write_report(args.smoke_report,dict(ok=False,error=str(error)))
+                smoke_result.append(1)
+            finally:
+                window.close()
+        QTimer.singleShot(200,run_smoke)
     result=application.exec()
     if temporary:
         temporary.cleanup()
-    return result
+    return smoke_result[0] if smoke_result else result
