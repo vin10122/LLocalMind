@@ -61,6 +61,7 @@ from flash_moe import Qwen3MoEModel, StreamingDetokenizer  # noqa: E402
 from flash_moe.paths import model_path  # noqa: E402
 from flash_moe.progress import StartupProgress  # noqa: E402
 from flash_moe.tokenizer import GGUFTokenizer  # noqa: E402
+from llocalmind.prompts import format_conversation  # noqa: E402
 
 
 class LiveProfiler:
@@ -166,16 +167,7 @@ class LiveProfiler:
 
 def encode_user_turn(tok: GGUFTokenizer, prompt: str) -> list[int]:
     """Codifica una domanda con l'istruzione di risposta concisa."""
-    formatted = (
-        "<|im_start|>system\n"
-        "Rispondi nella lingua dell'utente. Sii diretto e conciso: dai la "
-        "risposta essenziale senza premesse o ripetizioni. Per domande "
-        "semplici bastano una o poche frasi; aggiungi dettagli solo se "
-        "servono a rispondere correttamente. Concludi appena hai risposto."
-        "<|im_end|>\n"
-        f"<|im_start|>user\n{prompt}<|im_end|>\n"
-        "<|im_start|>assistant\n<think>\n\n</think>\n\n"
-    )
+    formatted = format_conversation([{"role": "user", "content": prompt}])
     return tok.encode(formatted, add_bos=False)
 
 

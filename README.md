@@ -223,6 +223,70 @@ scripts\compile_native_expert.bat
 py -3.14 chat.py default --native-decode native --expert-workers 4 --max-tokens 128
 ```
 
+## LLocalMind desktop app
+
+The **LLocalMind** Qt desktop interface follows the approved rounded blue
+design, with the LL/M logo and bundled Sora/Manrope fonts. It includes saved
+conversations, multi-turn context, streaming answers, Copy, Regenerate, Stop,
+local text-file attachment and model/settings selection. User data is stored
+outside the program directory. The existing PowerShell chat remains available.
+
+![LLocalMind desktop preview](docs/llocalmind-desktop.png)
+
+Install GUI dependencies once, then open the app:
+
+```powershell
+py -3.14 -m pip install -r requirements-gui.txt
+py -3.14 gui.py
+```
+
+Select a GGUF in **Impostazioni → Sfoglia**. The app remembers the selection
+and loads it on subsequent starts. The measured CPU expert / GPU projection
+defaults are preselected; advanced settings expose cache, worker, context and
+output limits. Stop is cooperative: during a long prefill, cancellation or
+closing the window waits for the next token boundary before releasing the
+model. Increasing conversation history also increases prompt processing work.
+
+To view the design without importing the inference runtime or reading a GGUF:
+
+```powershell
+py -3.14 gui.py --demo
+```
+
+The preview uses temporary conversations and labels its status as an
+**anteprima**; it reports no fabricated live performance. Normal sessions
+display measured effective decode speed and time to the first token.
+
+### Windows EXE and updates
+
+The build definition bundles Python, OpenVINO, the native kernels, icons and
+fonts into a portable application folder. GGUFs stay external. On Windows:
+
+```powershell
+py -3.14 -m pip install -r requirements-build.txt
+.\scripts\compile_dequant_k.bat
+.\scripts\compile_native_expert.bat
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build_desktop.ps1
+```
+
+The executable is `dist\LLocalMind\LLocalMind.exe`; distribute the **whole
+LLocalMind folder**, not just the EXE. With Inno Setup 6.3+ installed, add
+`-Installer` to the build script to also create the per-user setup EXE and
+its checksum. GUI tests run offscreen with synthetic model operations; actual
+Windows packaging, native drivers and full-GGUF GUI performance still need
+validation on the target Windows PC. No Windows EXE is built by Linux tests.
+
+**Impostazioni → Controlla aggiornamenti** checks stable GitHub releases,
+downloads with SHA-256 verification and, in the frozen Windows app, offers
+installation after saving chats and closing inference resources. Program files
+are replaced independently of conversations and external models. Source mode
+can download the installer but does not install over a Git checkout.
+
+From a source checkout, `py -3.14 update.py check` checks for a newer stable
+application release without loading the model. This does not replace `git pull`
+for source updates. See [Windows packaging and updates](packaging/windows/README.md)
+for release assets, checksum verification and installer details.
+
 ## Requirements
 
 - 64-bit Windows 10 or 11.

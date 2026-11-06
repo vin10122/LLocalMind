@@ -1,0 +1,4 @@
+-r requirements-gui.txt
+pyinstaller>=6.17,<7
+# PyInstaller converts the approved PNG to Windows icon sizes.
+pillow>=11.3
