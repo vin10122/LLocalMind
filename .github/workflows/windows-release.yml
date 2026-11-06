@@ -73,6 +73,7 @@ jobs:
       - name: Test packaged EXE
         shell: pwsh
         run: |
+          .\tools\smoke_windows.ps1 -Executable .\dist\LLocalMind\LLocalMind-Diagnostics.exe -Report .\build\diagnostic-smoke.json -Screenshot .\build\diagnostic-gui.png
           .\tools\smoke_windows.ps1 -Executable .\dist\LLocalMind\LLocalMind.exe -Report .\build\portable-smoke.json -Screenshot .\build\portable-gui.png
       - name: Install Inno Setup if needed
         shell: pwsh
@@ -127,6 +128,7 @@ jobs:
           path: |
             build/*smoke.json
             build/*gui.png
+            build/*smoke.json.*.log
           if-no-files-found: ignore
           retention-days: 14
 

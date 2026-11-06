@@ -34,5 +34,8 @@ analysis = Analysis(
 pyz = PYZ(analysis.pure)
 exe = EXE(pyz, analysis.scripts, [], exclude_binaries=True, name="LLocalMind", upx=False,
           console=False, icon=str(assets / "logo.png"))
-app = COLLECT(exe, analysis.binaries, analysis.datas, strip=False, upx=False,
+diagnostics = EXE(pyz, analysis.scripts, [], exclude_binaries=True,
+                  name="LLocalMind-Diagnostics", upx=False, console=True,
+                  icon=str(assets / "logo.png"))
+app = COLLECT(exe, diagnostics, analysis.binaries, analysis.datas, strip=False, upx=False,
               name="LLocalMind")

@@ -4,7 +4,23 @@ The Qt GUI is implemented in `src/llocalmind/app.py`, with a PyInstaller
 definition and a per-user Inno Setup installer. The complete frozen-app update
 flow must be validated on Windows before shipping a release. Linux/offscreen
 tests do not produce or validate a Windows EXE. No release is published by
-these tools.
+the local build tools. The GitHub Actions tagged-build workflow can publish
+a preview release after its Windows checks succeed.
+
+## Automated Windows build
+
+`.github/workflows/windows-release.yml` uses a Windows 2022 runner and Python
+3.14 x64. It builds both native DLLs and the PyInstaller folder, tests the EXE
+with `tools/smoke_windows.ps1`, builds Inno Setup and tests the installed EXE.
+Smoke tests import the packaged dependencies, compile a CPU OpenVINO graph,
+call both native kernels and conversion, and capture the rendered GUI.
+They do not download a model or establish Intel GPU/NPU driver support.
+
+Branch builds upload `LLocalMind-Windows-x64` artifacts. A matching version
+tag also publishes the assets as a **prerelease**. After checking a compatible
+GGUF on the target PC, maintainers can promote it to a stable GitHub release
+to make it eligible for the stable auto-updater. Do not change the app version
+without building the matching executable.
 
 ## User files
 

@@ -259,6 +259,14 @@ display measured effective decode speed and time to the first token.
 
 ### Windows EXE and updates
 
+GitHub Actions builds Windows downloads on pushes to `master` and matching
+`vMAJOR.MINOR.PATCH` tags. Each build compiles the kernels, runs source tests,
+then smoke-tests both the portable EXE and an installed copy without a GGUF.
+The run's `LLocalMind-Windows-x64` artifact contains an installer, portable
+ZIP and SHA-256 sidecars. Tagged builds also publish a **preview release**
+after all checks pass. Preview releases are not offered by the stable updater;
+maintainers can promote one after manual target-PC validation.
+
 The build definition bundles Python, OpenVINO, the native kernels, icons and
 fonts into a portable application folder. GGUFs stay external. On Windows:
 
