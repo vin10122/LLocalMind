@@ -29,7 +29,15 @@ def archive(extra=None,server=True,dll=True):
     with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED) as z:
         if server:z.writestr('llama-server.exe',pe())
         if dll:z.writestr('ggml.dll',b'fake DLL fixture')
-        for name,data in extra or []:z.writestr(name,data)
+        for name,data in extra or []:
+            if isinstance(name,str):
+                # ZipInfo(name) normalizes backslashes on Windows. Write the
+                # actual raw entry so this fixture tests the same ZIP bytes
+                # on all platforms, rather than a sanitized Windows ZIP.
+                info=zipfile.ZipInfo()
+                info.filename=info.orig_filename=name
+                name=info
+            z.writestr(name,data)
     return out.getvalue()
 
 

@@ -182,7 +182,9 @@ class RuntimeInstaller:
                     seen=set()
                     for index,entry in enumerate(entries):
                         _cancel(cancel)
-                        name=_relative(entry.filename).as_posix()
+                        # Validate before ZipInfo's platform-specific name
+                        # normalization (including Windows backslashes/NULs).
+                        name=_relative(entry.orig_filename).as_posix()
                         if name.casefold() in seen or stat.S_ISLNK(entry.external_attr>>16):
                             raise RuntimeInstallError('Archivio ZIP ambiguo o con collegamenti')
                         seen.add(name.casefold())
