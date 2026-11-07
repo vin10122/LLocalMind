@@ -152,7 +152,7 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<'NOTES'
-          LLocalMind 0.2.2 - Italian Interface.
+          LLocalMind 0.2.3 - Italian Interface.
 
           - Optional Italian Interface sidebar switch: azure theme, thin tricolour top bar and thick tricolour user-bubble borders with solid light-blue interiors.
           - Large Dottore, parti 🍕 / Fratello, fermati 🍝 controls retain normal send/stop behavior. Appearance is saved separately and never changes language, prompts or the loaded model.

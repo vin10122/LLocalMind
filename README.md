@@ -18,11 +18,11 @@ high-memory discrete graphics card.
 
 ## Install on Windows
 
-The latest stable Windows release is [v0.2.2 – Italian Interface](https://github.com/vin10122/LLocalMind/releases/tag/v0.2.2):
+The latest stable Windows release is [v0.2.3 – Italian Interface](https://github.com/vin10122/LLocalMind/releases/tag/v0.2.3):
 
 ### Recommended: Windows installer
 
-1. Download **[LLocalMind-Setup-0.2.2-windows-x64.exe](https://github.com/vin10122/LLocalMind/releases/download/v0.2.2/LLocalMind-Setup-0.2.2-windows-x64.exe)**.
+1. Download **[LLocalMind-Setup-0.2.3-windows-x64.exe](https://github.com/vin10122/LLocalMind/releases/download/v0.2.3/LLocalMind-Setup-0.2.3-windows-x64.exe)**.
 2. Run the installer, then open **LLocalMind** from the Start menu.
 3. Open **Impostazioni → Sfoglia**, select your compatible local **GGUF** file,
    and save. Wait for the model status to become **Pronto**, then send a message.
@@ -38,7 +38,7 @@ select CPU for DeltaNet and Full attention under advanced settings.
 
 ### Portable version
 
-1. Download **[LLocalMind-0.2.2-windows-x64-portable.zip](https://github.com/vin10122/LLocalMind/releases/download/v0.2.2/LLocalMind-0.2.2-windows-x64-portable.zip)**.
+1. Download **[LLocalMind-0.2.3-windows-x64-portable.zip](https://github.com/vin10122/LLocalMind/releases/download/v0.2.3/LLocalMind-0.2.3-windows-x64-portable.zip)**.
 2. Extract the **whole ZIP**, then open `LLocalMind\LLocalMind.exe`.
 3. Select the GGUF in settings as described above.
 
@@ -60,7 +60,7 @@ choose the download, then confirm installation. LLocalMind verifies the
 installer's SHA-256, saves the conversation, closes the model and exits. The
 installer updates the same application and reopens it when complete.
 
-**v0.2.2 – Italian Interface is the current stable release.** Since v0.1.5,
+**v0.2.3 – Italian Interface is the current stable release.** Since v0.1.5,
 the updater includes public prereleases and selects the highest newer numeric
 `MAJOR.MINOR.PATCH` version among the most recent 100 releases. Drafts, equal
 versions and downgrades are excluded. Preview updates are labelled **anteprima**.
@@ -224,7 +224,7 @@ conversations, multi-turn context, streaming answers, Copy, Regenerate, Stop,
 local text-file attachment and model/settings selection. User data is stored
 outside the program directory. The existing PowerShell chat remains available.
 
-### Italian Interface appearance (0.2.2)
+### Italian Interface appearance (0.2.3)
 
 The separate **Italian Interface 🇮🇹** sliding switch in the sidebar enables an
 optional playful theme: azure backgrounds, a thin tricolour bar at the top,
