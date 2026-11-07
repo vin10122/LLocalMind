@@ -1,5 +1,6 @@
 """Offline updater checks: no GitHub calls, model loads or real installers."""
 import hashlib
+import copy
 import importlib.util
 import io
 import json
@@ -37,7 +38,7 @@ class UpdaterTests(unittest.TestCase):
     def open(self, request, timeout):
         self.requests.append(request.full_url)
         self.assertEqual(timeout, 30)
-        value = json.dumps(self.metadata).encode() if request.full_url == API_URL else self.responses[request.full_url]
+        value = json.dumps([self.metadata]).encode() if request.full_url == API_URL else self.responses[request.full_url]
         if isinstance(value, Exception):
             raise value
         return io.BytesIO(value)
@@ -53,15 +54,15 @@ class UpdaterTests(unittest.TestCase):
         self.assertIsNone(self.manager('0.2.0').check())
         self.assertIsNone(self.manager('1.0.0').check())
 
-    def test_stable_release_only_and_no_executable_download_on_check(self):
+    def test_previews_included_drafts_excluded_and_no_executable_download_on_check(self):
         release = self.manager().check()
         self.assertEqual(release.version, '0.2.0')
         self.assertEqual(release.notes, 'Release notes')
         self.assertEqual(self.requests, [API_URL])
-        for key in ('draft', 'prerelease'):
-            self.metadata[key] = True
-            self.assertIsNone(self.manager().check())
-            self.metadata[key] = False
+        self.metadata['prerelease']=True
+        self.assertTrue(self.manager().check().prerelease)
+        self.metadata['draft']=True
+        self.assertIsNone(self.manager().check())
 
     def test_offline_and_no_releases(self):
         for code in (404, 403, 500):
@@ -76,9 +77,10 @@ class UpdaterTests(unittest.TestCase):
         with self.assertRaises(UpdateError): UpdateManager(opener=offline).check()
 
     def test_invalid_release_metadata(self):
-        for value in (b'not JSON', b'[]', b'{}'):
+        for value in (b'not JSON', b'{}', b'[null]'):
             with self.assertRaises(UpdateError):
                 UpdateManager(opener=lambda *a, **kw: io.BytesIO(value)).check()
+        self.assertIsNone(UpdateManager(opener=lambda *a,**kw:io.BytesIO(b'[]')).check())
         for assets in ({}, ['invalid'], [], [dict(name=self.name)]):
             self.metadata['assets'] = assets
             with self.assertRaises(UpdateError): self.manager().check()
@@ -91,7 +93,23 @@ class UpdaterTests(unittest.TestCase):
         asset['digest'] = None
         with self.assertRaises(UpdateError): self.manager().check()
 
+    def test_highest_version_wins_even_if_stable_is_listed_first(self):
+        older=copy.deepcopy(self.metadata)
+        older['tag_name']='v0.1.9'
+        newest=copy.deepcopy(self.metadata)
+        newest['prerelease']=True
+        draft=copy.deepcopy(self.metadata)
+        draft['tag_name']='v9.0.0';draft['draft']=True
+        unknown=dict(tag_name='nightly',draft=False)
+        data=json.dumps([older,draft,unknown,newest]).encode()
+        manager=UpdateManager('0.1.9',opener=lambda *a,**kw:io.BytesIO(data))
+        self.assertEqual(manager.check().version,'0.2.0')
+        self.assertTrue(manager.check().prerelease)
+        manager.current_version='0.2.0'
+        self.assertIsNone(manager.check())
+
     def test_verified_download_and_user_data_preserved(self):
+        self.metadata['prerelease']=True
         data = self.root / 'data/chat.json'
         data.parent.mkdir()
         data.write_text('my conversation')

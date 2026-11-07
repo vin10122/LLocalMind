@@ -24,7 +24,7 @@ from . import __version__
 from .app_paths import updates_dir
 
 REPOSITORY = "vin10122/LLocalMind"
-API_URL = f"https://api.github.com/repos/{REPOSITORY}/releases/latest"
+API_URL = f"https://api.github.com/repos/{REPOSITORY}/releases?per_page=100"
 MAX_INSTALLER_BYTES = 4 * 1024**3
 
 
@@ -38,7 +38,7 @@ class DownloadCancelled(UpdateError):
 
 def version_tuple(version: str) -> tuple[int, int, int]:
     if not isinstance(version, str) or not re.fullmatch(r"v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", version):
-        raise UpdateError(f"Versione stabile non valida: {version!r}")
+        raise UpdateError(f"Versione non valida: {version!r}")
     return tuple(map(int, version.removeprefix("v").split(".")))
 
 
@@ -60,6 +60,7 @@ class Release:
     size: int
     sha256: str | None
     checksum_url: str | None
+    prerelease: bool = False
 
 
 @dataclass(frozen=True)
@@ -96,7 +97,7 @@ class UpdateManager:
         return expected
 
     def check(self) -> Release | None:
-        """Latest stable release, or None if absent/current. Never downloads EXEs."""
+        """Highest newer published version, including previews; exclude drafts."""
         try:
             with self._request(API_URL, "application/vnd.github+json") as response:
                 raw = response.read(2 * 1024**2 + 1)
@@ -111,14 +112,17 @@ class UpdateManager:
             raise UpdateError("Risposta GitHub troppo grande")
         try:
             data = json.loads(raw)
-            if not isinstance(data, dict):
-                raise ValueError("invalid release")
-            if data.get("draft") or data.get("prerelease"):
-                return None
-            tag = data["tag_name"]
-            latest = version_tuple(tag)
-            if latest <= version_tuple(self.current_version):
-                return None
+            if not isinstance(data,list) or any(not isinstance(r,dict) for r in data):
+                raise ValueError("invalid release list")
+            candidates=[]
+            for item in data:
+                if item.get('draft'):continue
+                try:version=version_tuple(item.get('tag_name'))
+                except UpdateError:continue
+                if version>version_tuple(self.current_version):candidates.append((version,item))
+            if not candidates:return None
+            latest,data=max(candidates,key=lambda candidate:candidate[0])
+            tag=data['tag_name']
             version = ".".join(map(str, latest))
             name = f"LLocalMind-Setup-{version}-windows-x64.exe"
             assets = data["assets"]
@@ -141,7 +145,7 @@ class UpdateManager:
                 raise UpdateError("La release non contiene un checksum SHA-256")
             return Release(version, tag, str(data.get("name") or tag),
                            str(data.get("body") or ""), name, url, size,
-                           sha256, checksum_url)
+                           sha256, checksum_url, data.get('prerelease') is True)
         except (KeyError, TypeError, ValueError, StopIteration) as error:
             raise UpdateError("Release senza installer Windows valido per LLocalMind") from error
 

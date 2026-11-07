@@ -19,7 +19,7 @@ They do not download a model or establish Intel GPU/NPU driver support.
 Branch builds upload `LLocalMind-Windows-x64` artifacts. A matching version
 tag also publishes the assets as a **prerelease**. After checking a compatible
 GGUF on the target PC, maintainers can promote it to a stable GitHub release
-to make it eligible for the stable auto-updater. Do not change the app version
+but the updater already includes public prereleases from v0.1.5 onward. Do not change the app version
 without building the matching executable.
 
 ## User files
@@ -56,7 +56,7 @@ uninstalling. Do not change that AppId for subsequent releases.
    py -3.14 tools\build_windows_installer.py --app-dir .\dist\LLocalMind
    ```
 
-4. Publish a stable GitHub release tagged `vMAJOR.MINOR.PATCH` in
+4. Publish a public GitHub release (stable or prerelease) tagged `vMAJOR.MINOR.PATCH` in
    `vin10122/LLocalMind`, attaching both emitted files:
 
    ```text
@@ -68,7 +68,7 @@ The sidecar contains `HASH`, two spaces, and the exact installer filename.
 GitHub's asset `sha256:` digest is preferred when available; the sidecar is
 the fallback. Checksums verify integrity of downloads from the configured
 GitHub repository, not Authenticode identity. Code signing is a separate
-release step. Drafts, prereleases and downgrades are not offered.
+release step. Drafts and downgrades are not offered. Public prereleases are included and labelled as previews.
 
 ## GUI integration
 
@@ -79,7 +79,7 @@ shutdown and installer handoff are managed by `MainWindow` in `app.py`.
 It has no model dependency and never executes an installer automatically:
 
 1. Call `manager.check()` in a background worker. `None` means no newer
-   stable release; `UpdateError` is a network/metadata error, not "up to date".
+   published release (including previews); `UpdateError` is a network/metadata error, not "up to date".
 2. Show the version and release notes as plain text. Let the user choose
    **Download and update**.
 3. Call `manager.download(release, progress=callback, cancel=event)` in the

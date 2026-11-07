@@ -645,12 +645,13 @@ class MainWindow(QMainWindow):
         elif task.action=='check':
             release=task.result
             if release is None:
-                QMessageBox.information(self,'Aggiornamenti','Nessun aggiornamento stabile disponibile.')
+                QMessageBox.information(self,'Aggiornamenti','Nessun aggiornamento disponibile (incluse le anteprime).')
             else:
                 box=QMessageBox(self)
                 box.setWindowTitle('Aggiornamento disponibile')
                 box.setTextFormat(Qt.TextFormat.PlainText)
-                box.setText(f'LLocalMind {release.version} è disponibile.')
+                channel=' · anteprima' if release.prerelease else ''
+                box.setText(f'LLocalMind {release.version}{channel} è disponibile.')
                 box.setDetailedText(release.notes)
                 download=box.addButton('Scarica aggiornamento',QMessageBox.ButtonRole.AcceptRole)
                 box.addButton('Non ora',QMessageBox.ButtonRole.RejectRole)

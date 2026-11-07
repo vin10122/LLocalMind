@@ -18,11 +18,11 @@ high-memory discrete graphics card.
 
 ## Install on Windows
 
-The latest stable Windows version is available in [release v0.1.4](https://github.com/vin10122/LLocalMind/releases/tag/v0.1.4):
+The latest Windows preview is available in [release v0.1.5](https://github.com/vin10122/LLocalMind/releases/tag/v0.1.5):
 
 ### Recommended: Windows installer
 
-1. Download **[LLocalMind-Setup-0.1.4-windows-x64.exe](https://github.com/vin10122/LLocalMind/releases/download/v0.1.4/LLocalMind-Setup-0.1.4-windows-x64.exe)**.
+1. Download **[LLocalMind-Setup-0.1.5-windows-x64.exe](https://github.com/vin10122/LLocalMind/releases/download/v0.1.5/LLocalMind-Setup-0.1.5-windows-x64.exe)**.
 2. Run the installer, then open **LLocalMind** from the Start menu.
 3. Open **Impostazioni → Sfoglia**, select your compatible local **GGUF** file,
    and save. Wait for the model status to become **Pronto**, then send a message.
@@ -38,7 +38,7 @@ select CPU for DeltaNet and Full attention under advanced settings.
 
 ### Portable version
 
-1. Download **[LLocalMind-0.1.4-windows-x64-portable.zip](https://github.com/vin10122/LLocalMind/releases/download/v0.1.4/LLocalMind-0.1.4-windows-x64-portable.zip)**.
+1. Download **[LLocalMind-0.1.5-windows-x64-portable.zip](https://github.com/vin10122/LLocalMind/releases/download/v0.1.5/LLocalMind-0.1.5-windows-x64-portable.zip)**.
 2. Extract the **whole ZIP**, then open `LLocalMind\LLocalMind.exe`.
 3. Select the GGUF in settings as described above.
 
@@ -55,17 +55,23 @@ SHA-256 sidecars are attached to the release; the release is not code-signed.
 
 ### Installed app: update without uninstalling
 
-For a newer **stable release**, open **Impostazioni → Controlla aggiornamenti**,
+For a newer **published release, including previews**, open **Impostazioni → Controlla aggiornamenti**,
 choose the download, then confirm installation. LLocalMind verifies the
 installer's SHA-256, saves the conversation, closes the model and exits. The
 installer updates the same application and reopens it when complete.
 
-**v0.1.4 is published on the stable update channel.** The in-app checker
-offers newer stable versions only; it does not offer previews or reinstall
-the version already running. To install a preview, or to update manually, download the new setup EXE from [Releases](https://github.com/vin10122/LLocalMind/releases),
+**v0.1.5 is a preview, not a stable release.** Starting with this version,
+the updater includes public prereleases and selects the highest newer numeric
+`MAJOR.MINOR.PATCH` version among the most recent 100 releases. Drafts, equal
+versions and downgrades are excluded. Preview updates are labelled **anteprima**.
+Installer origin and SHA-256 verification remain enforced.
+
+**Users of v0.1.3 and earlier must run this preview installer manually once**:
+the old updater checks stable releases only and cannot discover this preview.
+Download the new setup EXE from [Releases](https://github.com/vin10122/LLocalMind/releases),
 close LLocalMind and run it over the existing installation. **Do not uninstall
-first.** Settings, conversations and external GGUFs are preserved; the model
-does not need to be downloaded again.
+first.** Settings, conversations, installed vision runtime and external GGUFs
+are preserved; models do not need downloading again.
 
 If you installed a preview before the repository was renamed to
 `vin10122/LLocalMind`, run the new installer manually once to refresh the
@@ -350,7 +356,7 @@ engine**, which runs the supported model's actual vision tower, projector and
 multimodal prefill. Text-engine token rates do not apply to this path.
 
 You need your language-model GGUF, its **compatible mmproj GGUF**, and a
-llama.cpp runtime that supports that model architecture. **Since v0.1.4 the
+llama.cpp runtime that supports that model architecture. **Since v0.1.5 the
 Windows x64 app can install the runtime automatically.** Models and projectors
 remain external and are not downloaded by the runtime installer.
 Compatibility of the Hermes Final/APEX GGUF with the projector from the MTP
@@ -463,8 +469,8 @@ GitHub Actions builds Windows downloads on pushes to `master` and matching
 then smoke-tests both the portable EXE and an installed copy without a GGUF.
 The run's `LLocalMind-Windows-x64` artifact contains an installer, portable
 ZIP and SHA-256 sidecars. Tagged builds also publish a **preview release**
-after all checks pass. Preview releases are not offered by the stable updater;
-maintainers can promote one after manual target-PC validation.
+after all checks pass. Since v0.1.5, public previews are offered by the updater
+as well; maintainers can still promote a release after target-PC validation.
 
 The build definition bundles Python, OpenVINO, the native kernels, icons and
 fonts into a portable application folder. GGUFs stay external. On Windows:
@@ -485,14 +491,14 @@ performance and Intel GPU/NPU driver behavior still need validation on the
 target PC. The Windows EXE is built on a Windows runner, not cross-compiled
 by the Linux tests.
 
-**Impostazioni → Controlla aggiornamenti** checks stable GitHub releases,
+**Impostazioni → Controlla aggiornamenti** checks public GitHub releases, including previews,
 downloads with SHA-256 verification and, in the frozen Windows app, offers
 installation after saving chats and closing inference resources. Program files
 are replaced independently of conversations and external models. Source mode
 can download the installer but does not install over a Git checkout.
 
-From a source checkout, `py -3.14 update.py check` checks for a newer stable
-application release without loading the model. This does not replace `git pull`
+From a source checkout, `py -3.14 update.py check` checks for a newer published
+application release, including previews, without loading the model. This does not replace `git pull`
 for source updates. See [Windows packaging and updates](packaging/windows/README.md)
 for release assets, checksum verification and installer details.
 

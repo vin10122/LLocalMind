@@ -20,7 +20,7 @@ def main(argv=None):
             raise UpdateError("Dai sorgenti usa git pull; install e' riservato all'app Windows compilata")
         release = manager.check()
         if release is None:
-            print("Nessun aggiornamento stabile disponibile.")
+            print("Nessun aggiornamento disponibile (incluse le anteprime).")
             return 0
         print(f"Disponibile: {release.version}\n{release.name}")
         if args.action == "check":

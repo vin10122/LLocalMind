@@ -59,19 +59,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Native decode build failed" }
       - name: Run source tests
         shell: pwsh
-        run: |
-          .\tools\test_installer.ps1
-          $env:FLASH_MOE_TEST_NATIVE = "$env:GITHUB_WORKSPACE\src\flash_moe\moe_quant_dot.dll"
-          python tools/test_updater.py
-          if ($LASTEXITCODE -ne 0) { throw "Updater tests failed" }
-          python tools/test_gui.py
-          if ($LASTEXITCODE -ne 0) { throw "GUI tests failed" }
-          python tools/test_multimodal.py
-          if ($LASTEXITCODE -ne 0) { throw "Multimodal tests failed" }
-          python tools/test_vision_runtime.py
-          if ($LASTEXITCODE -ne 0) { throw "Vision installer tests failed" }
-          python tools/test_optimized_inference.py
-          if ($LASTEXITCODE -ne 0) { throw "Inference tests failed" }
+        run: .\tools\run_source_tests.ps1
       - name: Verify actual Windows vision runtime
         run: python tools/probe_vision_runtime.py
       - name: Build portable application
@@ -169,6 +157,7 @@ jobs:
           - No Python installation is required. GGUF models are external and are not included.
           - Each generated answer shows its token count and measured decode speed; these metrics are saved with conversations.
           - New: Settings → Installa motore vision downloads, verifies and configures the official Windows CPU llama.cpp runtime automatically, without administrator rights.
+          - The updater now includes public preview releases, selects the highest newer numeric version, and continues to exclude drafts and verify installer SHA-256. Older stable-only apps need this preview installer run manually once.
           - The runtime is pinned to b12110 with a verified SHA-256; cancellation cleans temporary files and existing installations are preserved.
           - New: local image attachments in the GUI and CLI, with persistent image history and a CPU llama.cpp vision engine.
           - Vision requires a language-model GGUF and matching mmproj GGUF. The app can install llama-server on demand; runtime and model files are not bundled. The optimized OpenVINO engine remains text-only.
