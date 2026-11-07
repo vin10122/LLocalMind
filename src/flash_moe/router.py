@@ -103,7 +103,7 @@ class ExpertRouter:
         Il tensor e' F32 nel GGUF; la precisione di storage e' un parametro
         perche' cambia il routing: in f16 una coppia di expert con punteggio
         vicino si ribalta, e con 2048 termini per il prodotto l'errore
-        relativo del gate si accumula. Vedere tools/test_router.py, che
+        relativo del gate si accumula. Vedere test/test_router.py, che
         misura la frequenza con cui accade.
 
         Nei log di llama.cpp il gate appare come

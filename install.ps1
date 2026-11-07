@@ -287,7 +287,7 @@ Write-Success "Creato run_chat.bat"
 $runBenchBat = @"
 @echo off
 chcp 65001 >nul
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 if exist ".venv\Scripts\python.exe" (
     set "PYTHON=.venv\Scripts\python.exe"
@@ -301,14 +301,14 @@ set OPENBLAS_NUM_THREADS=1
 set MKL_NUM_THREADS=1
 set BLIS_NUM_THREADS=1
 
-"%PYTHON%" %PYTHON_ARGS% tools\bench_stability.py default --native-decode native --max-tokens 512 --max-seq 2048
+"%PYTHON%" %PYTHON_ARGS% test\bench_stability.py default --native-decode native --max-tokens 512 --max-seq 2048
 
 pause
 "@
 
-$runBenchPath = Join-Path $ProjectDir "run_benchmark.bat"
+$runBenchPath = Join-Path $ProjectDir "test\run_benchmark.bat"
 $runBenchBat | Out-File -FilePath $runBenchPath -Encoding ASCII
-Write-Success "Creato run_benchmark.bat"
+Write-Success "Creato test\run_benchmark.bat"
 
 # Summary
 Write-Host ""
@@ -327,7 +327,7 @@ Write-Host "  2. Esegui il chat client:"
 Write-Host "     .\run_chat.bat"
 Write-Host ""
 Write-Host "  3. Per eseguire benchmark:"
-Write-Host "     .\run_benchmark.bat"
+Write-Host "     .\test\run_benchmark.bat"
 Write-Host ""
 
 Write-Info "OPZIONI COMUNI:"

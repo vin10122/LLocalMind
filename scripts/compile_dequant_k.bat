@@ -53,5 +53,5 @@ echo [BUILD] funzioni esportate:
 echo     dequant_k(type, src, dst, n_elements, want_f16)
 echo     dequant_k_supported(type)
 echo     dequant_k_block_size(type)
-echo [BUILD] verifica con:  python tools\test_dequant_k.py
+echo [BUILD] verifica con:  python test\test_dequant_k.py
 exit /b 0

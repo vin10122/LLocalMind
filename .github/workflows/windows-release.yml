@@ -15,6 +15,7 @@ on:
       - 'packaging/**'
       - 'requirements*.txt'
       - 'tools/**'
+      - 'test/**'
 
 permissions:
   contents: read
@@ -59,9 +60,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Native decode build failed" }
       - name: Run source tests
         shell: pwsh
-        run: .\tools\run_source_tests.ps1
+        run: .\test\run_source_tests.ps1
       - name: Verify actual Windows vision runtime
-        run: python tools/probe_vision_runtime.py
+        run: python test/probe_vision_runtime.py
       - name: Build portable application
         shell: pwsh
         run: .\scripts\build_desktop.ps1
@@ -70,8 +71,8 @@ jobs:
         run: |
           & .\dist\LLocalMind\LLocalMind-Diagnostics.exe --benchmark-vision --help
           if ($LASTEXITCODE -ne 0) { throw "Packaged vision benchmark unavailable" }
-          .\tools\smoke_windows.ps1 -Executable .\dist\LLocalMind\LLocalMind-Diagnostics.exe -Report .\build\diagnostic-smoke.json -Screenshot .\build\diagnostic-gui.png -Language en -ItalianInterface
-          .\tools\smoke_windows.ps1 -Executable .\dist\LLocalMind\LLocalMind.exe -Report .\build\portable-smoke.json -Screenshot .\build\portable-gui.png
+          .\test\smoke_windows.ps1 -Executable .\dist\LLocalMind\LLocalMind-Diagnostics.exe -Report .\build\diagnostic-smoke.json -Screenshot .\build\diagnostic-gui.png -Language en -ItalianInterface
+          .\test\smoke_windows.ps1 -Executable .\dist\LLocalMind\LLocalMind.exe -Report .\build\portable-smoke.json -Screenshot .\build\portable-gui.png
       - name: Install current Inno Setup
         shell: pwsh
         run: |
@@ -103,7 +104,7 @@ jobs:
           if (-not $process.WaitForExit(180000)) { Stop-Process -Id $process.Id -Force; throw "Installer timeout" }
           $process.WaitForExit()
           if ($process.ExitCode -ne 0) { throw "Installer failed: $($process.ExitCode)" }
-          .\tools\smoke_windows.ps1 -Executable "$install\LLocalMind.exe" -Report .\build\installed-smoke.json -Screenshot .\build\installed-gui.png
+          .\test\smoke_windows.ps1 -Executable "$install\LLocalMind.exe" -Report .\build\installed-smoke.json -Screenshot .\build\installed-gui.png
       - name: Create portable ZIP and checksums
         shell: pwsh
         run: |

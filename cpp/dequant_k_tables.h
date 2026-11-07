@@ -1,4 +1,4 @@
-/* Generato da tools/derive_k_tables.py - NON modificare a mano.
+/* Generato da test/derive_k_tables.py - NON modificare a mano.
  *
  * Per ogni output i:
  *   B1[i], S1[i] = byte e shift del campo a basso peso (2 bit in Q3_K,

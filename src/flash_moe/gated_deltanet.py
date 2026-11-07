@@ -31,7 +31,7 @@ secondo, e si applica anch'esso senza trasporre. Con hidden 2048 e
 value_dim 4096 i due versi sono scambiabili solo apparentemente: un errore
 qui si manifesta come errore di forma su questo modello, ma su un modello
 con hidden e value_dim uguali passerebbe silenziosamente. Per questo
-``tools/test_gated_deltanet.py`` confronta la ricorrenza su forme non
+``test/test_gated_deltanet.py`` confronta la ricorrenza su forme non
 quadrate.
 
 La ricorrenza, per value-head h, stato S di forma (head_v_dim, head_k_dim):
@@ -362,7 +362,7 @@ class GatedDeltaNetLayer:
         # dettaglio, porta a un errore del 53% sull'output del layer, e i
         # test numerici non la colgono perche' entrambe le versioni
         # producono numeri plausibili. Vedi
-        # tools/test_gated_deltanet_replication.py.
+        # test/test_gated_deltanet_replication.py.
         reps = self.n_v_heads // self.n_k_heads
         if reps > 1:
             # Il tiling si scrive come una copia di (reps, n_k_heads) da

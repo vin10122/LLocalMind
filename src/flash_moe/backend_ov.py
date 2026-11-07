@@ -1,6 +1,6 @@
 """Backend OpenVINO per l'esecuzione SwiGLU di un singolo expert.
 
-Scelte dettate da misure (tools/check_share_weights.py, tools/check_ov_precisions.py):
+Scelte dettate da misure (test/check_share_weights.py, test/check_ov_precisions.py):
 
 * **f16, non bf16.** I pesi bf16 passati come ``numpy`` ``uint16`` a una porta
   ``ov.Type.bf16`` vengono reinterpretati come interi: 2048 NaN su GPU, errore
@@ -150,7 +150,7 @@ class OpenVINOExpertBackend:
         # ha tensori di due grandezze diverse (hidden x inter e inter x hidden).
         # Senza questo pool ogni dequant chiede pagine nuove al sistema operativo
         # e i page fault costano 0,56 ms su 0,96 ms per tensor, cioe' il 59% del
-        # tempo di dequantizzazione. Vedi tools/test_weight_pool.py.
+        # tempo di dequantizzazione. Vedi test/test_weight_pool.py.
         self._pool: dict[int, list[np.ndarray]] = {}
         # OpenVINO >= 2022.3 accetta share_inputs. Se il parametro non esiste
         # il fallback sopra lo spegne da solo e il backend continua a funzionare.

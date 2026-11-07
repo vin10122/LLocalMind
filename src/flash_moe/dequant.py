@@ -16,7 +16,7 @@ Nessun kernel C++ e' collegato di default. ``flash_moe/fast_dequant_q8_0.dll`` e
 noto essere numericamente errato (dichiara ``scales[8], qs[256]`` mentre il
 layout reale e' interleaved ``d, qs[32], d, qs[32], ...``, e applica un offset
 ``-128`` che Q8_0 non ha: il suo formato e' ``y = qs[j] * d``). Va abilitato solo
-dopo aver passato il gate numerico in ``tools/test_phase1.py``.
+dopo aver passato il gate numerico in ``test/test_phase1.py``.
 """
 
 from __future__ import annotations

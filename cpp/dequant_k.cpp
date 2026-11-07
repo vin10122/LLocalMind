@@ -10,7 +10,7 @@
  *
  * I layout e' l'algebra degli indici sono ricavati dalla reference
  * gguf.quants (la stessa che llama.cpp replica in ggml-quants.c), non dalla
- * memoria. tools/test_dequant_k.py confronta ogni kernel contro quella reference
+ * memoria. test/test_dequant_k.py confronta ogni kernel contro quella reference
  * su dati reali: se un indice e' sbagliato, il test fallisce.
  *
  * NOTA Q8_0: il blocco e'  f16 d + int8 qs[32]  e la formula e'  y = qs * d.
@@ -29,7 +29,7 @@
 #include <immintrin.h>
 #include <ppl.h>
 
-/* Mappature misurate da tools/derive_k_tables.py, non derivate a mano. */
+/* Mappature misurate da test/derive_k_tables.py, non derivate a mano. */
 #include "dequant_k_tables.h"
 
 #define QK_K 256
@@ -243,7 +243,7 @@ static void dequant_q5_k(const uint8_t* src, float* dst, int64_t nblocks) {
 /* 210 B: ql[128], qh[64], int8 scales[16], f16 d.
  *
  * Il mapping ql/qh -> output e' un interlacciamento non ovvio, quindi e'
- * misurato invece che derivato: tools/derive_k_tables.py accende un bit alla
+ * misurato invece che derivato: test/derive_k_tables.py accende un bit alla
  * volta sulla reference e registra, per ogni output, il byte e lo shift dei due
  * campi. Le tabelle sono in dequant_k_tables.h.
  *

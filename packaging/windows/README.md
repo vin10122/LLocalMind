@@ -11,7 +11,7 @@ a preview release after its Windows checks succeed.
 
 `.github/workflows/windows-release.yml` uses a Windows 2022 runner and Python
 3.14 x64. It builds both native DLLs and the PyInstaller folder, tests the EXE
-with `tools/smoke_windows.ps1`, builds Inno Setup and tests the installed EXE.
+with `test/smoke_windows.ps1`, builds Inno Setup and tests the installed EXE.
 Smoke tests import the packaged dependencies, compile a CPU OpenVINO graph,
 call both native kernels and conversion, and capture the rendered GUI.
 They do not download a model or establish Intel GPU/NPU driver support.
@@ -113,5 +113,5 @@ Ordinary GitHub source-code archives are not considered Windows installers.
 Run the offline tests without contacting GitHub or executing an installer:
 
 ```powershell
-py -3.14 tools\test_updater.py
+py -3.14 test\test_updater.py
 ```

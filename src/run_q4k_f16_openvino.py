@@ -28,7 +28,7 @@ EXPERT_TYPES: dict[int, dict[str, int]] = {}
 GGUF_FILE_PATH = model_path()
 DLL_PATH = dll_path()
 
-# Dequantizzazione: kernel C++ validato (tools/test_dequant_k.py, gate 162/162),
+# Dequantizzazione: kernel C++ validato (test/test_dequant_k.py, gate 162/162),
 # con fallback sulla reference gguf.quants.
 #
 # Il risultato e' float16 nativo. Passare uint16 su porte a 16 bit produce NaN,
