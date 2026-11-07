@@ -25,6 +25,12 @@ The tested PC has an **Intel Core Ultra 5 226V, Arc 130V and 15.7 GiB RAM**.
 Use current Intel drivers and AC power for best performance. For text mode,
 select CPU for DeltaNet and attention if the Intel GPU is unavailable.
 
+**AMD Ryzen:** CPU mode should also work on modern Ryzen processors supporting
+AVX2, FMA and F16C. Set **DeltaNet → CPU** and **Full attention → CPU**;
+Intel GPU/NPU acceleration does not apply to AMD hardware. AMD-specific testing
+and benchmark data are still insufficient to confirm broad compatibility or
+provide reliable performance figures.
+
 ## Features
 
 - **Text chat:** local inference with saved conversations, streaming, Copy,
