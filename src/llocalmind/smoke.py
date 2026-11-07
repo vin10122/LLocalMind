@@ -1,5 +1,6 @@
 """Packaged runtime smoke check; no model download or GGUF required."""
 import json
+import os
 from pathlib import Path
 
 
@@ -36,9 +37,16 @@ def probe():
     out=native.delta.forward(state,heads,heads,heads,np.full(2,.5,np.float32),np.full(2,-.1,np.float32))
     if not np.isfinite(out).all() or not state.any():
         raise RuntimeError('Native DeltaNet smoke check failed')
+    from .vision_runtime import RuntimeInstaller,PACKAGE
+    runtime=os.environ.get('LLOCALMIND_TEST_RUNTIME_DIR')
+    if runtime:
+        # Exercise DLL loading from the actual frozen app/installer as well
+        # as from source, without loading or downloading a GGUF.
+        RuntimeInstaller(runtime).install()
     return dict(openvino=ov.__version__,devices=core.available_devices,
                 numpy=np.__version__,native_expert=True,native_delta=True,
-                native_dequant=True,gguf=True,tokenizers=tokenizers.__version__)
+                native_dequant=True,gguf=True,tokenizers=tokenizers.__version__,
+                vision_runtime=PACKAGE.tag,vision_runtime_probed=bool(runtime))
 
 
 def write_report(filename,result):

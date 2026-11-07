@@ -33,12 +33,13 @@ class UpdateProgress(QDialog):
     def __init__(self,kind,cancel,parent):
         super().__init__(parent)
         self.cancel=cancel
-        self.setWindowTitle('Aggiornamenti LLocalMind')
+        self.setWindowTitle('Motore vision' if kind=='runtime' else 'Aggiornamenti LLocalMind')
         self.setMinimumWidth(380)
         layout=QVBoxLayout(self)
         layout.setContentsMargins(24,24,24,24)
         layout.setSpacing(16)
-        self.label=QLabel('Controllo aggiornamenti…' if kind=='check' else 'Download aggiornamento…')
+        self.label=QLabel('Installazione motore vision…' if kind=='runtime' else
+                         'Controllo aggiornamenti…' if kind=='check' else 'Download aggiornamento…')
         layout.addWidget(self.label)
         self.bar=QProgressBar()
         self.bar.setRange(0,0 if kind=='check' else 100)
@@ -70,6 +71,7 @@ class MainWindow(QMainWindow):
         self._model_thread_done=False
         self._pending_update=None
         self._update_jobs=[]
+        self._vision_install_draft=None
         self._message_widgets=[]
         self._active_reply=None
         self._pending_images=[]
@@ -367,10 +369,17 @@ class MainWindow(QMainWindow):
         self.notice.setText(text)
         self.notice.setVisible(bool(text))
 
-    def settings(self):
-        dialog=SettingsDialog(self.state.settings,self.check_updates,
-                              self.busy or self.loading or self.demo,self)
-        if dialog.exec()!=QDialog.DialogCode.Accepted:
+    def settings(self,*,draft=None):
+        from .vision_runtime import supported_platform
+        dialog=SettingsDialog(draft or self.state.settings,self.check_updates,
+            self.busy or self.loading or self.demo,self,
+            can_install_vision=supported_platform() and not self._update_jobs and not self.state.read_only)
+        result=dialog.exec()
+        if result==SettingsDialog.InstallVision:
+            self._vision_install_draft=dialog.values.copy()
+            self._start_update('runtime')
+            return
+        if result!=QDialog.DialogCode.Accepted:
             return
         previous=self.state.settings.copy()
         try:
@@ -619,9 +628,21 @@ class MainWindow(QMainWindow):
         if job['cancel'].is_set():
             return
         if task.error:
-            QMessageBox.warning(self,'Aggiornamenti',task.error)
+            QMessageBox.warning(self,'Motore vision' if task.action=='runtime' else 'Aggiornamenti',task.error)
             return
-        if task.action=='check':
+        if task.action=='runtime':
+            path=str(task.result)
+            values=dict(self.state.settings,vision_executable=path)
+            try:self.state.save_settings(values)
+            except (OSError,ValueError) as error:
+                self._notice('Motore installato, ma configurazione non salvata: '+str(error))
+                return
+            draft=dict(self._vision_install_draft or values,vision_executable=path)
+            self._vision_install_draft=None
+            QMessageBox.information(self,'Motore vision pronto',
+                'Il motore vision è installato e configurato. Seleziona il modello GGUF e il suo mmproj, poi salva.')
+            self.settings(draft=draft)
+        elif task.action=='check':
             release=task.result
             if release is None:
                 QMessageBox.information(self,'Aggiornamenti','Nessun aggiornamento stabile disponibile.')

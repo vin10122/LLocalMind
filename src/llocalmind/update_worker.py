@@ -17,12 +17,16 @@ class UpdateTask(QObject):
     @Slot()
     def run(self):
         try:
-            manager=UpdateManager()
-            if self.action=='check':
-                self.result=manager.check()
+            if self.action=='runtime':
+                from .vision_runtime import RuntimeInstaller
+                self.result=RuntimeInstaller().install(cancel=self.cancel,progress=self.progress.emit)
             else:
-                self.result=manager.download(self.release,cancel=self.cancel,
-                    progress=lambda received,total:self.progress.emit(int(received*100/total)))
+                manager=UpdateManager()
+                if self.action=='check':
+                    self.result=manager.check()
+                else:
+                    self.result=manager.download(self.release,cancel=self.cancel,
+                        progress=lambda received,total:self.progress.emit(int(received*100/total)))
         except Exception as error:
             self.error=str(error)
         finally:

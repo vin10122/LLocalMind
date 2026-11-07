@@ -9,7 +9,9 @@ from .state import validate_settings
 
 
 class SettingsDialog(QDialog):
-    def __init__(self,values,check_updates,busy=False,parent=None):
+    InstallVision=42
+
+    def __init__(self,values,check_updates,busy=False,parent=None,*,can_install_vision=True):
         super().__init__(parent)
         self.setWindowTitle('Impostazioni · LLocalMind')
         self.setMinimumWidth(560)
@@ -62,9 +64,13 @@ class SettingsDialog(QDialog):
             row.addWidget(edit,1)
             row.addWidget(button)
             fields.addRow(label,row)
+        self.install_vision=QPushButton('Installa motore vision')
+        self.install_vision.setEnabled(not busy and can_install_vision)
+        self.install_vision.clicked.connect(self.request_vision_install)
+        fields.addRow(self.install_vision)
         note=QLabel('Serve una versione di llama.cpp che supporti il modello e il suo mmproj. '
                    'Elaborazione locale su CPU; prestazioni e RAM diverse dal motore Intel. '
-                   'Mantieni le DLL accanto a llama-server.exe.')
+                   'Il pulsante scarica e configura il motore; modello e mmproj restano da selezionare.')
         note.setWordWrap(True)
         fields.addRow(note)
         vision_form.addRow(self.vision_fields)
@@ -135,15 +141,25 @@ class SettingsDialog(QDialog):
         if filename:
             self.path.setText(filename)
 
-    def accept(self):
+    def collected_values(self):
         values=self.values.copy()
         values['model_path']=self.path.text().strip()
         values['engine']=self.engine.currentData()
         for key,edit in self.vision_paths.items():values[key]=edit.text().strip()
         for name,control in self.controls.items():
             values[name]=control.currentText() if isinstance(control,QComboBox) else control.value()
+        return validate_settings(values)
+
+    def request_vision_install(self):
+        try:self.values=self.collected_values()
+        except ValueError as error:
+            QMessageBox.warning(self,'Impostazioni',str(error))
+            return
+        self.done(self.InstallVision)
+
+    def accept(self):
         try:
-            self.values=validate_settings(values)
+            values=self.collected_values()
             if values['model_path'] and not Path(values['model_path']).is_file():
                 raise ValueError('Il file del modello selezionato non esiste')
             if values['engine']=='vision':
@@ -155,4 +171,5 @@ class SettingsDialog(QDialog):
         except ValueError as error:
             QMessageBox.warning(self,'Impostazioni',str(error))
             return
+        self.values=values
         super().accept()

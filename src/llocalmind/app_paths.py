@@ -1,6 +1,7 @@
 """User-owned files live outside the replaceable application directory."""
 
 import os
+import sys
 from pathlib import Path
 
 
@@ -24,3 +25,11 @@ def models_dir() -> Path:
 
 def updates_dir() -> Path:
     return data_root() / "updates"
+
+
+def child_environment():
+    """Let external engines find the VC runtime bundled with the frozen app."""
+    env=os.environ.copy()
+    if getattr(sys,'frozen',False) and getattr(sys,'_MEIPASS',None):
+        env['PATH']=str(sys._MEIPASS)+os.pathsep+env.get('PATH','')
+    return env

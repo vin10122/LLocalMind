@@ -25,6 +25,7 @@ from llocalmind.prompts import format_conversation
 from llocalmind.state import LocalState,validate_settings
 from llocalmind.theme import apply_theme
 from llocalmind.widgets import Message,schedule_parts
+from llocalmind.settings_dialog import SettingsDialog
 from PIL import Image
 
 
@@ -277,6 +278,66 @@ class DesktopTests(unittest.TestCase):
             notice.assert_called_once()
             self.assertFalse(window.ready)
             self.assertTrue(window._thread.isRunning())
+
+    def test_runtime_button_preserves_unfinished_settings(self):
+        values=dict(self.state.settings,engine='vision')
+        dialog=SettingsDialog(values,lambda:None,can_install_vision=True)
+        dialog.vision_paths['vision_projector'].setText('D:/models/my-mmproj.gguf')
+        self.assertTrue(dialog.install_vision.isEnabled())
+        dialog.request_vision_install()
+        self.assertEqual(dialog.result(),SettingsDialog.InstallVision)
+        self.assertEqual(dialog.values['vision_projector'],'D:/models/my-mmproj.gguf')
+        dialog.deleteLater()
+
+    def test_runtime_install_saves_executable_and_restores_settings_draft(self):
+        window=self.window()
+        target=Path(self.temp.name)/'llama-server.exe'
+        target.touch()
+        window._vision_install_draft=dict(self.state.settings,engine='vision',vision_projector='D:/mmproj.gguf')
+        with patch('llocalmind.vision_runtime.RuntimeInstaller') as installer, \
+                patch('llocalmind.app.QMessageBox.information'), \
+                patch('llocalmind.app.QMessageBox.warning') as warning,patch.object(window,'settings') as settings:
+            installer.return_value.install.return_value=target
+            window._start_update('runtime')
+            self.wait(lambda:not window._update_jobs)
+            self.assertFalse(warning.called,warning.call_args)
+            self.assertEqual(self.state.settings['vision_executable'],str(target))
+            restored=settings.call_args.kwargs['draft']
+            self.assertEqual(restored['vision_projector'],'D:/mmproj.gguf')
+            self.assertEqual(restored['vision_executable'],str(target))
+            self.assertEqual(restored['engine'],'vision')
+            self.assertEqual(LocalState(self.temp.name).settings['vision_executable'],str(target))
+
+    def test_runtime_cancellation_does_not_change_previous_settings(self):
+        from llocalmind.vision_runtime import RuntimeInstallCancelled
+        window=self.window()
+        previous=self.state.settings.copy()
+        def install(*,cancel,progress):
+            progress(10);cancel.set()
+            raise RuntimeInstallCancelled('cancelled')
+        with patch('llocalmind.vision_runtime.RuntimeInstaller') as installer, \
+                patch('llocalmind.app.QMessageBox.warning') as warning,patch.object(window,'settings') as settings:
+            installer.return_value.install.side_effect=install
+            window._start_update('runtime')
+            self.wait(lambda:not window._update_jobs)
+            self.assertEqual(self.state.settings,previous)
+            warning.assert_not_called();settings.assert_not_called()
+
+    def test_close_during_runtime_install_drains_download_thread(self):
+        import threading
+        from llocalmind.vision_runtime import RuntimeInstallCancelled
+        window=self.window()
+        started=threading.Event()
+        def install(*,cancel,progress):
+            started.set();cancel.wait(2)
+            raise RuntimeInstallCancelled('cancelled')
+        with patch('llocalmind.vision_runtime.RuntimeInstaller') as installer:
+            installer.return_value.install.side_effect=install
+            window._start_update('runtime')
+            self.wait(started.is_set)
+            window.close()
+            self.wait(lambda:window._allow_close)
+            self.assertFalse(window._update_jobs)
 
     def test_real_stream_adapter_budget_cancellation_and_cleanup(self):
         # Exercise the real detokenizer with a tiny fake token vocabulary.

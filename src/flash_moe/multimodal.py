@@ -64,12 +64,14 @@ class LocalVisionModel:
                 self.port=sock.getsockname()[1]
             self.log_path.parent.mkdir(parents=True,exist_ok=True)
             self.log=self.log_path.open('w',encoding='utf-8')
+            from llocalmind.app_paths import child_environment
             command=[str(self.executable),'-m',str(self.model),'--mmproj',str(self.projector),
                 '--host','127.0.0.1','--port',str(self.port),'--api-key',self.key,
                 '--alias',self.alias,'-c',str(self.max_seq),'-np','1','-ngl','0',
                 '--no-mmproj-offload','--no-webui','--jinja','--no-context-shift',
                 '-t',str(self.threads),'-tb',str(self.prefill_threads)]
             self.process=subprocess.Popen(command,cwd=self.executable.parent,
+                env=child_environment(),
                 stdin=subprocess.DEVNULL,stdout=self.log,stderr=subprocess.STDOUT,
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
             progress(0,'Caricamento vision locale · CPU')

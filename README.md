@@ -18,11 +18,11 @@ high-memory discrete graphics card.
 
 ## Install on Windows
 
-The latest stable Windows version is available in [release v0.1.3](https://github.com/vin10122/LLocalMind/releases/tag/v0.1.3):
+The latest stable Windows version is available in [release v0.1.4](https://github.com/vin10122/LLocalMind/releases/tag/v0.1.4):
 
 ### Recommended: Windows installer
 
-1. Download **[LLocalMind-Setup-0.1.3-windows-x64.exe](https://github.com/vin10122/LLocalMind/releases/download/v0.1.3/LLocalMind-Setup-0.1.3-windows-x64.exe)**.
+1. Download **[LLocalMind-Setup-0.1.4-windows-x64.exe](https://github.com/vin10122/LLocalMind/releases/download/v0.1.4/LLocalMind-Setup-0.1.4-windows-x64.exe)**.
 2. Run the installer, then open **LLocalMind** from the Start menu.
 3. Open **Impostazioni → Sfoglia**, select your compatible local **GGUF** file,
    and save. Wait for the model status to become **Pronto**, then send a message.
@@ -38,7 +38,7 @@ select CPU for DeltaNet and Full attention under advanced settings.
 
 ### Portable version
 
-1. Download **[LLocalMind-0.1.3-windows-x64-portable.zip](https://github.com/vin10122/LLocalMind/releases/download/v0.1.3/LLocalMind-0.1.3-windows-x64-portable.zip)**.
+1. Download **[LLocalMind-0.1.4-windows-x64-portable.zip](https://github.com/vin10122/LLocalMind/releases/download/v0.1.4/LLocalMind-0.1.4-windows-x64-portable.zip)**.
 2. Extract the **whole ZIP**, then open `LLocalMind\LLocalMind.exe`.
 3. Select the GGUF in settings as described above.
 
@@ -60,7 +60,7 @@ choose the download, then confirm installation. LLocalMind verifies the
 installer's SHA-256, saves the conversation, closes the model and exits. The
 installer updates the same application and reopens it when complete.
 
-**v0.1.3 is published on the stable update channel.** The in-app checker
+**v0.1.4 is published on the stable update channel.** The in-app checker
 offers newer stable versions only; it does not offer previews or reinstall
 the version already running. To install a preview, or to update manually, download the new setup EXE from [Releases](https://github.com/vin10122/LLocalMind/releases),
 close LLocalMind and run it over the existing installation. **Do not uninstall
@@ -349,15 +349,17 @@ not implemented. Image requests now use a separate **local llama.cpp CPU
 engine**, which runs the supported model's actual vision tower, projector and
 multimodal prefill. Text-engine token rates do not apply to this path.
 
-You need your language-model GGUF, its **compatible mmproj GGUF**, and a recent
-[llama.cpp Windows CPU distribution](https://github.com/ggml-org/llama.cpp/releases)
-that supports that model architecture. Extract the whole distribution and
-keep its DLLs beside `llama-server.exe`. LLocalMind does not download these files.
+You need your language-model GGUF, its **compatible mmproj GGUF**, and a
+llama.cpp runtime that supports that model architecture. **Since v0.1.4 the
+Windows x64 app can install the runtime automatically.** Models and projectors
+remain external and are not downloaded by the runtime installer.
 Compatibility of the Hermes Final/APEX GGUF with the projector from the MTP
 repository remains unverified; a similar filename alone is not a guarantee.
 
 In the desktop app, open **Impostazioni**, select **Testo e immagini · llama.cpp locale
-CPU**, then choose `llama-server.exe` and the matching mmproj. Select the normal
+CPU**, then click **Installa motore vision**. Wait for the download and verification;
+the executable path is saved automatically, and settings reopen with your
+unfinished selections preserved. Choose the matching mmproj. Select the normal
 language-model GGUF in the model field. Save and wait for **Pronto**; the
 previous engine is closed before the vision engine loads, avoiding two loaded
 language models. Use the paperclip to attach PNG, JPEG or WebP files and send
@@ -365,6 +367,26 @@ your question. Sending an image alone uses a default description request.
 Image previews and references are retained in the saved conversation and used
 in subsequent turns and regenerated answers. To resume the optimized text
 engine, select **Testo · Intel ottimizzato** and start a text-only chat.
+
+
+The button installs the official **llama.cpp b12110 Windows CPU x64** package
+(about 24 MiB download, 61 MiB extracted) under
+`%LOCALAPPDATA%\LLocalMind\runtimes\llama.cpp`. It requires no administrator
+rights and verifies a SHA-256 pinned in the application before extraction.
+The executable and all its DLLs are kept together and tested with `--version`.
+A verified installation can be reused offline. Failed or cancelled attempts
+remove staging files and leave the previously selected engine unchanged.
+Repairs/new runtime versions install beside existing files, avoiding replacement
+of DLLs that may be in use. App updates preserve this external runtime folder;
+old runtime copies are not automatically deleted.
+
+You can still select a manually installed executable with **Sfoglia…**. For
+manual installation, extract the entire official
+[Windows CPU ZIP](https://github.com/ggml-org/llama.cpp/releases), keeping DLLs
+beside `llama-server.exe`. Automatic installation is limited to Windows x64;
+other source platforms require an appropriate local executable. llama.cpp is
+provided separately by its authors under the
+[MIT license](https://github.com/ggml-org/llama.cpp/blob/master/LICENSE).
 
 For a CLI test, set `FLASH_MOE_GGUF` to your language-model file, then use your
 actual executable, projector and image paths:
