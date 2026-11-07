@@ -15,8 +15,8 @@ DEFAULTS = dict(model_path='', max_tokens=128, max_seq=2048, cache=320,
                 weight_cache=1, expert_workers=4, prefill_threads=4,
                 ssm_device='GPU', attention_device='GPU', temperature=0.0,
                 engine='optimized',vision_executable='',vision_projector='',
-                vision_image_tokens=768,vision_batch=512,vision_ubatch=256,
-                vision_cache_mib=128,vision_warmup=True)
+                vision_image_tokens=768,vision_batch=2048,vision_ubatch=1024,
+                vision_threads=8,vision_cache_mib=128,vision_warmup=True)
 
 
 def validate_settings(values):
@@ -26,6 +26,11 @@ def validate_settings(values):
     for key in result:
         if key in values:
             result[key] = values[key]
+    if 'vision_threads' not in values:
+        if result['vision_batch'] == 512:
+            result['vision_batch'] = 2048
+        if result['vision_ubatch'] == 256:
+            result['vision_ubatch'] = 1024
     for key in ('model_path','vision_executable','vision_projector'):
         if not isinstance(result[key],str):raise ValueError('Percorso non valido')
     if result['engine'] not in ('optimized','vision'):raise ValueError('Motore non valido')
@@ -37,7 +42,8 @@ def validate_settings(values):
     if result['max_tokens'] >= result['max_seq']:
         raise ValueError('Il limite di output deve essere inferiore al contesto')
     for key,low,high in (('vision_image_tokens',64,8192),('vision_batch',32,2048),
-                        ('vision_ubatch',32,2048),('vision_cache_mib',0,1024)):
+                        ('vision_ubatch',32,2048),('vision_threads',1,16),
+                        ('vision_cache_mib',0,1024)):
         if type(result[key]) is not int or not low<=result[key]<=high:
             raise ValueError('Impostazione vision non valida: '+key)
     if result['vision_ubatch']>result['vision_batch'] or type(result['vision_warmup']) is not bool:
@@ -52,12 +58,13 @@ def validate_settings(values):
 
 def engine_signature(values):
     """Only options actually consumed by the selected engine cause a reload."""
-    common=('engine','model_path','max_seq','expert_workers','prefill_threads')
+    common=('engine','model_path','max_seq')
     if values['engine']=='vision':
         keys=common+('vision_executable','vision_projector','vision_image_tokens',
-                     'vision_batch','vision_ubatch','vision_cache_mib','vision_warmup')
+                     'vision_threads','vision_batch','vision_ubatch','vision_cache_mib','vision_warmup')
     else:
-        keys=common+('cache','weight_cache','ssm_device','attention_device')
+        keys=common+('expert_workers','prefill_threads','cache','weight_cache',
+                     'ssm_device','attention_device')
     return tuple((key,values[key]) for key in keys)
 
 

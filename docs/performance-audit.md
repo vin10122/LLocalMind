@@ -17,6 +17,26 @@ available, so this release makes no vision speed claim. Existing external
 runtime files are preserved; users upgrading from the preview can use Settings
 to install and select the CPU runtime.
 
+## Measured CPU prefill profile
+
+On the Core Ultra 5 226V / 16 GiB target, one local image request with the
+35B GGUF and F16 mmproj reached its first token in 91.9 s (808 prompt tokens),
+using eight generation/prompt threads, batch 2048, microbatch 1024, and the
+768 visual-token limit. The earlier four-thread, batch-512/microbatch-256
+request had reached 76 prompt tokens in 29 s before it was cancelled. This
+suggests a substantial improvement, but is not a controlled comparison:
+the earlier request was incomplete. A no-image text control processed 823
+tokens in 39.5 s, showing that most of the measured image request time is
+shared with the slow CPU language-model prefill; shrinking the input image
+from 2048 to 1024 pixels did not measurably improve total latency.
+
+The measured 8/2048/1024 profile is now the Vision default. A 2048-token
+microbatch was not tested: only about 625 MiB of RAM remained free after model
+startup, so that run was skipped to avoid excessive paging. Actual latency
+depends on RAM pressure, thermal state, image/model and runtime. The 8-thread
+setting is specific to the measured 8-core target; reduce it in Settings on
+machines that become less responsive or perform worse.
+
 The following table describes the earlier v0.1.7 CPU baseline.
 
 ## Main findings

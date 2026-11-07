@@ -17,7 +17,7 @@ def run(args,model_path):
         with tempfile.TemporaryDirectory(prefix='llocalmind-image-') as directory:
             images=[import_image(args.image,directory)] if args.image else []
             engine=LocalVisionModel(model_path,args.mmproj,args.llama_server,
-                max_seq=args.max_seq,threads=args.expert_workers,prefill_threads=args.prefill_threads,
+                max_seq=args.max_seq,threads=args.vision_threads,prefill_threads=args.vision_threads,
                 log_path=data_root()/'logs/vision.log',image_max_tokens=args.vision_image_tokens,
                 batch_tokens=args.vision_batch,ubatch_tokens=args.vision_ubatch,
                 cache_mib=args.vision_cache_mib,warmup=not args.vision_no_warmup)

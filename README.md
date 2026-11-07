@@ -442,11 +442,15 @@ performance report now records `encoder_device` alongside prompt/cache counts
 and timings. Compare the same image and history, on AC power, before claiming
 a speedup.
 
-### Vision performance controls (v0.1.7 preview)
+### Vision performance controls
 
-The default CPU profile now limits each image to **768 visual tokens**, uses
-batch 512 / microbatch 256 and caps the prompt-cache allowance at 128 MiB.
-These settings are available under advanced options. Reducing visual tokens
+The CPU profile limits each image to **768 visual tokens**, uses batch 2048 /
+microbatch 1024 and caps the prompt-cache allowance at 128 MiB. Vision uses
+eight CPU threads by default. These settings are available under advanced
+options. On a Core Ultra 5 226V, a local test with one 768-token image measured
+about **92 s** to the first token (808 prompt tokens); the earlier 4-thread,
+512/256 profile had reached 76 prompt tokens in 29 s before cancellation, so
+these are not a controlled end-to-end comparison. Reducing visual tokens
 can speed image processing but lose fine details or small text. Warm-up stays
 enabled; disabling it moves some startup work to the first request.
 
@@ -455,10 +459,10 @@ no longer imports the native OpenVINO stack for vision, and irrelevant settings
 no longer reload the model. Native text prefill also batches shared experts on
 long inputs, and reuses compatible KV storage between requests.
 
-**The language model and image encoder run on CPU in v0.1.9.
-No new target-PC vision speed is claimed:** the 35B model plus encoder can still exceed the practical RAM
-budget on a 16 GiB PC. See the [performance audit](docs/performance-audit.md)
-for findings, tradeoffs and the limits of the available measurements.
+**The language model and image encoder run on CPU.** The 35B model plus
+encoder can still exceed the practical RAM budget on a 16 GiB PC. See the
+[performance audit](docs/performance-audit.md) for findings, tradeoffs and
+the limits of the available measurements.
 
 Latest load/request reports are written automatically to
 `%LOCALAPPDATA%\LLocalMind\logs\performance-load.json` and

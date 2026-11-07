@@ -58,8 +58,8 @@ class ModelWorker(QObject):
                 from flash_moe.multimodal import LocalVisionModel,VisionCancelled
                 from .app_paths import data_root
                 self.vision=LocalVisionModel(path,options['vision_projector'],options['vision_executable'],
-                    max_seq=options['max_seq'],threads=options['expert_workers'],
-                    prefill_threads=options['prefill_threads'],log_path=data_root()/'logs/vision.log',
+                    max_seq=options['max_seq'],threads=options['vision_threads'],
+                    prefill_threads=options['vision_threads'],log_path=data_root()/'logs/vision.log',
                     image_max_tokens=options['vision_image_tokens'],batch_tokens=options['vision_batch'],
                     ubatch_tokens=options['vision_ubatch'],cache_mib=options['vision_cache_mib'],
                     warmup=options['vision_warmup'])

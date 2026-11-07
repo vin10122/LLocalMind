@@ -90,6 +90,7 @@ class SettingsDialog(QDialog):
             ('expert_workers','Worker esperti CPU',1,16),
             ('prefill_threads','Thread prefill CPU',1,16),
             ('vision_image_tokens','Token visivi massimi',64,8192),
+            ('vision_threads','Thread Vision CPU',1,16),
             ('vision_batch','Batch vision',32,2048),
             ('vision_ubatch','Microbatch vision',32,2048),
             ('vision_cache_mib','Cache prompt vision (MiB)',0,1024),

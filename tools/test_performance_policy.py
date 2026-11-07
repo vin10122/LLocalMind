@@ -45,11 +45,29 @@ class PerformancePolicyTests(unittest.TestCase):
         native=dict(DEFAULTS)
         self.assertEqual(engine_signature(native),engine_signature(dict(native,vision_image_tokens=256)))
         vision=dict(DEFAULTS,engine='vision')
-        self.assertEqual(engine_signature(vision),engine_signature(dict(vision,cache=1000,ssm_device='CPU',max_tokens=200)))
+        self.assertEqual(engine_signature(vision),engine_signature(dict(vision,cache=1000,
+            ssm_device='CPU',max_tokens=200,prefill_threads=12)))
         self.assertNotEqual(engine_signature(vision),engine_signature(dict(vision,vision_image_tokens=256)))
+        self.assertNotEqual(engine_signature(vision),engine_signature(dict(vision,vision_threads=4)))
         self.assertNotEqual(engine_signature(vision),engine_signature(dict(vision,max_seq=4096)))
-        for change in (dict(vision_image_tokens=1),dict(vision_ubatch=2048,vision_batch=128),dict(vision_cache_mib=8192),dict(vision_warmup='false')):
+        for change in (dict(vision_image_tokens=1),dict(vision_ubatch=2048,vision_batch=128),
+                       dict(vision_threads=0),dict(vision_cache_mib=8192),dict(vision_warmup='false')):
             with self.assertRaises(ValueError):validate_settings(dict(DEFAULTS,**change))
+
+    def test_existing_default_vision_profile_migrates_to_measured_preset(self):
+        old={key:value for key,value in DEFAULTS.items() if key!='vision_threads'}
+        old.update(vision_batch=512,vision_ubatch=256)
+        values=validate_settings(old)
+        self.assertEqual(values['vision_threads'],8)
+        self.assertEqual(values['vision_batch'],2048)
+        self.assertEqual(values['vision_ubatch'],1024)
+        custom=validate_settings(dict(old,vision_batch=1024,vision_ubatch=512))
+        self.assertEqual((custom['vision_batch'],custom['vision_ubatch']),(1024,512))
+
+    def test_vision_cli_defaults_match_the_measured_preset(self):
+        import chat
+        args=chat.build_parser().parse_args([])
+        self.assertEqual((args.vision_threads,args.vision_batch,args.vision_ubatch),(8,2048,1024))
 
     def test_image_payload_is_reused_but_changed_file_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:

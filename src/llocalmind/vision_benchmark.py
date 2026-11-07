@@ -41,7 +41,7 @@ def main(argv=None):
             cache=ImagePayloadCache()
             history=[dict(role='user',content='Descrivi brevemente questa immagine.',images=[item])]
             engine=LocalVisionModel(values['model_path'],values['vision_projector'],values['vision_executable'],
-                max_seq=values['max_seq'],threads=values['expert_workers'],prefill_threads=values['prefill_threads'],
+                max_seq=values['max_seq'],threads=values['vision_threads'],prefill_threads=values['vision_threads'],
                 image_max_tokens=values['vision_image_tokens'],batch_tokens=values['vision_batch'],
                 ubatch_tokens=values['vision_ubatch'],cache_mib=values['vision_cache_mib'],warmup=values['vision_warmup'],
                 log_path=data_root()/'logs/vision-benchmark-server.log')
