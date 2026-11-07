@@ -1,4 +1,4 @@
-# Performance audit — v0.1.6 preview
+# Performance audit — v0.1.7 preview
 
 Target: Windows, Intel Core Ultra 5 226V, Arc 130V, approximately 16 GiB shared
 RAM, on AC power. The large Hermes GGUF and mmproj are not available in CI.

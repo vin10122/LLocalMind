@@ -1,9 +1,17 @@
 # PyInstaller onedir app. Build on Windows with scripts/build_desktop.ps1.
 from pathlib import Path
 import os
+import sys
 from PyInstaller.utils.hooks import collect_all, collect_submodules, copy_metadata
 
 root = Path(SPECPATH).parents[1]
+# Hook discovery runs before Analysis applies pathex. Resolve local packages now,
+# otherwise collect_submodules silently returns [] in a clean build environment.
+sys.path[:0] = [str(root / "src"), str(root)]
+project_hidden = collect_submodules("flash_moe") + collect_submodules("llocalmind")
+for required in ("flash_moe.manifest", "flash_moe.model", "llocalmind.vision_benchmark"):
+    if required not in project_hidden:
+        raise SystemExit(f"Local module discovery failed: {required}")
 assets = root / "src/llocalmind/assets"
 binaries = []
 for name in ("moe_quant_dot.dll", "fast_dequant_k_parallel.dll"):
@@ -26,8 +34,7 @@ analysis = Analysis(
     pathex=[str(root), str(root / "src")],
     binaries=binaries + ov_binaries,
     datas=[(str(assets), "llocalmind/assets"), (str(root / "LICENSE"), ".")] + ov_data + notices,
-    hiddenimports=ov_hidden + collect_submodules("flash_moe")
-                  + collect_submodules("llocalmind") + ["run_q4k_f16_openvino"],
+    hiddenimports=ov_hidden + project_hidden + ["run_q4k_f16_openvino"],
     excludes=["PySide6.QtWebEngineCore", "PySide6.QtWebEngineWidgets", "PySide6.QtPdf"],
     noarchive=False,
 )
