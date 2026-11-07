@@ -43,7 +43,7 @@ def main(argv=None):
             engine=LocalVisionModel(values['model_path'],values['vision_projector'],values['vision_executable'],
                 max_seq=values['max_seq'],threads=values['expert_workers'],prefill_threads=values['prefill_threads'],
                 image_max_tokens=values['vision_image_tokens'],batch_tokens=values['vision_batch'],
-                ubatch_tokens=values['vision_ubatch'],cache_mib=values['vision_cache_mib'],warmup=values['vision_warmup'],encoder=values['vision_encoder'],
+                ubatch_tokens=values['vision_ubatch'],cache_mib=values['vision_cache_mib'],warmup=values['vision_warmup'],
                 log_path=data_root()/'logs/vision-benchmark-server.log')
             print('Caricamento del modello; mantieni la GUI chiusa.',flush=True)
             engine.start()

@@ -7,7 +7,6 @@ from __future__ import annotations
 import http.client
 import json
 import os
-import re
 from pathlib import Path
 import secrets
 import shutil
@@ -21,34 +20,6 @@ class VisionCancelled(Exception):
     pass
 
 
-def detect_vulkan_device(executable,stop=None):
-    """Probe local devices without loading GGUFs; CPU remains a valid fallback."""
-    from llocalmind.app_paths import child_environment
-    stop=stop or threading.Event()
-    if stop.is_set():raise VisionCancelled()
-    try:
-        with subprocess.Popen([str(executable),'--list-devices'],cwd=Path(executable).parent,
-                env=child_environment(),stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0) as process:
-            deadline=time.monotonic()+10
-            while True:
-                if stop.is_set():
-                    process.kill();process.communicate()
-                    raise VisionCancelled()
-                try:output,_=process.communicate(timeout=.2)
-                except subprocess.TimeoutExpired:
-                    if time.monotonic()<deadline:continue
-                    process.kill();process.communicate()
-                    return None
-                if process.returncode:return None
-                devices=re.findall(r'^\s*(Vulkan[0-9]+):\s*(.+)$',output.decode('utf-8',errors='replace'),re.M)
-                # Prefer the Intel adapter on integrated-Intel systems. Device
-                # identifiers alone are passed to llama.cpp, never display text.
-                devices.sort(key=lambda item:('intel' not in item[1].lower(),item[0]))
-                return devices[0][0] if devices else None
-    except OSError:return None
-
-
 class MultiModalProjector:
     """Guard against using the removed, mathematically invalid projector."""
     def __init__(self, *args, **kwargs):
@@ -59,7 +30,7 @@ class MultiModalProjector:
 class LocalVisionModel:
     def __init__(self, model, projector, executable=None, *, max_seq=2048,
                  threads=4, prefill_threads=4, log_path=None,image_max_tokens=768,
-                 batch_tokens=512,ubatch_tokens=256,cache_mib=128,warmup=True,encoder="auto"):
+                 batch_tokens=512,ubatch_tokens=256,cache_mib=128,warmup=True):
         self.model=Path(model).expanduser().resolve()
         self.projector=Path(projector).expanduser().resolve()
         found=shutil.which(str(executable)) if executable else shutil.which('llama-server')
@@ -78,8 +49,6 @@ class LocalVisionModel:
         self.batch_tokens=batch_tokens
         self.ubatch_tokens=ubatch_tokens
         self.cache_mib=cache_mib
-        if encoder not in ('auto','cpu'):raise ValueError('Dispositivo encoder vision non valido')
-        self.encoder=encoder
         self.encoder_device='CPU'
         self.warmup=warmup
         self.startup_seconds=None
@@ -105,9 +74,7 @@ class LocalVisionModel:
             with socket.socket() as sock:
                 sock.bind(('127.0.0.1',0))
                 self.port=sock.getsockname()[1]
-            progress(0,'Verifica accelerazione immagini')
-            device=detect_vulkan_device(self.executable,stop) if self.encoder=='auto' else None
-            self.encoder_device=device or 'CPU'
+            progress(0,'Avvio encoder immagini CPU')
             self.log_path.parent.mkdir(parents=True,exist_ok=True)
             self.log=self.log_path.open('w',encoding='utf-8')
             from llocalmind.app_paths import child_environment
@@ -118,21 +85,20 @@ class LocalVisionModel:
                 '--image-min-tokens','64','--image-max-tokens',str(self.image_max_tokens),
                 '-b',str(self.batch_tokens),'-ub',str(self.ubatch_tokens),
                 '--cache-ram',str(self.cache_mib),'--no-cache-idle-slots',
-                '-t',str(self.threads),'-tb',str(self.prefill_threads)]
-            if device:command.extend(['--mmproj-offload','--mmproj-device',device])
-            else:command.append('--no-mmproj-offload')
+                '-t',str(self.threads),'-tb',str(self.prefill_threads),
+                '--no-mmproj-offload']
             if not self.warmup:command.append('--no-warmup')
             self.process=subprocess.Popen(command,cwd=self.executable.parent,
                 env=child_environment(),
                 stdin=subprocess.DEVNULL,stdout=self.log,stderr=subprocess.STDOUT,
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
-            progress(0,'Caricamento vision · encoder '+self.encoder_device+' · modello CPU')
+            progress(0,'Caricamento vision · encoder e modello CPU')
             deadline=time.monotonic()+600
             while time.monotonic()<deadline:
                 if stop.is_set():raise VisionCancelled()
                 if self.process.poll() is not None:
                     raise RuntimeError('Avvio vision fallito: verifica versione di llama.cpp e '
-                        f'compatibilità modello/mmproj. Se l’encoder GPU non si avvia, seleziona CPU nelle impostazioni. Log: {self.log_path}')
+                        f'compatibilità modello/mmproj. Log: {self.log_path}')
                 conn=self._connection(timeout=1)
                 try:
                     conn.request('GET','/v1/models',headers=self._headers())
@@ -141,7 +107,7 @@ class LocalVisionModel:
                         data=json.loads(response.read(65536))
                         if any(m.get('id')==self.alias for m in data.get('data',[])):
                             self.startup_seconds=time.perf_counter()-started
-                            progress(100,'Vision pronta · encoder '+self.encoder_device)
+                            progress(100,'Vision pronta · encoder CPU')
                             return
                 except (OSError,http.client.HTTPException):pass
                 finally:conn.close()

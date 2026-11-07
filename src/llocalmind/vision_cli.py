@@ -20,8 +20,8 @@ def run(args,model_path):
                 max_seq=args.max_seq,threads=args.expert_workers,prefill_threads=args.prefill_threads,
                 log_path=data_root()/'logs/vision.log',image_max_tokens=args.vision_image_tokens,
                 batch_tokens=args.vision_batch,ubatch_tokens=args.vision_ubatch,
-                cache_mib=args.vision_cache_mib,warmup=not args.vision_no_warmup,encoder=args.vision_encoder)
-            print('[Vision] Modello su CPU; encoder immagini automatico o CPU. Il motore testo OpenVINO non viene caricato.',flush=True)
+                cache_mib=args.vision_cache_mib,warmup=not args.vision_no_warmup)
+            print('[Vision] Encoder immagini e modello su CPU. Il motore testo OpenVINO non viene caricato.',flush=True)
             engine.start(progress=lambda _,label:print(label,flush=True))
             def ask(prompt):
                 print('  ',end='',flush=True)

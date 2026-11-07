@@ -353,9 +353,8 @@ RGB-average projector has been removed: it did not execute the trained vision
 tower and its output was not passed to the model. Native OpenVINO vision is
 not implemented. Image requests now use a separate **local llama.cpp
 engine**, which runs the supported model's actual vision tower, projector and
-multimodal prefill. The language model runs on CPU; since v0.1.8, the image
-encoder can use a detected Vulkan GPU. Text-engine token rates do not apply to
-this path.
+multimodal prefill. The language model and image encoder run on CPU in v0.1.9
+stable. Text-engine token rates do not apply to this path.
 
 You need your language-model GGUF, its **compatible mmproj GGUF**, and a
 llama.cpp runtime that supports that model architecture. **Since v0.1.5 the
@@ -364,7 +363,7 @@ remain external and are not downloaded by the runtime installer.
 Compatibility of the Hermes Final/APEX GGUF with the projector from the MTP
 repository remains unverified; a similar filename alone is not a guarantee.
 
-In the desktop app, open **Impostazioni**, select **Testo e immagini · llama.cpp locale**, then click **Installa / aggiorna motore vision Vulkan**. Wait for the download and verification;
+In the desktop app, open **Impostazioni**, select **Testo e immagini · llama.cpp locale**, then click **Installa / aggiorna motore vision CPU**. Wait for the download and verification;
 the executable path is saved automatically, and settings reopen with your
 unfinished selections preserved. Choose the matching mmproj. Select the normal
 language-model GGUF in the model field. Save and wait for **Pronto**; the
@@ -376,9 +375,8 @@ in subsequent turns and regenerated answers. To resume the optimized text
 engine, select **Testo · Intel ottimizzato** and start a text-only chat.
 
 
-The button installs the official **llama.cpp b12110 Windows Vulkan x64** package
-(about 36 MiB download, 101 MiB extracted) under
-`%LOCALAPPDATA%\LLocalMind\runtimes\llama.cpp`. It requires no administrator
+The button installs the official **llama.cpp b12110 Windows CPU x64** package
+under `%LOCALAPPDATA%\LLocalMind\runtimes\llama.cpp`. It requires no administrator
 rights and verifies a SHA-256 pinned in the application before extraction.
 The executable and all its DLLs are kept together and tested with `--version`.
 A verified installation can be reused offline. Failed or cancelled attempts
@@ -389,7 +387,7 @@ old runtime copies are not automatically deleted.
 
 You can still select a manually installed executable with **Sfoglia…**. For
 manual installation, extract the entire official
-[Windows Vulkan x64 ZIP](https://github.com/ggml-org/llama.cpp/releases), keeping DLLs
+[Windows CPU x64 ZIP](https://github.com/ggml-org/llama.cpp/releases), keeping DLLs
 beside `llama-server.exe`. Automatic installation is limited to Windows x64;
 other source platforms require an appropriate local executable. llama.cpp is
 provided separately by its authors under the
@@ -429,28 +427,13 @@ vision startup, compatibility and performance with the exact Hermes/mmproj
 still require target-PC validation.** Automated tests cover transport, pixels,
 history, cleanup and cancellation using a test server, not a trained model.
 
-### Accelerated image encoder (v0.1.8 preview)
+### CPU-only image encoder (v0.1.9 stable)
 
-Updating the app alone does not replace an existing CPU-only runtime. Open
-**Impostazioni**, select the vision engine and click
-**Installa / aggiorna motore vision Vulkan**. Keep **Encoder immagini →
-Automatico · GPU Vulkan se disponibile**, save and wait for the model to load.
-The model header then reports the selected encoder (`Vulkan0`, for example)
-and that the language model remains on CPU. If it reports `CPU`, GPU
-acceleration was not detected; check the selected runtime and graphics driver.
-
-Only the image encoder is offloaded. Language-model layers remain on CPU
-(`-ngl 0`, `--device none`) and the visual-token budget stays unchanged.
-No image history is discarded. GPU floating-point rounding can differ; actual
-quality, memory use and speed on the Arc 130V still require validation. A GPU
-may use more shared RAM and its first use may include shader compilation.
-If GPU initialization fails, choose **Encoder immagini → CPU** and reload.
-Automatic mode falls back to CPU when the device probe finds no Vulkan GPU.
-
-The Vulkan runtime is pinned by SHA-256, installed beside the CPU runtime,
-and verified from the packaged/installed EXE in Windows CI. Existing CPU
-runtime files are preserved. Selecting an older CPU-only executable continues
-to work on CPU; it does not gain GPU support from an app update.
+The stable release runs both the vision encoder and language model on CPU.
+GPU image-encoder offload is not supported. The installer uses a pinned,
+SHA-256-verified official llama.cpp Windows CPU runtime; an app update does
+not delete older external runtime files. Users upgrading from a preview can
+click **Installa / aggiorna motore vision CPU** to select the CPU runtime.
 
 One user run reported **305 s to first token** and **6.18 tok/s** generation
 before this change. That is the motivation for accelerating pre-response
@@ -472,7 +455,7 @@ no longer imports the native OpenVINO stack for vision, and irrelevant settings
 no longer reload the model. Native text prefill also batches shared experts on
 long inputs, and reuses compatible KV storage between requests.
 
-**The language model remains on CPU; the encoder can use Vulkan in v0.1.8.
+**The language model and image encoder run on CPU in v0.1.9.
 No new target-PC vision speed is claimed:** the 35B model plus encoder can still exceed the practical RAM
 budget on a 16 GiB PC. See the [performance audit](docs/performance-audit.md)
 for findings, tradeoffs and the limits of the available measurements.

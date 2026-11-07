@@ -75,7 +75,7 @@ class MultimodalTests(unittest.TestCase):
         self.server.received=threading.Event();self.server.release=threading.Event()
         self.server.reject=self.server.stall=self.server.truncate=self.server.no_timings=False
         threading.Thread(target=self.server.serve_forever,daemon=True).start()
-        engine=LocalVisionModel(self.model,self.projector,sys.executable,log_path=self.root/'vision.log',encoder='cpu')
+        engine=LocalVisionModel(self.model,self.projector,sys.executable,log_path=self.root/'vision.log')
         engine.port=self.server.server_port
         engine.process=Mock();engine.process.poll.return_value=None
         return engine
@@ -156,7 +156,7 @@ class MultimodalTests(unittest.TestCase):
             Qwen3MoEModel(self.root/'missing.gguf',mmproj_path=self.projector)
 
     def test_start_validates_identity_and_closes_owned_process(self):
-        engine=LocalVisionModel(self.model,self.projector,sys.executable,log_path=self.root/'vision.log',encoder='cpu')
+        engine=LocalVisionModel(self.model,self.projector,sys.executable,log_path=self.root/'vision.log')
         response=Mock(status=200)
         response.read.return_value=json.dumps(dict(data=[dict(id=engine.alias)])).encode()
         conn=Mock();conn.getresponse.return_value=response
@@ -167,66 +167,19 @@ class MultimodalTests(unittest.TestCase):
             self.assertEqual(command[command.index('--host')+1],'127.0.0.1')
             self.assertEqual(command[command.index('-ngl')+1],'0')
             self.assertIn('--no-mmproj-offload',command)
+            self.assertNotIn('--mmproj-offload',command)
+            self.assertNotIn('--mmproj-device',command)
             self.assertIn('--no-context-shift',command)
+            self.assertEqual(engine.encoder_device,'CPU')
             engine.close();popen.return_value.terminate.assert_called_once()
             self.assertTrue(engine.log is None)
 
     def test_failed_start_cleans_process_and_log(self):
-        engine=LocalVisionModel(self.model,self.projector,sys.executable,log_path=self.root/'vision.log',encoder='cpu')
+        engine=LocalVisionModel(self.model,self.projector,sys.executable,log_path=self.root/'vision.log')
         with patch('flash_moe.multimodal.subprocess.Popen') as popen:
             popen.return_value.poll.return_value=1
             with self.assertRaisesRegex(RuntimeError,'Avvio'):engine.start()
             self.assertIsNone(engine.process);self.assertIsNone(engine.log)
-
-    def test_gpu_encoder_does_not_offload_language_model(self):
-        engine=LocalVisionModel(self.model,self.projector,sys.executable,log_path=self.root/'vision.log')
-        response=Mock(status=200)
-        response.read.return_value=json.dumps(dict(data=[dict(id=engine.alias)])).encode()
-        conn=Mock();conn.getresponse.return_value=response
-        with patch('flash_moe.multimodal.detect_vulkan_device',return_value='Vulkan1'), \
-                patch('flash_moe.multimodal.subprocess.Popen') as popen,patch.object(engine,'_connection',return_value=conn):
-            popen.return_value.poll.return_value=None
-            engine.start()
-            command=popen.call_args.args[0]
-            self.assertEqual(command[command.index('-ngl')+1],'0')
-            self.assertEqual(command[command.index('--device')+1],'none')
-            self.assertEqual(command[command.index('--mmproj-device')+1],'Vulkan1')
-            self.assertIn('--mmproj-offload',command)
-            self.assertNotIn('--no-mmproj-offload',command)
-            self.assertEqual(engine.encoder_device,'Vulkan1')
-            engine.close()
-
-    def test_device_probe_handles_missing_gpu_failure_timeout_and_cancel(self):
-        from flash_moe.multimodal import detect_vulkan_device
-        with patch('flash_moe.multimodal.subprocess.Popen') as popen:
-            process=popen.return_value.__enter__.return_value
-            process.returncode=0
-            process.communicate.return_value=(b'Available devices:\n  Vulkan0: NVIDIA adapter\n  Vulkan1: Intel Arc 130V\n',None)
-            self.assertEqual(detect_vulkan_device(sys.executable),'Vulkan1')
-            process.communicate.return_value=(b'Available devices:\n',None)
-            self.assertIsNone(detect_vulkan_device(sys.executable))
-            process.returncode=1
-            self.assertIsNone(detect_vulkan_device(sys.executable))
-            process.returncode=0
-            process.communicate.side_effect=[subprocess.TimeoutExpired('probe',.2),(b'',None)]
-            with patch('flash_moe.multimodal.time.monotonic',side_effect=[0,11]):
-                self.assertIsNone(detect_vulkan_device(sys.executable))
-            process.kill.assert_called_once()
-        stop=threading.Event();stop.set()
-        with self.assertRaises(VisionCancelled):detect_vulkan_device(sys.executable,stop)
-
-    def test_auto_mode_falls_back_to_cpu_when_runtime_has_no_gpu(self):
-        engine=LocalVisionModel(self.model,self.projector,sys.executable,log_path=self.root/'vision.log')
-        response=Mock(status=200)
-        response.read.return_value=json.dumps(dict(data=[dict(id=engine.alias)])).encode()
-        conn=Mock();conn.getresponse.return_value=response
-        with patch('flash_moe.multimodal.detect_vulkan_device',return_value=None), \
-                patch('flash_moe.multimodal.subprocess.Popen') as popen,patch.object(engine,'_connection',return_value=conn):
-            popen.return_value.poll.return_value=None
-            engine.start()
-            self.assertIn('--no-mmproj-offload',popen.call_args.args[0])
-            self.assertEqual(engine.encoder_device,'CPU')
-            engine.close()
 
     def test_cli_vision_bypasses_native_model_and_sends_pixels(self):
         import chat

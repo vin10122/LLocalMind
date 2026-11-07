@@ -27,18 +27,14 @@ class RuntimePackage:
     url: str
     sha256: str
     size: int
-    backend: str = "cpu"
 
 
 # Downloaded from the official ggml-org release and hashed before pinning.
 # Updating this requires reviewing a new official archive and running the
 # Windows runtime probe. Never resolve an unverified "latest" ZIP at runtime.
-CPU_PACKAGE=RuntimePackage('b12110',
+PACKAGE=RuntimePackage('b12110',
     'https://github.com/ggml-org/llama.cpp/releases/download/b12110/llama-b12110-bin-win-cpu-x64.zip',
     '98901e327c252875accaf2d1bf364e10e868843b0b63468baad1aa945cdc5da2',24708445)
-PACKAGE=RuntimePackage('b12110',
-    'https://github.com/ggml-org/llama.cpp/releases/download/b12110/llama-b12110-bin-win-vulkan-x64.zip',
-    '9732a5e48887ca54d0bfe4af4324dc85fd56cd8cda19b52df3542fa6ebe6874f',37661146,'vulkan')
 MAX_UNPACKED=512*1024**2
 
 
@@ -117,8 +113,8 @@ class RuntimeInstaller:
         self.directory=Path(directory) if directory is not None else data_root()/'runtimes'/'llama.cpp'
         self.package=package
         expected=(f'https://github.com/ggml-org/llama.cpp/releases/download/{package.tag}/'
-                  f'llama-{package.tag}-bin-win-{package.backend}-x64.zip')
-        if (package.backend not in ('cpu','vulkan') or not re.fullmatch(r'b[0-9]+',package.tag) or package.url!=expected
+                  f'llama-{package.tag}-bin-win-cpu-x64.zip')
+        if (not re.fullmatch(r'b[0-9]+',package.tag) or package.url!=expected
                 or not re.fullmatch(r'[0-9a-f]{64}',package.sha256)
                 or not 0<package.size<512*1024**2):
             raise RuntimeInstallError('Manifest del motore non valido')
@@ -126,7 +122,7 @@ class RuntimeInstaller:
         self.probe=probe
 
     def _existing(self,cancel):
-        for folder in sorted(self.directory.glob('llama-'+self.package.tag+'-'+self.package.backend+'-x64-*'),reverse=True):
+        for folder in sorted(self.directory.glob('llama-'+self.package.tag+'-cpu-x64-*'),reverse=True):
             _cancel(cancel)
             try:
                 if not folder.is_dir() or folder.is_symlink():continue
@@ -213,7 +209,7 @@ class RuntimeInstaller:
                 _cancel(cancel)
                 (payload/'runtime.json').write_text(json.dumps(dict(sha256=self.package.sha256,
                     server=servers[0],files=files)),encoding='utf-8')
-                destination=self.directory/f'llama-{self.package.tag}-{self.package.backend}-x64-{uuid.uuid4().hex[:12]}'
+                destination=self.directory/f'llama-{self.package.tag}-cpu-x64-{uuid.uuid4().hex[:12]}'
                 payload.rename(destination)
                 progress(100)
                 return destination/servers[0]

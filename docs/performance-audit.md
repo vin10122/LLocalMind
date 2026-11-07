@@ -5,25 +5,17 @@ RAM, on AC power. The large Hermes GGUF and mmproj are not available in CI.
 This audit identifies avoidable work; it does not establish a new whole-model
 speed or guarantee interactive image latency.
 
-## v0.1.8 follow-up: image encoder offload
+## v0.1.9 stable: CPU-only vision runtime
 
-A target-PC screenshot showed 305 s to first token and 6.18 tok/s generation.
-These are distinct measurements; fast generation did not establish fast image
-prefill. The previous runtime forced the encoder onto CPU. The new optional
-path uses the pinned official b12110 Vulkan runtime, probes local adapters and
-passes `--mmproj-device VulkanN` while keeping language-model layers on CPU
-(`--device none -ngl 0`). Auto mode uses CPU when no Vulkan GPU is detected.
-The header and report show the selected encoder. GPU initialization failures
-can be recovered by selecting the explicit CPU option.
-
-No lower image budget, image-history removal or model quantization change is
-used to obtain this acceleration. GPU arithmetic may still differ numerically.
-The expected benefit is confined to encoder execution; CPU language-model
-prefill remains a possible dominant cost. GPU shared-memory use and first-use
-shader compilation can also increase latency. No Arc/full-Hermes benchmark is
-available in CI, so the new path is a preview, not a measured speed claim.
-Existing CPU installs must use the Settings runtime-update button once; an
-application update alone does not change the selected external executable.
+The optional image-encoder GPU offload from the v0.1.8 preview is removed.
+Vision now uses the pinned official b12110 Windows CPU runtime and explicitly
+disables encoder offload, while language-model layers remain on CPU
+(`--device none -ngl 0`). A target-PC screenshot had shown 305 s to first token
+and 6.18 tok/s generation; these are distinct measurements, and neither
+establishes image-encoder performance. No controlled target-PC comparison is
+available, so this release makes no vision speed claim. Existing external
+runtime files are preserved; users upgrading from the preview can use Settings
+to install and select the CPU runtime.
 
 The following table describes the earlier v0.1.7 CPU baseline.
 
@@ -50,9 +42,8 @@ option, not a free speedup.
 Loading a model larger than available physical RAM depends on storage, OS
 file caching and working-set pressure. The image request also runs the actual
 vision tower and multimodal prefill on CPU. These costs cannot be removed by
-an animation, an import change or reporting decode tok/s alone. The v0.1.7 pinned
-runtime was a CPU build. The v0.1.8 encoder-only Vulkan path addresses this
-limitation, while target-PC memory/correctness measurements remain necessary.
+an animation, an import change or reporting decode tok/s alone. Target-PC
+memory/correctness measurements remain necessary.
 
 The native text route still spends time on routed expert reads, dequantization,
 kernels, DeltaNet and attention. Cold GPU graph compilation remains. Earlier

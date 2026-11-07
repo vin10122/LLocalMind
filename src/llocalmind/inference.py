@@ -62,7 +62,7 @@ class ModelWorker(QObject):
                     prefill_threads=options['prefill_threads'],log_path=data_root()/'logs/vision.log',
                     image_max_tokens=options['vision_image_tokens'],batch_tokens=options['vision_batch'],
                     ubatch_tokens=options['vision_ubatch'],cache_mib=options['vision_cache_mib'],
-                    warmup=options['vision_warmup'],encoder=options['vision_encoder'])
+                    warmup=options['vision_warmup'])
                 from .images import ImagePayloadCache
                 self.image_cache=ImagePayloadCache()
                 try:self.vision.start(self.stop,self.progress.emit)

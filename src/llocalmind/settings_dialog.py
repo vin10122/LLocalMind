@@ -64,18 +64,12 @@ class SettingsDialog(QDialog):
             row.addWidget(edit,1)
             row.addWidget(button)
             fields.addRow(label,row)
-        self.vision_encoder=QComboBox()
-        self.vision_encoder.addItem('Automatico · GPU Vulkan se disponibile','auto')
-        self.vision_encoder.addItem('CPU','cpu')
-        self.vision_encoder.setCurrentIndex(self.vision_encoder.findData(values['vision_encoder']))
-        self.vision_encoder.setEnabled(not busy)
-        fields.addRow('Encoder immagini',self.vision_encoder)
-        self.install_vision=QPushButton('Installa / aggiorna motore vision Vulkan')
+        self.install_vision=QPushButton('Installa / aggiorna motore vision CPU')
         self.install_vision.setEnabled(not busy and can_install_vision)
         self.install_vision.clicked.connect(self.request_vision_install)
         fields.addRow(self.install_vision)
         note=QLabel('Serve una versione di llama.cpp che supporti il modello e il suo mmproj. '
-                   'Il nuovo runtime usa la GPU per l’encoder immagini quando disponibile; il modello resta su CPU. '
+                   'L’encoder immagini e il modello usano la CPU. '
                    'Il pulsante scarica e configura il motore; modello e mmproj restano da selezionare.')
         note.setWordWrap(True)
         fields.addRow(note)
@@ -168,7 +162,6 @@ class SettingsDialog(QDialog):
         values=self.values.copy()
         values['model_path']=self.path.text().strip()
         values['engine']=self.engine.currentData()
-        values['vision_encoder']=self.vision_encoder.currentData()
         for key,edit in self.vision_paths.items():values[key]=edit.text().strip()
         for name,control in self.controls.items():
             values[name]=(control.currentText() if isinstance(control,QComboBox) else

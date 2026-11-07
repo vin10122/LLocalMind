@@ -297,6 +297,7 @@ class DesktopTests(unittest.TestCase):
         dialog=SettingsDialog(values,lambda:None,can_install_vision=True)
         dialog.vision_paths['vision_projector'].setText('D:/models/my-mmproj.gguf')
         self.assertTrue(dialog.install_vision.isEnabled())
+        self.assertNotIn('vision_encoder',dialog.collected_values())
         dialog.request_vision_install()
         self.assertEqual(dialog.result(),SettingsDialog.InstallVision)
         self.assertEqual(dialog.values['vision_projector'],'D:/models/my-mmproj.gguf')

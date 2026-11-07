@@ -238,7 +238,6 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Eseguibile llama-server locale per vision; altrimenti cercato nel PATH")
     parser.add_argument('--vision-image-tokens',type=int,default=768,
                         help='Massimo token visivi: meno token velocizzano ma riducono i dettagli')
-    parser.add_argument('--vision-encoder', choices=('auto','cpu'), default='auto', help='Encoder immagini: GPU Vulkan se disponibile, oppure CPU')
     parser.add_argument('--vision-batch',type=int,default=512)
     parser.add_argument('--vision-ubatch',type=int,default=256)
     parser.add_argument('--vision-cache-mib',type=int,default=128)

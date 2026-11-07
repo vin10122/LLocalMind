@@ -158,12 +158,12 @@ jobs:
           - Portable: extract the whole portable ZIP, then open `LLocalMind/LLocalMind.exe`.
           - No Python installation is required. GGUF models are external and are not included.
           - Each generated answer shows its token count and measured decode speed; these metrics are saved with conversations.
-          - New: optional Vulkan GPU image encoder with device detection and CPU fallback; language-model layers remain on CPU. Existing CPU-runtime users must click Settings → Installa / aggiorna motore vision Vulkan once after updating the app.
-          - The header and local report identify the selected encoder. Visual-token detail settings are unchanged. GPU arithmetic, driver support and shared-memory pressure require target-PC validation; no new vision latency is claimed.
+          - Stable v0.1.9 removes image-encoder GPU offload; both the vision encoder and language model now run on CPU.
+          - The packaged vision runtime is pinned to the official Windows CPU build. Advanced visual-token settings are unchanged; real-model image quality and CPU performance still require target-PC validation.
           - New: bounded visual-token/batch/cache defaults, image/prefix reuse, lazy vision imports and engine-specific reloads. Advanced settings expose the speed/detail tradeoff.
           - New: native long-prompt shared-expert batching, reusable KV storage and coalesced GUI streaming.
           - New: local load/request reports and `LLocalMind-Diagnostics.exe --benchmark-vision --image PATH` (close the GUI first). No target-PC vision speed is claimed.
-          - New: Settings → Installa motore vision downloads, verifies and configures the official Windows Vulkan llama.cpp runtime automatically, without administrator rights.
+          - Settings → Installa / aggiorna motore vision CPU downloads, verifies and configures the official Windows CPU llama.cpp runtime automatically, without administrator rights.
           - The updater now includes public preview releases, selects the highest newer numeric version, and continues to exclude drafts and verify installer SHA-256. Older stable-only apps need this preview installer run manually once.
           - The runtime is pinned to b12110 with a verified SHA-256; cancellation cleans temporary files and existing installations are preserved.
           - New: local image attachments in the GUI and CLI, with persistent image history and a local llama.cpp vision engine.
