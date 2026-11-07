@@ -70,7 +70,7 @@ jobs:
         run: |
           & .\dist\LLocalMind\LLocalMind-Diagnostics.exe --benchmark-vision --help
           if ($LASTEXITCODE -ne 0) { throw "Packaged vision benchmark unavailable" }
-          .\tools\smoke_windows.ps1 -Executable .\dist\LLocalMind\LLocalMind-Diagnostics.exe -Report .\build\diagnostic-smoke.json -Screenshot .\build\diagnostic-gui.png -Language en
+          .\tools\smoke_windows.ps1 -Executable .\dist\LLocalMind\LLocalMind-Diagnostics.exe -Report .\build\diagnostic-smoke.json -Screenshot .\build\diagnostic-gui.png -Language en -ItalianInterface
           .\tools\smoke_windows.ps1 -Executable .\dist\LLocalMind\LLocalMind.exe -Report .\build\portable-smoke.json -Screenshot .\build\portable-gui.png
       - name: Install current Inno Setup
         shell: pwsh
@@ -152,7 +152,10 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<'NOTES'
-          LLocalMind 0.2.1 - International.
+          LLocalMind 0.2.2 - Italian Interface.
+
+          - Optional Italian Interface sidebar switch: azure theme, thin tricolour top bar and thick tricolour user-bubble borders with solid light-blue interiors.
+          - Large Dottore, parti 🍕 / Fratello, fermati 🍝 controls retain normal send/stop behavior. Appearance is saved separately and never changes language, prompts or the loaded model.
 
           - Italian/English interface, a separate Language sidebar button and the same selector in Settings. The choice persists without reloading the model.
           - English mode guides new text/vision answers in English unless another language is explicitly requested; saved conversations are not translated. CLI: --language en.
@@ -181,4 +184,4 @@ jobs:
           - CI checks the GUI, CPU OpenVINO, native kernels and installer without a GGUF. Full-model quality/performance on the target PC still needs manual validation.
           - SHA-256 sidecars are included. This build is not code-signed. Updaters since v0.1.5 include public previews as well as stable releases.
           NOTES
-          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - International" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Italian Interface" --notes-file release-notes.md

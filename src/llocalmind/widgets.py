@@ -2,10 +2,10 @@
 from .i18n import tr
 from pathlib import Path
 import re
-from PySide6.QtCore import Qt, QSize, QUrl, Signal
-from PySide6.QtGui import QDesktopServices, QFontMetrics, QIcon, QPainter, QPixmap, QTextDocument
+from PySide6.QtCore import Qt, QSize, QUrl, Signal, QRectF
+from PySide6.QtGui import QDesktopServices, QFontMetrics, QIcon, QPainter, QPixmap, QTextDocument, QColor, QLinearGradient, QPainterPath, QPen
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton,
+from PySide6.QtWidgets import (QCheckBox, QFrame, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton,
                                QSizePolicy, QTextBrowser, QToolButton, QVBoxLayout)
 from .metrics import clean_stats, response_summary
 from .images import image_path
@@ -113,12 +113,73 @@ class Markdown(QTextBrowser):
         self.fit()
 
 
+class ThemeSwitch(QCheckBox):
+    """Keyboard-accessible native checkbox, painted as a sliding switch."""
+    def __init__(self,parent=None):
+        super().__init__(parent)
+        self.setObjectName('italianInterfaceSwitch')
+        self.setFixedSize(52,30)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setAccessibleName('Italian Interface 🇮🇹')
+
+    def hitButton(self,position):
+        return self.rect().contains(position)
+
+    def paintEvent(self,event):
+        painter=QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor('#278a61' if self.isChecked() else '#698497'))
+        painter.drawRoundedRect(QRectF(2,3,48,24),12,12)
+        painter.setBrush(QColor('#ffffff'))
+        painter.drawEllipse(QRectF(28 if self.isChecked() else 5,6,18,18))
+        if self.hasFocus():
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.setPen(QPen(QColor('#9bd7ff'),1.5))
+            painter.drawRoundedRect(QRectF(1,1,50,28),14,14)
+
+
+class PromptFrame(QFrame):
+    """Paint a six-pixel tricolour border, leaving the interior solid blue."""
+    def __init__(self,parent=None):
+        super().__init__(parent)
+        self.italian_interface=False
+        self.setObjectName('promptFrame')
+        self.setMaximumWidth(732)
+        self.content=QVBoxLayout(self)
+        self.content.setSpacing(0)
+        self.content.setContentsMargins(0,0,0,0)
+
+    def set_italian_interface(self,enabled):
+        self.italian_interface=bool(enabled)
+        self.setMaximumWidth(732 if enabled else 720)
+        border=6 if enabled else 0
+        self.content.setContentsMargins(border,border,border,border)
+        self.updateGeometry()
+        self.update()
+
+    def paintEvent(self,event):
+        if not self.italian_interface:
+            return super().paintEvent(event)
+        painter=QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        gradient=QLinearGradient(0,0,self.width(),0)
+        for position,color in ((0,'#16955a'),(.3333,'#16955a'),(.3334,'#ffffff'),
+                               (.6666,'#ffffff'),(.6667,'#d83b48'),(1,'#d83b48')):
+            gradient.setColorAt(position,QColor(color))
+        outer=QPainterPath();outer.addRoundedRect(QRectF(self.rect()),22,22)
+        painter.fillPath(outer,gradient)
+        inner=QPainterPath();inner.addRoundedRect(QRectF(self.rect()).adjusted(6,6,-6,-6),16,16)
+        painter.fillPath(inner,QColor('#e4f2ff'))
+
+
 class Message(QFrame):
     copy_requested=Signal(str)
     regenerate_requested=Signal()
 
     def __init__(self,role,text='',pending=False,stats=None,*,images=None,directory=None,
-                 web_search=False):
+                 web_search=False,italian_interface=False):
         super().__init__()
         self.role=role
         self.text=text
@@ -133,7 +194,10 @@ class Message(QFrame):
             self.bubble.setTextFormat(Qt.TextFormat.PlainText)
             self.bubble.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             self.bubble.setMaximumWidth(720)
-            row.addWidget(self.bubble)
+            self.prompt_frame=PromptFrame()
+            self.prompt_frame.content.addWidget(self.bubble)
+            self.prompt_frame.set_italian_interface(italian_interface)
+            row.addWidget(self.prompt_frame)
             layout.addLayout(row)
             for item in images or []:
                 image_row=QHBoxLayout()

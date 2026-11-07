@@ -112,6 +112,49 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual(window.new_button.text(),'Nuova chat')
         self.assertEqual(window.input.toPlainText(),'Bozza italiana ancora qui')
 
+    def test_italian_appearance_is_persistent_and_does_not_change_language_or_inference(self):
+        from PySide6.QtCore import Qt
+        from llocalmind.state import engine_signature
+        window=self.window()
+        window.change_language('en')
+        before=engine_signature(window.state.settings)
+        window.current['messages']=[dict(role='user',content='Original text')]
+        window._render()
+        window.input.setPlainText('Keep this draft')
+        calls=[]
+        window.load_requested.connect(lambda *args:calls.append(args))
+        window.generate_requested.connect(lambda *args:calls.append(args))
+        window.busy=True
+        window._buttons()
+        QTest.mouseClick(window.theme_switch,Qt.MouseButton.LeftButton)
+        self.assertTrue(window.state.settings['italian_interface'])
+        self.assertTrue(window.busy)
+        self.assertFalse(window._stop.is_set())
+        self.assertEqual(window.state.settings['language'],'en')
+        self.assertEqual(window.new_button.text(),'New chat')
+        self.assertEqual(window.send_button.text(),'Fratello, fermati 🍝')
+        self.assertEqual(window.input.toPlainText(),'Keep this draft')
+        self.assertEqual(window.current['messages'][0]['content'],'Original text')
+        self.assertTrue(window._message_widgets[0].prompt_frame.italian_interface)
+        self.assertEqual(engine_signature(window.state.settings),before)
+        self.assertFalse(calls)
+        window.send_button.click()
+        self.assertTrue(window._stop.is_set())
+        window._stop.clear()
+        window.busy=False
+        window._buttons()
+        self.assertEqual(window.send_button.text(),'Dottore, parti 🍕')
+        QTest.keyClick(window.theme_switch,Qt.Key.Key_Space)
+        self.assertFalse(window.state.settings['italian_interface'])
+        self.assertEqual(window.send_button.width(),48)
+        self.assertFalse(window._message_widgets[0].prompt_frame.italian_interface)
+        QTest.keyClick(window.theme_switch,Qt.Key.Key_Space)
+        self.assertTrue(LocalState(self.temp.name).settings['italian_interface'])
+        self.assertEqual(LocalState(self.temp.name).settings['language'],'en')
+        window.change_language('it')
+        self.assertTrue(window.theme_switch.isChecked())
+        self.assertEqual(window.send_button.text(),'Dottore, parti 🍕')
+
     def test_language_cannot_change_during_generation(self):
         window=self.window()
         window.busy=True

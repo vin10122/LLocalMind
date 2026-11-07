@@ -20,10 +20,10 @@ from .images import MAX_IMAGES,import_image
 from .metrics import clean_stats, response_summary
 from .settings_dialog import SettingsDialog
 from .state import LocalState, new_chat, engine_signature
-from .theme import apply_theme
+from .theme import apply_theme, ITALIAN_STYLE
 from .update_worker import UpdateTask
 from .updater import UpdateManager
-from .widgets import ASSETS, Composer, Message, action, icon, logo_label
+from .widgets import ASSETS, Composer, Message, ThemeSwitch, action, icon, logo_label
 
 
 def number(value,places=1):
@@ -170,6 +170,16 @@ class MainWindow(QMainWindow):
         pill_row.addWidget(QLabel(tr('Tutto sul tuo PC')))
         pill_row.addStretch()
         side.addWidget(pill)
+        theme_row=QHBoxLayout()
+        theme_label=QLabel('Italian Interface 🇮🇹')
+        self.theme_switch=ThemeSwitch()
+        theme_label.setBuddy(self.theme_switch)
+        self.theme_switch.setChecked(self.state.settings['italian_interface'])
+        self.theme_switch.toggled.connect(self.set_italian_interface)
+        theme_row.addWidget(theme_label)
+        theme_row.addStretch()
+        theme_row.addWidget(self.theme_switch)
+        side.addLayout(theme_row)
         self.language_button=action(tr('Lingua / Language'),'globe',color='#f5f2eb',name='sidebarAction')
         self.language_button.setObjectName('languageButton')
         self.language_button.clicked.connect(self.choose_language)
@@ -181,6 +191,10 @@ class MainWindow(QMainWindow):
         main=QVBoxLayout()
         main.setContentsMargins(0,8,0,4)
         main.setSpacing(14)
+        self.tricolor_bar=QFrame()
+        self.tricolor_bar.setObjectName('tricolorBar')
+        self.tricolor_bar.setFixedHeight(6)
+        main.addWidget(self.tricolor_bar)
         heading=QHBoxLayout()
         title_col=QVBoxLayout()
         title=QLabel(tr('Il tuo spazio per pensare'))
@@ -271,6 +285,26 @@ class MainWindow(QMainWindow):
         footer.addWidget(self.stats_label)
         main.addLayout(footer)
         row.addLayout(main,1)
+        self._apply_interface_style()
+
+    def _apply_interface_style(self):
+        enabled=self.state.settings['italian_interface']
+        self.setStyleSheet(ITALIAN_STYLE if enabled else '')
+        self.tricolor_bar.setVisible(enabled)
+
+    def set_italian_interface(self,enabled):
+        if self._closing:return
+        try:self.state.save_settings(dict(self.state.settings,italian_interface=bool(enabled)))
+        except (OSError,ValueError) as error:
+            self.theme_switch.blockSignals(True)
+            self.theme_switch.setChecked(self.state.settings['italian_interface'])
+            self.theme_switch.blockSignals(False)
+            self._notice(str(error))
+            return
+        self._apply_interface_style()
+        for widget in self._message_widgets:
+            if widget.role=='user':widget.prompt_frame.set_italian_interface(enabled)
+        self._buttons()
 
     @staticmethod
     def _line():
@@ -295,7 +329,19 @@ class MainWindow(QMainWindow):
         self.attachments.setEnabled(not blocked)
         self.input.setReadOnly(blocked)
         self.send_button.setEnabled(self.demo or self.busy or (self.ready and not blocked))
-        self.send_button.setIcon(icon('stop' if self.busy else 'send','#f5f2eb'))
+        self.theme_switch.setEnabled(not self._closing)
+        self.send_button.setProperty('stopping',self.busy)
+        if self.state.settings['italian_interface']:
+            self.send_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+            self.send_button.setFixedSize(236,54)
+            self.send_button.setText('Fratello, fermati 🍝' if self.busy else 'Dottore, parti 🍕')
+        else:
+            self.send_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+            self.send_button.setFixedSize(48,48)
+            self.send_button.setText('')
+            self.send_button.setIcon(icon('stop' if self.busy else 'send','#f5f2eb'))
+        self.send_button.style().unpolish(self.send_button)
+        self.send_button.style().polish(self.send_button)
         self.send_button.setToolTip(tr('Interrompi') if self.busy else tr('Invia · Maiusc+Invio per andare a capo'))
         assistants=[w for w in self._message_widgets if w.role=='assistant']
         for widget in assistants:
@@ -333,7 +379,7 @@ class MainWindow(QMainWindow):
 
     def _add_message(self,role,text,pending=False,stats=None,images=None,web_search=False):
         widget=Message(role,text,pending,stats,images=images,directory=self.state.directory,
-                       web_search=web_search)
+                       web_search=web_search,italian_interface=self.state.settings['italian_interface'])
         widget.copy_requested.connect(lambda text:QApplication.clipboard().setText(text))
         widget.regenerate_requested.connect(self.regenerate)
         self._message_widgets.append(widget)
@@ -441,6 +487,9 @@ class MainWindow(QMainWindow):
         if result!=QDialog.DialogCode.Accepted:
             return
         previous=self.state.settings.copy()
+        # Appearance has its own live control; an older runtime-install draft
+        # must not overwrite a theme selected while the download was running.
+        dialog.values['italian_interface']=previous['italian_interface']
         try:
             self.state.save_settings(dialog.values)
         except (OSError,ValueError) as error:
@@ -805,6 +854,7 @@ class MainWindow(QMainWindow):
 def main(argv=None):
     parser=argparse.ArgumentParser(description=tr('LLocalMind · chat locale'))
     parser.add_argument('--language',choices=('it','en'),help='Italiano / English')
+    parser.add_argument('--italian-interface',action=argparse.BooleanOptionalAction,default=None,help='Italian Interface appearance only')
     parser.add_argument('--demo',action='store_true',help=tr('Anteprima della GUI senza caricare il modello'))
     parser.add_argument('--smoke-test',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--smoke-report',help=argparse.SUPPRESS)
@@ -819,9 +869,12 @@ def main(argv=None):
     preview=args.demo or args.smoke_test
     temporary=tempfile.TemporaryDirectory(prefix='llocalmind-preview-') if preview else None
     state=LocalState(temporary.name) if temporary else LocalState()
-    if args.language:
-        if state.read_only:state.settings['language']=args.language
-        else:state.save_settings(dict(state.settings,language=args.language))
+    overrides={}
+    if args.language:overrides['language']=args.language
+    if args.italian_interface is not None:overrides['italian_interface']=args.italian_interface
+    if overrides:
+        if state.read_only:state.settings.update(overrides)
+        else:state.save_settings(dict(state.settings,**overrides))
     window=MainWindow(state=state,demo=preview)
     window.show()
     smoke_result=[]
@@ -833,6 +886,9 @@ def main(argv=None):
                 expected='New chat' if state.settings['language']=='en' else 'Nuova chat'
                 if window.new_button.text()!=expected:raise RuntimeError('GUI language smoke check failed')
                 details['language']=state.settings['language']
+                details['italian_interface']=state.settings['italian_interface']
+                if state.settings['italian_interface'] and window.send_button.text()!='Dottore, parti 🍕':
+                    raise RuntimeError('Italian Interface smoke check failed')
                 if args.smoke_screenshot:
                     path=Path(args.smoke_screenshot)
                     path.parent.mkdir(parents=True,exist_ok=True)

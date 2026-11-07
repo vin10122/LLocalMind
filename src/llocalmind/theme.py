@@ -61,3 +61,28 @@ def apply_theme(application):
         QFontDatabase.addApplicationFont(str(ASSETS/'fonts'/name))
     application.setFont(QFont('Manrope',11))
     application.setStyleSheet(STYLE)
+
+
+ITALIAN_STYLE = """
+QMainWindow, QDialog { background: #e1f0ff; }
+QFrame#sidebar { background: #175b96; }
+QFrame#localPill { background: #2871ad; }
+QPushButton#sidebarAction:hover, QPushButton#languageButton:hover { background: #2871ad; }
+QListWidget#chatList::item:selected { background: #3680ba; }
+QListWidget#chatList::item:hover:!selected { background: #286da5; }
+QPushButton#newChat { background: #ffffff; color: #175b96; }
+QLabel#heading, QLabel#assistantName { color: #124e82; }
+QLabel#userBubble { background: #e4f2ff; color: #123b60; border-radius: 16px; }
+QFrame#composer { background: #f8fcff; border-color: #9bc7eb; }
+QFrame#line { background: #abd0ef; }
+QFrame#statusPill, QFrame#scheduleCard { background: #f8fcff; }
+QFrame#cardAccent { background: #64ace0; }
+QPushButton#webSearch { background: #edf7ff; border-color: #a2c9e6; }
+QPushButton#webSearch:checked { background: #badcfa; }
+QToolButton#send { background: #198455; color: #ffffff; border-radius: 18px; font-weight: 600; font-size: 15px; padding: 8px 12px; }
+QToolButton#send:hover { background: #126b44; }
+QToolButton#send[stopping="true"] { background: #c93848; }
+QToolButton#send[stopping="true"]:hover { background: #ac2839; }
+QToolButton#send:disabled { background: #7395b2; color: #f6faff; }
+QFrame#tricolorBar { border: none; border-radius: 3px; background: qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #16955a,stop:0.3333 #16955a,stop:0.3334 #ffffff,stop:0.6666 #ffffff,stop:0.6667 #d83b48,stop:1 #d83b48); }
+"""

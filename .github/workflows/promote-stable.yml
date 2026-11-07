@@ -48,6 +48,7 @@ jobs:
         run: |
           title="LLocalMind $RELEASE_TAG"
           if [ "$RELEASE_TAG" = "v0.2.1" ]; then title="$title - International"; fi
+          if [ "$RELEASE_TAG" = "v0.2.2" ]; then title="$title - Italian Interface"; fi
           gh release edit "$RELEASE_TAG" --prerelease=false --latest --title "$title" --notes-file stable-notes.md
           python - <<'PY'
           import os
