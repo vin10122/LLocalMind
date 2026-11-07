@@ -127,7 +127,11 @@ class LocalVisionModel:
         completed=False
         try:
             conn.connect()
-            active_socket=conn.sock
+            # HTTPConnection may close/detach its socket after reading a
+            # Connection: close header while HTTPResponse keeps reading.
+            # Retain an independently owned handle so cancellation can still
+            # shutdown that connection on Windows as well as POSIX.
+            active_socket=conn.sock.dup()
             conn.request('POST','/v1/chat/completions',json.dumps(payload).encode('utf-8'),self._headers())
             response=conn.getresponse()
             if response.status!=200:
@@ -166,6 +170,7 @@ class LocalVisionModel:
         finally:
             done.set()
             watcher.join(timeout=1)
+            if active_socket is not None:active_socket.close()
             if response is not None:response.close()
             conn.close()
 
