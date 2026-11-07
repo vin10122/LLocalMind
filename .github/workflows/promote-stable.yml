@@ -55,7 +55,20 @@ jobs:
           from llocalmind.updater import UpdateManager, version_tuple
           target = json.loads(subprocess.check_output(['gh','release','view',os.environ['RELEASE_TAG'],'--json','isPrerelease,isDraft']))
           assert not target['isPrerelease'] and not target['isDraft']
-          release = UpdateManager(current_version='0.1.0').check()
-          assert release is not None and version_tuple(release.version) >= version_tuple(os.environ['RELEASE_TAG']), 'Updater did not discover the promoted release or a newer version'
-          print(f'Updater verified: {release.tag}, {release.asset_name}')
+          # Authenticate CI's real API transport to avoid the shared runner's
+          # anonymous quota. The desktop client remains anonymous; its actual
+          # release-selection and asset-validation code runs unchanged here.
+          import io
+          from llocalmind.updater import API_URL
+          def release_api(request, timeout):
+              assert request.full_url == API_URL, 'Unexpected CI API destination'
+              return io.BytesIO(subprocess.check_output(['gh','api',API_URL]))
+          try:
+              release = UpdateManager(current_version='0.1.0',opener=release_api).check()
+              assert release is not None and version_tuple(release.version) >= version_tuple(os.environ['RELEASE_TAG']), 'Updater did not discover the promoted release or a newer version'
+              print(f'Updater verified: {release.tag}, {release.asset_name}')
+          except Exception as error:
+              message = str(error).replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+              print(f'::error title=Stable updater verification::{type(error).__name__}: {message}')
+              raise
           PY
