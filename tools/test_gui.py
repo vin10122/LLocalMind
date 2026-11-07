@@ -65,7 +65,9 @@ class DesktopTests(unittest.TestCase):
     def tearDown(self):
         for window in self.windows:
             window.close()
-            self.wait(lambda:not window._thread.isRunning())
+            # Also drain the GUI's queued completion callback before the next
+            # test releases the window/archive, not just the native thread.
+            self.wait(lambda:window._allow_close and not window._thread.isRunning())
         self.temp.cleanup()
 
     def window(self,**kwargs):

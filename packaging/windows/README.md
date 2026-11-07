@@ -57,7 +57,7 @@ uninstalling. Do not change that AppId for subsequent releases.
    ```
 
 4. Publish a stable GitHub release tagged `vMAJOR.MINOR.PATCH` in
-   `vin10122/Intel-optimized-MoE-streaming`, attaching both emitted files:
+   `vin10122/LLocalMind`, attaching both emitted files:
 
    ```text
    LLocalMind-Setup-MAJOR.MINOR.PATCH-windows-x64.exe

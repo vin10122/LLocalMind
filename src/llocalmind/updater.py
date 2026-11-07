@@ -23,7 +23,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 from . import __version__
 from .app_paths import updates_dir
 
-REPOSITORY = "vin10122/Intel-optimized-MoE-streaming"
+REPOSITORY = "vin10122/LLocalMind"
 API_URL = f"https://api.github.com/repos/{REPOSITORY}/releases/latest"
 MAX_INSTALLER_BYTES = 4 * 1024**3
 
