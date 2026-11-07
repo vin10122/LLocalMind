@@ -429,7 +429,7 @@ class MainWindow(QMainWindow):
         self._timer.stop()
         self._set_status('Pronto')
         if name.lower().startswith('hermes3.6-35b'):
-            name='Hermes 3.6 · 35B A3B'+(' · Vision CPU' if self.state.settings['engine']=='vision' else '')
+            name='Hermes 3.6 · 35B A3B'+(name[name.index(' · Vision'):] if ' · Vision' in name else '')
         self.subtitle.setText(name)
         self._buttons()
 

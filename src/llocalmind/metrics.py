@@ -24,6 +24,8 @@ def clean_stats(value):
     if tokens<2:
         result['rate']=None
     result['interrupted']=value.get('interrupted') is True
+    if isinstance(value.get('encoder_device'),str) and len(value['encoder_device'])<=32:
+        result['encoder_device']=value['encoder_device']
     for key in ('input_seconds','startup_seconds'):
         if key in value:result[key]=_number(value[key])
     for key in ('prompt_tokens','image_max_tokens','evaluated_prompt_tokens','cached_tokens'):

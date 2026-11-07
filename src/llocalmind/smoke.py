@@ -42,11 +42,16 @@ def probe():
     if runtime:
         # Exercise DLL loading from the actual frozen app/installer as well
         # as from source, without loading or downloading a GGUF.
-        RuntimeInstaller(runtime).install()
+        executable=RuntimeInstaller(runtime).install()
+        if not executable.with_name('ggml-vulkan.dll').is_file():
+            raise RuntimeError('Pinned Vulkan runtime backend missing')
+        from flash_moe.multimodal import detect_vulkan_device
+        encoder_device=detect_vulkan_device(executable) or 'CPU'
+    else:encoder_device=None
     return dict(openvino=ov.__version__,devices=core.available_devices,
                 numpy=np.__version__,native_expert=True,native_delta=True,
                 native_dequant=True,gguf=True,tokenizers=tokenizers.__version__,
-                vision_runtime=PACKAGE.tag,vision_runtime_probed=bool(runtime))
+                vision_runtime=PACKAGE.tag,vision_runtime_backend=PACKAGE.backend,vision_encoder_device=encoder_device,vision_runtime_probed=bool(runtime))
 
 
 def write_report(filename,result):

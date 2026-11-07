@@ -198,6 +198,8 @@ class Message(QFrame):
             tooltip+=f"\nElaborazione prompt: {stats['prefill']:.2f} s."
         if stats and stats.get('prompt_tokens') is not None:
             tooltip+=f"\nPrompt: {stats['prompt_tokens']} token; cache: {stats.get('cached_tokens','n/d')}."
+        if stats and stats.get('encoder_device'):
+            tooltip+='\nEncoder immagini: '+stats['encoder_device']+'; modello linguistico: CPU.'
         if stats and stats.get('image_max_tokens') is not None:
             tooltip+=f"\nLimite per immagine: {stats['image_max_tokens']} token visivi."
         self.metrics_label.setToolTip(tooltip)

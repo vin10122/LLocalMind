@@ -254,6 +254,7 @@ class DesktopTests(unittest.TestCase):
         worker.error.connect(errors.append)
         with patch('flash_moe.multimodal.LocalVisionModel') as factory:
             engine=factory.return_value
+            engine.encoder_device='CPU'
             engine.generate.return_value=dict(tokens=2,rate=2)
             worker.load(str(model),options)
             native.backend.close.assert_called_once()

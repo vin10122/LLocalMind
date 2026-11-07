@@ -69,6 +69,20 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(len(self.calls),1);self.assertEqual(self.probe.call_count,2)
         self.assertFalse(list(self.root.glob('.install-*')))
 
+    def test_cpu_and_vulkan_installations_are_distinct_and_reusable(self):
+        from dataclasses import replace
+        cpu=self.installer()
+        cpu_path=cpu.install()
+        package=replace(cpu.package,backend='vulkan',url=cpu.package.url.replace('-cpu-','-vulkan-'))
+        gpu=RuntimeInstaller(self.root,package=package,opener=cpu.open,probe=self.probe)
+        gpu_path=gpu.install()
+        self.assertNotEqual(cpu_path,gpu_path)
+        self.assertTrue(cpu_path.is_file())
+        self.assertTrue(gpu_path.is_file())
+        self.assertEqual(cpu.install(),cpu_path)
+        self.assertEqual(gpu.install(),gpu_path)
+        self.assertEqual(len(self.calls),2)
+
     def test_hash_mismatch_and_wrong_size_leave_no_installation(self):
         for replacement in (b'broken',archive()+b'extra'):
             installer=self.installer();self.body=replacement

@@ -102,7 +102,7 @@ class PerformancePolicyTests(unittest.TestCase):
             root=Path(directory)
             model=root/'m.gguf';model.touch()
             projector=root/'v.gguf';projector.touch()
-            engine=LocalVisionModel(model,projector,sys.executable,log_path=root/'vision.log')
+            engine=LocalVisionModel(model,projector,sys.executable,log_path=root/'vision.log',encoder='cpu')
             conn=Mock();response=Mock(status=200)
             response.read.return_value=json.dumps(dict(data=[dict(id=engine.alias)])).encode()
             conn.getresponse.return_value=response

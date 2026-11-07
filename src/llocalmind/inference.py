@@ -62,7 +62,7 @@ class ModelWorker(QObject):
                     prefill_threads=options['prefill_threads'],log_path=data_root()/'logs/vision.log',
                     image_max_tokens=options['vision_image_tokens'],batch_tokens=options['vision_batch'],
                     ubatch_tokens=options['vision_ubatch'],cache_mib=options['vision_cache_mib'],
-                    warmup=options['vision_warmup'])
+                    warmup=options['vision_warmup'],encoder=options['vision_encoder'])
                 from .images import ImagePayloadCache
                 self.image_cache=ImagePayloadCache()
                 try:self.vision.start(self.stop,self.progress.emit)
@@ -70,11 +70,11 @@ class ModelWorker(QObject):
                     self._close_model()
                     return
                 from .performance import record,memory_snapshot
-                record('load','vision',dict(seconds=time.perf_counter()-started,
+                record('load','vision',dict(encoder_device=self.vision.encoder_device,seconds=time.perf_counter()-started,
                     image_max_tokens=options['vision_image_tokens'],batch=options['vision_batch'],
                     ubatch=options['vision_ubatch'],cache_mib=options['vision_cache_mib'],warmup=options['vision_warmup'],
                     memory=memory_snapshot(self.vision.process.pid)))
-                self.loaded.emit(path.stem+' · Vision CPU')
+                self.loaded.emit(path.stem+' · Vision · encoder '+self.vision.encoder_device+' · modello CPU')
                 return
             os.environ['FLASH_MOE_GGUF'] = str(path)
             self.progress.emit(0, 'Preparazione del modello')

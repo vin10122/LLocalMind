@@ -18,11 +18,11 @@ high-memory discrete graphics card.
 
 ## Install on Windows
 
-The latest Windows preview is available in [release v0.1.7](https://github.com/vin10122/LLocalMind/releases/tag/v0.1.7):
+The latest Windows preview is available in [release v0.1.8](https://github.com/vin10122/LLocalMind/releases/tag/v0.1.8):
 
 ### Recommended: Windows installer
 
-1. Download **[LLocalMind-Setup-0.1.7-windows-x64.exe](https://github.com/vin10122/LLocalMind/releases/download/v0.1.7/LLocalMind-Setup-0.1.7-windows-x64.exe)**.
+1. Download **[LLocalMind-Setup-0.1.8-windows-x64.exe](https://github.com/vin10122/LLocalMind/releases/download/v0.1.8/LLocalMind-Setup-0.1.8-windows-x64.exe)**.
 2. Run the installer, then open **LLocalMind** from the Start menu.
 3. Open **Impostazioni → Sfoglia**, select your compatible local **GGUF** file,
    and save. Wait for the model status to become **Pronto**, then send a message.
@@ -38,7 +38,7 @@ select CPU for DeltaNet and Full attention under advanced settings.
 
 ### Portable version
 
-1. Download **[LLocalMind-0.1.7-windows-x64-portable.zip](https://github.com/vin10122/LLocalMind/releases/download/v0.1.7/LLocalMind-0.1.7-windows-x64-portable.zip)**.
+1. Download **[LLocalMind-0.1.8-windows-x64-portable.zip](https://github.com/vin10122/LLocalMind/releases/download/v0.1.8/LLocalMind-0.1.8-windows-x64-portable.zip)**.
 2. Extract the **whole ZIP**, then open `LLocalMind\LLocalMind.exe`.
 3. Select the GGUF in settings as described above.
 
@@ -60,7 +60,7 @@ choose the download, then confirm installation. LLocalMind verifies the
 installer's SHA-256, saves the conversation, closes the model and exits. The
 installer updates the same application and reopens it when complete.
 
-**v0.1.7 is a preview, not a stable release.** Since v0.1.5,
+**v0.1.8 is a preview, not a stable release.** Since v0.1.5,
 the updater includes public prereleases and selects the highest newer numeric
 `MAJOR.MINOR.PATCH` version among the most recent 100 releases. Drafts, equal
 versions and downgrades are excluded. Preview updates are labelled **anteprima**.
@@ -351,9 +351,11 @@ outside the program directory. The existing PowerShell chat remains available.
 The optimized Intel/OpenVINO engine is **text-only**. The former experimental
 RGB-average projector has been removed: it did not execute the trained vision
 tower and its output was not passed to the model. Native OpenVINO vision is
-not implemented. Image requests now use a separate **local llama.cpp CPU
+not implemented. Image requests now use a separate **local llama.cpp
 engine**, which runs the supported model's actual vision tower, projector and
-multimodal prefill. Text-engine token rates do not apply to this path.
+multimodal prefill. The language model runs on CPU; since v0.1.8, the image
+encoder can use a detected Vulkan GPU. Text-engine token rates do not apply to
+this path.
 
 You need your language-model GGUF, its **compatible mmproj GGUF**, and a
 llama.cpp runtime that supports that model architecture. **Since v0.1.5 the
@@ -362,8 +364,7 @@ remain external and are not downloaded by the runtime installer.
 Compatibility of the Hermes Final/APEX GGUF with the projector from the MTP
 repository remains unverified; a similar filename alone is not a guarantee.
 
-In the desktop app, open **Impostazioni**, select **Testo e immagini · llama.cpp locale
-CPU**, then click **Installa motore vision**. Wait for the download and verification;
+In the desktop app, open **Impostazioni**, select **Testo e immagini · llama.cpp locale**, then click **Installa / aggiorna motore vision Vulkan**. Wait for the download and verification;
 the executable path is saved automatically, and settings reopen with your
 unfinished selections preserved. Choose the matching mmproj. Select the normal
 language-model GGUF in the model field. Save and wait for **Pronto**; the
@@ -375,8 +376,8 @@ in subsequent turns and regenerated answers. To resume the optimized text
 engine, select **Testo · Intel ottimizzato** and start a text-only chat.
 
 
-The button installs the official **llama.cpp b12110 Windows CPU x64** package
-(about 24 MiB download, 61 MiB extracted) under
+The button installs the official **llama.cpp b12110 Windows Vulkan x64** package
+(about 36 MiB download, 101 MiB extracted) under
 `%LOCALAPPDATA%\LLocalMind\runtimes\llama.cpp`. It requires no administrator
 rights and verifies a SHA-256 pinned in the application before extraction.
 The executable and all its DLLs are kept together and tested with `--version`.
@@ -388,7 +389,7 @@ old runtime copies are not automatically deleted.
 
 You can still select a manually installed executable with **Sfoglia…**. For
 manual installation, extract the entire official
-[Windows CPU ZIP](https://github.com/ggml-org/llama.cpp/releases), keeping DLLs
+[Windows Vulkan x64 ZIP](https://github.com/ggml-org/llama.cpp/releases), keeping DLLs
 beside `llama-server.exe`. Automatic installation is limited to Windows x64;
 other source platforms require an appropriate local executable. llama.cpp is
 provided separately by its authors under the
@@ -428,6 +429,36 @@ vision startup, compatibility and performance with the exact Hermes/mmproj
 still require target-PC validation.** Automated tests cover transport, pixels,
 history, cleanup and cancellation using a test server, not a trained model.
 
+### Accelerated image encoder (v0.1.8 preview)
+
+Updating the app alone does not replace an existing CPU-only runtime. Open
+**Impostazioni**, select the vision engine and click
+**Installa / aggiorna motore vision Vulkan**. Keep **Encoder immagini →
+Automatico · GPU Vulkan se disponibile**, save and wait for the model to load.
+The model header then reports the selected encoder (`Vulkan0`, for example)
+and that the language model remains on CPU. If it reports `CPU`, GPU
+acceleration was not detected; check the selected runtime and graphics driver.
+
+Only the image encoder is offloaded. Language-model layers remain on CPU
+(`-ngl 0`, `--device none`) and the visual-token budget stays unchanged.
+No image history is discarded. GPU floating-point rounding can differ; actual
+quality, memory use and speed on the Arc 130V still require validation. A GPU
+may use more shared RAM and its first use may include shader compilation.
+If GPU initialization fails, choose **Encoder immagini → CPU** and reload.
+Automatic mode falls back to CPU when the device probe finds no Vulkan GPU.
+
+The Vulkan runtime is pinned by SHA-256, installed beside the CPU runtime,
+and verified from the packaged/installed EXE in Windows CI. Existing CPU
+runtime files are preserved. Selecting an older CPU-only executable continues
+to work on CPU; it does not gain GPU support from an app update.
+
+One user run reported **305 s to first token** and **6.18 tok/s** generation
+before this change. That is the motivation for accelerating pre-response
+work, not a controlled benchmark or a result for this new release. The
+performance report now records `encoder_device` alongside prompt/cache counts
+and timings. Compare the same image and history, on AC power, before claiming
+a speedup.
+
 ### Vision performance controls (v0.1.7 preview)
 
 The default CPU profile now limits each image to **768 visual tokens**, uses
@@ -441,8 +472,8 @@ no longer imports the native OpenVINO stack for vision, and irrelevant settings
 no longer reload the model. Native text prefill also batches shared experts on
 long inputs, and reuses compatible KV storage between requests.
 
-**The vision runtime remains CPU-only. No new target-PC vision speed is
-claimed:** the 35B model plus encoder can still exceed the practical RAM
+**The language model remains on CPU; the encoder can use Vulkan in v0.1.8.
+No new target-PC vision speed is claimed:** the 35B model plus encoder can still exceed the practical RAM
 budget on a 16 GiB PC. See the [performance audit](docs/performance-audit.md)
 for findings, tradeoffs and the limits of the available measurements.
 

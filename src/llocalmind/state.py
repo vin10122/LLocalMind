@@ -16,7 +16,7 @@ DEFAULTS = dict(model_path='', max_tokens=128, max_seq=2048, cache=320,
                 ssm_device='GPU', attention_device='GPU', temperature=0.0,
                 engine='optimized',vision_executable='',vision_projector='',
                 vision_image_tokens=768,vision_batch=512,vision_ubatch=256,
-                vision_cache_mib=128,vision_warmup=True)
+                vision_cache_mib=128,vision_warmup=True,vision_encoder='auto')
 
 
 def validate_settings(values):
@@ -28,6 +28,7 @@ def validate_settings(values):
             result[key] = values[key]
     for key in ('model_path','vision_executable','vision_projector'):
         if not isinstance(result[key],str):raise ValueError('Percorso non valido')
+    if result['vision_encoder'] not in ('auto','cpu'):raise ValueError('Encoder vision non valido')
     if result['engine'] not in ('optimized','vision'):raise ValueError('Motore non valido')
     for key, low, high in [('max_tokens',1,4096), ('max_seq',256,16384),
                            ('cache',1,2048), ('weight_cache',1,2048),
@@ -55,7 +56,7 @@ def engine_signature(values):
     common=('engine','model_path','max_seq','expert_workers','prefill_threads')
     if values['engine']=='vision':
         keys=common+('vision_executable','vision_projector','vision_image_tokens',
-                     'vision_batch','vision_ubatch','vision_cache_mib','vision_warmup')
+                     'vision_batch','vision_ubatch','vision_cache_mib','vision_warmup','vision_encoder')
     else:
         keys=common+('cache','weight_cache','ssm_device','attention_device')
     return tuple((key,values[key]) for key in keys)
