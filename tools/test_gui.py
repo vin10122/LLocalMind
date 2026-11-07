@@ -17,7 +17,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path[:0]=[str(ROOT/'src'),str(ROOT)]
 from PySide6.QtCore import QThread,Slot
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication,QDialog
 from llocalmind.app import MainWindow
 from llocalmind.inference import ModelWorker
 from llocalmind.metrics import clean_stats, response_summary
@@ -322,6 +322,19 @@ class DesktopTests(unittest.TestCase):
             self.wait(lambda:not window._update_jobs)
             self.assertEqual(self.state.settings,previous)
             warning.assert_not_called();settings.assert_not_called()
+
+    def test_replacing_runtime_reloads_engine_even_if_path_was_already_saved(self):
+        self.state.settings.update(model_path='model.gguf',engine='vision',vision_executable='old.exe')
+        window=self.window()
+        window.load_model()
+        self.wait(lambda:window.ready)
+        self.state.save_settings(dict(self.state.settings,vision_executable='new.exe'))
+        with patch('llocalmind.app.SettingsDialog') as factory,patch.object(window,'load_model') as reload:
+            factory.InstallVision=SettingsDialog.InstallVision
+            factory.return_value.exec.return_value=QDialog.DialogCode.Accepted
+            factory.return_value.values=self.state.settings.copy()
+            window.settings()
+            reload.assert_called_once()
 
     def test_close_during_runtime_install_drains_download_thread(self):
         import threading

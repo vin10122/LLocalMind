@@ -72,6 +72,7 @@ class MainWindow(QMainWindow):
         self._pending_update=None
         self._update_jobs=[]
         self._vision_install_draft=None
+        self._loaded_options=None
         self._message_widgets=[]
         self._active_reply=None
         self._pending_images=[]
@@ -388,7 +389,8 @@ class MainWindow(QMainWindow):
             self._notice(str(error))
             return
         engine_keys=set(previous)-{'max_tokens','temperature'}
-        changed=any(previous[key]!=dialog.values[key] for key in engine_keys)
+        active=self._loaded_options or previous
+        changed=any(active[key]!=dialog.values[key] for key in engine_keys)
         if not self.demo and dialog.values['model_path'] and (changed or not self.ready) and not self.busy and not self.loading:
             self.load_model()
 
@@ -402,6 +404,7 @@ class MainWindow(QMainWindow):
         self._timer.start()
         self._notice('')
         self._buttons()
+        self._loaded_options=self.state.settings.copy()
         self.load_requested.emit(self.state.settings['model_path'],self._options())
 
     def _options(self):
