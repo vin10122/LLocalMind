@@ -18,7 +18,7 @@ high-memory discrete graphics card.
 
 ## Install on Windows
 
-The latest Windows preview is available in [release v0.1.2](https://github.com/vin10122/LLocalMind/releases/tag/v0.1.2):
+The latest stable Windows version is available in [release v0.1.2](https://github.com/vin10122/LLocalMind/releases/tag/v0.1.2):
 
 ### Recommended: Windows installer
 
@@ -46,10 +46,10 @@ Keep the `_internal` directory and the other bundled files beside the EXE;
 copying only `LLocalMind.exe` will not work. The portable version also includes
 Python and the libraries, so it requires no Python setup.
 
-GGUF model files are **not included**. This preview passed GUI, CPU OpenVINO,
+GGUF model files are **not included**. This release passed GUI, CPU OpenVINO,
 native-kernel and installer startup checks on Windows; full-model quality,
 Intel GPU/NPU support and performance still need testing on the target PC.
-SHA-256 sidecars are attached to the release; the preview is not code-signed.
+SHA-256 sidecars are attached to the release; the release is not code-signed.
 
 ## Update LLocalMind
 
@@ -60,9 +60,9 @@ choose the download, then confirm installation. LLocalMind verifies the
 installer's SHA-256, saves the conversation, closes the model and exits. The
 installer updates the same application and reopens it when complete.
 
-**v0.1.2 is a preview.** The in-app checker offers stable releases only; it
-does not offer newer previews. To install another preview, or to update
-manually, download the new setup EXE from [Releases](https://github.com/vin10122/LLocalMind/releases),
+**v0.1.2 is published on the stable update channel.** The in-app checker
+offers newer stable versions only; it does not offer previews or reinstall
+the version already running. To install a preview, or to update manually, download the new setup EXE from [Releases](https://github.com/vin10122/LLocalMind/releases),
 close LLocalMind and run it over the existing installation. **Do not uninstall
 first.** Settings, conversations and external GGUFs are preserved; the model
 does not need to be downloaded again.

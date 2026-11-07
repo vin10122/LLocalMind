@@ -1,0 +1,56 @@
+name: Promote stable release
+
+on:
+  push:
+    branches: [master]
+    paths: ['.github/stable-release.json']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: stable-release
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate existing Windows release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import json, os, re, subprocess
+          from pathlib import Path
+          tag = json.loads(Path('.github/stable-release.json').read_text())['tag']
+          assert re.fullmatch(r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', tag), 'Stable semver required'
+          release = json.loads(subprocess.check_output(['gh', 'release', 'view', tag, '--json', 'isDraft,tagName,assets,body']))
+          assert not release['isDraft'] and release['tagName'] == tag
+          version = tag[1:]
+          names = {a['name'] for a in release['assets'] if a['size'] > 0}
+          for asset in (f'LLocalMind-Setup-{version}-windows-x64.exe', f'LLocalMind-{version}-windows-x64-portable.zip'):
+              assert {asset, asset + '.sha256'} <= names, f'Missing release asset: {asset}'
+          notes = release['body'].replace('Windows preview of LLocalMind.', 'Stable Windows release of LLocalMind.')
+          notes = notes.replace('This preview is not code-signed and is not offered by the stable auto-updater until promoted to a stable release.', 'This release is not code-signed. It is available through the stable update channel.')
+          Path('stable-notes.md').write_text(notes)
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              f.write(f'RELEASE_TAG={tag}\n')
+          PY
+      - name: Promote and verify updater discovery
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PYTHONPATH: src
+        run: |
+          gh release edit "$RELEASE_TAG" --prerelease=false --latest --title "LLocalMind $RELEASE_TAG" --notes-file stable-notes.md
+          python - <<'PY'
+          import os
+          from llocalmind.updater import UpdateManager
+          release = UpdateManager(current_version='0.1.0').check()
+          assert release is not None and release.tag == os.environ['RELEASE_TAG'], 'Stable updater did not discover the promoted release'
+          print(f'Updater verified: {release.tag}, {release.asset_name}')
+          PY
