@@ -37,6 +37,7 @@ class FakeWorker(ModelWorker):
     @Slot(list,dict)
     def generate(self,messages,options):
         self.history=copy.deepcopy(messages)
+        self.options=copy.deepcopy(options)
         count=0
         for _ in range(50):
             if self.stop.is_set():break
@@ -129,6 +130,24 @@ class DesktopTests(unittest.TestCase):
         window._message_widgets[-1].copy_button.click()
         self.assertEqual(QApplication.clipboard().text(),window.current['messages'][-1]['content'])
 
+    def test_web_search_is_opt_in_persisted_and_used_again_on_regenerate(self):
+        window=self.window()
+        window.load_model()
+        self.wait(lambda:window.ready)
+        self.assertFalse(window.web_search_button.isChecked())
+        self.assertIn('DuckDuckGo',window.web_search_button.toolTip())
+        window.web_search_button.setChecked(True)
+        window.input.setPlainText('Domanda recente')
+        window.send()
+        self.wait(lambda:not window.busy)
+        self.assertTrue(window._worker.options['_web_search'])
+        self.assertTrue(window.current['messages'][0]['web_search'])
+        self.assertIn('Ricerca web · DuckDuckGo',window._message_widgets[0].bubble.text())
+        self.assertTrue(LocalState(self.temp.name).chats[0]['messages'][0]['web_search'])
+        window.regenerate()
+        self.wait(lambda:not window.busy)
+        self.assertTrue(window._worker.options['_web_search'])
+
     def test_close_during_generation_drains_thread(self):
         window=self.window()
         window.load_model()
@@ -208,10 +227,15 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual(list(Path(self.temp.name).glob('*.tmp')),[])
         with self.assertRaises(ValueError):validate_settings([])
         with self.assertRaises(ValueError):validate_settings(dict(temperature=float('nan')))
+        invalid=self.state.chats[0].copy()
+        invalid['messages']=[dict(role='user',content='Question',web_search='yes')]
+        path.write_text(json.dumps([invalid]),encoding='utf-8')
+        self.assertTrue(LocalState(self.temp.name).read_only)
 
     def test_image_only_send_persistence_and_text_mode_guard(self):
         self.state.settings['engine']='vision'
         window=self.window()
+        self.assertFalse(window.web_search_button.isEnabled())
         window.load_model()
         self.wait(lambda:window.ready)
         source=Path(self.temp.name)/'red.png'
@@ -374,7 +398,9 @@ class DesktopTests(unittest.TestCase):
             tokens=['Ciao','!']
             token_types=[1,1]
             _byte_decoder={c:ord(c) for c in 'Ciao!'}
-            def encode(self,text,add_bos=False):return [0,1]
+            def encode(self,text,add_bos=False):
+                self.last_text=text
+                return [0,1]
         class Model:
             max_seq_len=256
             last_stream_timings=dict(generation_seconds=1,prefill_seconds=.5)
@@ -394,12 +420,28 @@ class DesktopTests(unittest.TestCase):
         worker.reply_finished.connect(done.append)
         worker.error.connect(errors.append)
         options=dict(self.state.settings,max_tokens=128)
-        worker.generate([dict(role='user',content='Domanda')],options)
+        with patch('llocalmind.web_search.search_and_fetch') as search:
+            worker.generate([dict(role='user',content='Domanda')],options)
+            search.assert_not_called()
         self.assertEqual(''.join(output),'Ciao!')
         self.assertEqual(stats[-1]['rate'],1)
         self.assertEqual(done[-1],'complete')
         self.assertTrue(worker.model.drained)
         self.assertFalse(errors)
+        from llocalmind.web_search import WebResult
+        worker.stop.clear()
+        options['_web_search']=True
+        with patch('llocalmind.web_search.search_and_fetch',
+                   return_value=[WebResult('Fonte','https://example.com','',
+                                           'Estratto verificato.')]) as search:
+            worker.generate([dict(role='user',content='Domanda recente',web_search=True)],options)
+        search.assert_called_once()
+        self.assertIn('Domanda recente',worker.tokenizer.last_text)
+        self.assertIn('Estratto verificato.',worker.tokenizer.last_text)
+        self.assertIn('https://example.com',worker.tokenizer.last_text)
+        self.assertIn('fonti esterne non attendibili',worker.tokenizer.last_text)
+        self.assertEqual(done[-1],'complete')
+        options['_web_search']=False
         worker.model.max_seq_len=2
         worker.generate([dict(role='user',content='Domanda')],options)
         self.assertEqual(done[-1],'error')

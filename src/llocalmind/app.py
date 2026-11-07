@@ -93,6 +93,7 @@ class MainWindow(QMainWindow):
         self._worker.token.connect(self._token,Qt.ConnectionType.QueuedConnection)
         self._worker.stats.connect(self._stats,Qt.ConnectionType.QueuedConnection)
         self._worker.error.connect(self._error,Qt.ConnectionType.QueuedConnection)
+        self._worker.search_status.connect(self._search_progress,Qt.ConnectionType.QueuedConnection)
         self._worker.reply_finished.connect(self._reply_finished,Qt.ConnectionType.QueuedConnection)
         self._worker.finished.connect(self._thread.quit)
         self._thread.finished.connect(self._worker.deleteLater)
@@ -223,6 +224,13 @@ class MainWindow(QMainWindow):
         self.attach.setToolTip('Allega testo o immagini locali')
         self.attach.clicked.connect(self.attach_text)
         compose.addWidget(self.attach)
+        self.web_search_button=QPushButton('Ricerca web')
+        self.web_search_button.setObjectName('webSearch')
+        self.web_search_button.setCheckable(True)
+        self.web_search_button.setToolTip(
+            'Facoltativa e disattivata di default. Invia la domanda a DuckDuckGo '
+            'e legge fino a tre pagine HTTPS pubbliche.')
+        compose.addWidget(self.web_search_button)
         self.input=Composer()
         self.input.submitted.connect(self.send)
         compose.addWidget(self.input,1)
@@ -274,6 +282,8 @@ class MainWindow(QMainWindow):
         self.new_button.setEnabled(not blocked)
         self.chat_list.setEnabled(not blocked)
         self.attach.setEnabled(not blocked)
+        self.web_search_button.setEnabled(
+            not blocked and not self.demo and self.state.settings['engine']!='vision')
         self.attachments.setEnabled(not blocked)
         self.input.setReadOnly(blocked)
         self.send_button.setEnabled(self.demo or self.busy or (self.ready and not blocked))
@@ -299,7 +309,8 @@ class MainWindow(QMainWindow):
         while self.messages.count():
             self.messages.takeAt(0).widget().deleteLater()
         for message in self.current['messages']:
-            self._add_message(message['role'],message['content'],stats=message.get('stats'),images=message.get('images'))
+            self._add_message(message['role'],message['content'],stats=message.get('stats'),
+                              images=message.get('images'),web_search=message.get('web_search',False))
         if not self.current['messages']:
             welcome=QLabel('Uno spazio tranquillo per le tue idee.\nScrivi una domanda per iniziare.')
             welcome.setObjectName('muted')
@@ -311,8 +322,9 @@ class MainWindow(QMainWindow):
             self._show_footer(self.current['messages'][-1].get('stats'))
         self._buttons()
 
-    def _add_message(self,role,text,pending=False,stats=None,images=None):
-        widget=Message(role,text,pending,stats,images=images,directory=self.state.directory)
+    def _add_message(self,role,text,pending=False,stats=None,images=None,web_search=False):
+        widget=Message(role,text,pending,stats,images=images,directory=self.state.directory,
+                       web_search=web_search)
         widget.copy_requested.connect(lambda text:QApplication.clipboard().setText(text))
         widget.regenerate_requested.connect(self.regenerate)
         self._message_widgets.append(widget)
@@ -450,6 +462,10 @@ class MainWindow(QMainWindow):
         if self.state.settings['engine']!='vision' and (self._pending_images or any(m.get('images') for m in self.current['messages'])):
             self._notice('Questa chat contiene immagini: seleziona Vision locale o apri una nuova chat di testo.')
             return
+        web_search=self.web_search_button.isChecked()
+        if web_search and self.state.settings['engine']!='optimized':
+            self._notice('La ricerca web è disponibile solo con il modello di testo locale.')
+            return
         text=text or 'Descrivi questa immagine.'
         self.input.clear()
         chat=self.current
@@ -457,10 +473,11 @@ class MainWindow(QMainWindow):
             chat['title']=' '.join(text.split())[:45]
         message=dict(role='user',content=text)
         if self._pending_images:message['images']=copy.deepcopy(self._pending_images)
+        if web_search:message['web_search']=True
         chat['messages'].append(message)
         self._clear_images()
         self._render()
-        self._start_reply()
+        self._start_reply(web_search=web_search)
         self._refresh_list()
 
     def regenerate(self):
@@ -471,11 +488,12 @@ class MainWindow(QMainWindow):
             self._notice('Seleziona Vision locale per rigenerare questa risposta con immagini.')
             return
         if messages and messages[-1]['role']=='assistant':
+            web_search=bool(len(messages)>1 and messages[-2].get('web_search',False))
             messages.pop()
             self._render()
-            self._start_reply()
+            self._start_reply(web_search=web_search)
 
-    def _start_reply(self):
+    def _start_reply(self,*,web_search=False):
         messages=self.current['messages']
         history=copy.deepcopy(messages)
         messages.append(dict(role='assistant',content=''))
@@ -483,13 +501,20 @@ class MainWindow(QMainWindow):
         self.stats_label.clear()
         self.busy=True
         self._stop.clear()
-        self._phase='Elaborazione del prompt'
+        self._phase='Ricerca web' if web_search else 'Elaborazione del prompt'
         self._timer.start()
         self._animate()
         self._notice('')
         self._buttons()
         self._save()
-        self.generate_requested.emit(history,self._options())
+        options=self._options()
+        options['_web_search']=web_search
+        self.generate_requested.emit(history,options)
+
+    @Slot(str)
+    def _search_progress(self,text):
+        if not self._closing:
+            self._phase=text
 
     @Slot(str)
     def _token(self,text):

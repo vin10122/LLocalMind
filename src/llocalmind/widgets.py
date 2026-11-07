@@ -115,7 +115,8 @@ class Message(QFrame):
     copy_requested=Signal(str)
     regenerate_requested=Signal()
 
-    def __init__(self,role,text='',pending=False,stats=None,*,images=None,directory=None):
+    def __init__(self,role,text='',pending=False,stats=None,*,images=None,directory=None,
+                 web_search=False):
         super().__init__()
         self.role=role
         self.text=text
@@ -180,6 +181,8 @@ class Message(QFrame):
             column.addLayout(row)
             layout.addWidget(content)
         self.update_text(text,pending=pending)
+        if role=='user' and web_search:
+            self.bubble.setText('Ricerca web · DuckDuckGo\n\n'+text)
         self.set_stats(stats)
 
     def set_stats(self,value):

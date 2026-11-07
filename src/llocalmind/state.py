@@ -96,6 +96,8 @@ class LocalState:
                     if (not isinstance(message,dict) or message.get('role') not in ('user','assistant')
                             or not isinstance(message.get('content'),str)):
                         raise ValueError('Messaggio non valido')
+                    if 'web_search' in message and type(message['web_search']) is not bool:
+                        raise ValueError('Impostazione ricerca web non valida')
                     validate_images(message.get('images',[]))
                     if message.get('images') and message['role']!='user':
                         raise ValueError('Le immagini devono essere associate a una domanda')

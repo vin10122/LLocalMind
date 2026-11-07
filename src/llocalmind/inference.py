@@ -15,6 +15,7 @@ class ModelWorker(QObject):
     token = Signal(str)
     stats = Signal(dict)
     error = Signal(str)
+    search_status = Signal(str)
     reply_finished = Signal(str)
     finished = Signal()
 
@@ -134,7 +135,21 @@ class ModelWorker(QObject):
             if self.model is None or self.tokenizer is None:
                 raise RuntimeError('Carica prima un modello')
             from flash_moe.tokenizer import StreamingDetokenizer
-            ids = self.tokenizer.encode(format_conversation(messages), add_bos=False)
+            web_research = None
+            if options.get('_web_search'):
+                from .web_search import WebSearchCancelled, format_research, search_and_fetch
+                try:
+                    query = next(message['content'] for message in reversed(messages)
+                                 if message['role'] == 'user')
+                    results = search_and_fetch(query, stop=self.stop,
+                                               on_status=self.search_status.emit)
+                except WebSearchCancelled:
+                    status = 'stopped'
+                    return
+                web_research = format_research(results)
+                self.search_status.emit('Analisi locale')
+            ids = self.tokenizer.encode(
+                format_conversation(messages, web_research=web_research), add_bos=False)
             if len(ids) + options['max_tokens'] - 1 > self.model.max_seq_len:
                 raise ValueError('La conversazione supera il contesto disponibile. '
                                  'Apri una nuova chat o aumenta il contesto nelle impostazioni.')

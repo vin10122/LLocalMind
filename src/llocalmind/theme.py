@@ -15,6 +15,8 @@ QPushButton#newChat { background: #f5f2eb; border: none; border-radius: 17px; fo
 QPushButton#newChat:hover { background: #e0eaf0; }
 QPushButton#sidebarAction { color: #f5f2eb; background: transparent; border: none; text-align: left; padding: 14px 8px; }
 QPushButton#sidebarAction:hover { background: #29465c; }
+QPushButton#webSearch { padding: 10px 12px; }
+QPushButton#webSearch:checked { background: #d3e6f2; border-color: #6d9bb6; }
 QListWidget#chatList { background: transparent; border: none; outline: none; }
 QListWidget#chatList::item { color: #f3f6f8; border-radius: 12px; padding: 14px 10px; margin-bottom: 5px; }
 QListWidget#chatList::item:selected { background: #49667d; }

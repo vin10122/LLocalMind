@@ -166,9 +166,11 @@ class LiveProfiler:
               "Le durate dei worker paralleli possono sovrapporsi.")
 
 
-def encode_user_turn(tok: GGUFTokenizer, prompt: str) -> list[int]:
+def encode_user_turn(tok: GGUFTokenizer, prompt: str,
+                     web_research: str | None = None) -> list[int]:
     """Codifica una domanda con le istruzioni di risposta."""
-    formatted = format_conversation([{"role": "user", "content": prompt}])
+    formatted = format_conversation([{"role": "user", "content": prompt}],
+                                    web_research=web_research)
     return tok.encode(formatted, add_bos=False)
 
 
@@ -220,6 +222,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Thread OpenVINO CPU per gruppi di token. Default 4.")
     parser.add_argument("--max-seq", type=int, default=2048,
                         help="lunghezza massima del contesto. Default 2048.")
+    parser.add_argument("--web-search", action="store_true",
+                        help="cerca su DuckDuckGo e usa fino a tre pagine HTTPS per la risposta")
     parser.add_argument("--preload", action="store_true",
                         help="Pre-carica tutti gli expert in cache prima della generazione")
     parser.add_argument("--mmap", action="store_true",
@@ -279,7 +283,14 @@ def ask(model: Qwen3MoEModel, tok: GGUFTokenizer, prompt: str,
     all'output spunta un segnaposto al posto di un carattere.
     """
     from flash_moe.tokenizer import StreamingDetokenizer
-    ids = encode_user_turn(tok, prompt)
+    web_research = None
+    if args.web_search:
+        from llocalmind.web_search import format_research, search_and_fetch
+        results = search_and_fetch(prompt, on_status=lambda text: print(f'[{text}]'))
+        for result in results:
+            print(f'  Fonte: {result.title} — {result.url}')
+        web_research = format_research(results)
+    ids = encode_user_turn(tok, prompt, web_research)
     if len(ids) + args.max_tokens - 1 > args.max_seq:
         raise ValueError(
             f"Prompt ({len(ids)} token) + output richiesto superano "
@@ -396,6 +407,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if args.mmproj or args.image or args.llama_server:
+        if args.web_search:
+            raise ValueError("--web-search non è disponibile con il motore vision")
         from llocalmind.vision_cli import run
         return run(args,path)
 

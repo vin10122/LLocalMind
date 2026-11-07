@@ -18,11 +18,11 @@ high-memory discrete graphics card.
 
 ## Install on Windows
 
-The latest Windows preview is available in [release v0.1.8](https://github.com/vin10122/LLocalMind/releases/tag/v0.1.8):
+The latest stable Windows release is [v0.1.10](https://github.com/vin10122/LLocalMind/releases/tag/v0.1.10):
 
 ### Recommended: Windows installer
 
-1. Download **[LLocalMind-Setup-0.1.8-windows-x64.exe](https://github.com/vin10122/LLocalMind/releases/download/v0.1.8/LLocalMind-Setup-0.1.8-windows-x64.exe)**.
+1. Download **[LLocalMind-Setup-0.1.10-windows-x64.exe](https://github.com/vin10122/LLocalMind/releases/download/v0.1.10/LLocalMind-Setup-0.1.10-windows-x64.exe)**.
 2. Run the installer, then open **LLocalMind** from the Start menu.
 3. Open **Impostazioni → Sfoglia**, select your compatible local **GGUF** file,
    and save. Wait for the model status to become **Pronto**, then send a message.
@@ -38,7 +38,7 @@ select CPU for DeltaNet and Full attention under advanced settings.
 
 ### Portable version
 
-1. Download **[LLocalMind-0.1.8-windows-x64-portable.zip](https://github.com/vin10122/LLocalMind/releases/download/v0.1.8/LLocalMind-0.1.8-windows-x64-portable.zip)**.
+1. Download **[LLocalMind-0.1.10-windows-x64-portable.zip](https://github.com/vin10122/LLocalMind/releases/download/v0.1.10/LLocalMind-0.1.10-windows-x64-portable.zip)**.
 2. Extract the **whole ZIP**, then open `LLocalMind\LLocalMind.exe`.
 3. Select the GGUF in settings as described above.
 
@@ -60,14 +60,14 @@ choose the download, then confirm installation. LLocalMind verifies the
 installer's SHA-256, saves the conversation, closes the model and exits. The
 installer updates the same application and reopens it when complete.
 
-**v0.1.8 is a preview, not a stable release.** Since v0.1.5,
+**v0.1.10 is the current stable release.** Since v0.1.5,
 the updater includes public prereleases and selects the highest newer numeric
 `MAJOR.MINOR.PATCH` version among the most recent 100 releases. Drafts, equal
 versions and downgrades are excluded. Preview updates are labelled **anteprima**.
 Installer origin and SHA-256 verification remain enforced.
 
-**Users of v0.1.3 and earlier must run this preview installer manually once**:
-the old updater checks stable releases only and cannot discover this preview.
+**Users of v0.1.3 and earlier must run this installer manually once**:
+the old updater checks stable releases only and cannot discover newer releases.
 Download the new setup EXE from [Releases](https://github.com/vin10122/LLocalMind/releases),
 close LLocalMind and run it over the existing installation. **Do not uninstall
 first.** Settings, conversations, installed vision runtime and external GGUFs
@@ -137,6 +137,7 @@ sponsored by Apple.
 ## At a glance
 
 - Reads models in GGUF format and lets you chat through the desktop GUI or PowerShell.
+- Optional DuckDuckGo web research can pass up to three public HTTPS pages to the local model.
 - Uses OpenVINO to run calculations on the CPU or a supported Intel device.
 - The model uses a **Mixture of Experts (MoE)** architecture: for each step,
   it activates only some groups of model weights, called *experts*, rather
@@ -345,6 +346,22 @@ design, with the LL/M logo and bundled Sora/Manrope fonts. It includes saved
 conversations, multi-turn context, streaming answers, Copy, Regenerate, Stop,
 local text-file attachment and model/settings selection. User data is stored
 outside the program directory. The existing PowerShell chat remains available.
+
+### Optional web research (v0.2.0)
+
+The **Ricerca web** control is off by default. When enabled for a text-model
+turn, LLocalMind sends that question to DuckDuckGo, reads up to the first three
+usable public HTTPS results, and gives bounded text excerpts and their URLs to
+the local model. The answer is generated locally; the search query and page
+requests do leave the PC. No cookies or local files are sent. External page
+text is treated as untrusted evidence, not as instructions. Search is not
+available in the separate Vision engine.
+
+In the CLI, opt in per run with `--web-search`:
+
+```powershell
+py -3.14 chat.py default --web-search "Quali sono le novità recenti?"
+```
 
 ### Image input (v0.1.3 and newer)
 
@@ -617,6 +634,10 @@ py -3.14 chat.py default
 
 Enter a prompt after the `>` symbol. To exit, type `/exit` or press
 `Ctrl+C`.
+
+To explicitly enable DuckDuckGo research for a CLI prompt, add `--web-search`.
+This sends the query to DuckDuckGo and retrieves up to three public HTTPS
+pages; without the flag, the CLI makes no web requests.
 
 The preset runs the main model on the CPU and uses the Intel GPU for DeltaNet
 projections and full attention. If the GPU or its driver is unavailable, use

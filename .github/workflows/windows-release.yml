@@ -159,6 +159,7 @@ jobs:
           - No Python installation is required. GGUF models are external and are not included.
           - Each generated answer shows its token count and measured decode speed; these metrics are saved with conversations.
           - Stable v0.1.10 gives more complete answers by default and raises the maximum response length from 128 to 512 tokens.
+          - v0.2.0 adds opt-in DuckDuckGo research: up to three public HTTPS pages are excerpted for the local text model. The query and page requests leave the PC; web text is treated as untrusted input.
           - The v0.1.9 CPU-only vision path is retained; both the vision encoder and language model run on CPU.
           - The packaged vision runtime is pinned to the official Windows CPU build. Advanced visual-token settings are unchanged; real-model image quality and CPU performance still require target-PC validation.
           - New: bounded visual-token/batch/cache defaults, image/prefix reuse, lazy vision imports and engine-specific reloads. Advanced settings expose the speed/detail tradeoff.
