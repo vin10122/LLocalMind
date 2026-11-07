@@ -20,6 +20,7 @@ from .shared_expert import SharedExpert
 from .embedding import EmbeddingLookup, LMHead, sample
 from .transformer import TransformerBlock
 from .gated_deltanet import GatedDeltaNetLayer, is_recurrent_layer, load_layer_weights
+from .multimodal import MultiModalProjector, ImageEmbedding
 
 import gguf
 import openvino as ov
@@ -54,6 +55,7 @@ class Qwen3MoEModel:
         native_library: Path | None = None,
         expert_workers: int = 4,
         prefill_threads: int = 4,
+        mmproj_path: Path | str | None = None,
     ) -> None:
         startup_phase_started = time.perf_counter()
 
@@ -239,6 +241,22 @@ class Qwen3MoEModel:
             )
         startup_phase("shared expert (lettura e conversione pesi)")
         report_progress(35, "Shared expert ready")
+
+        # Proiettore multimodale (mmproj): se fornito, carica i pesi del
+        # proiettore visione->testo da un file .mmproj GGUF. Serve a
+        # trasformare un'immagine in un embedding inseribile nel contesto.
+        self.mmproj: MultiModalProjector | None = None
+        if mmproj_path is not None:
+            mm_started = time.perf_counter()
+            self.mmproj = MultiModalProjector(
+                mmproj_path, hidden_size=self.hidden_size, device=device
+            )
+            if profile_startup:
+                print(f"[Startup detail] multimodal projector: "
+                      f"{time.perf_counter() - mm_started:.2f} s",
+                      flush=True)
+        startup_phase("proiettore multimodale (mmproj)")
+        report_progress(37, "Multimodal projector ready")
 
         # Build transformer blocks
         self.blocks: list[TransformerBlock] = []
@@ -700,3 +718,22 @@ class Qwen3MoEModel:
     def close(self) -> None:
         self.backend.close()
         self.store.close()
+
+    def embed_image(
+        self,
+        image_path: Path | str,
+        patch_size: int = 14,
+        n_patches_per_side: int = 24,
+    ) -> ImageEmbedding | None:
+        """Trasforma un'immagine in un embedding inseribile nel contesto testo.
+
+        Richiede che il modello sia stato inizializzato con ``mmproj_path``.
+        Restituisce ``None`` se il proiettore multimodale non e' disponibile.
+        """
+        if self.mmproj is None:
+            return None
+        return self.mmproj.embed_image(
+            image_path,
+            patch_size=patch_size,
+            n_patches_per_side=n_patches_per_side,
+        )
