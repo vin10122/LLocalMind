@@ -271,6 +271,8 @@ class DesktopTests(unittest.TestCase):
     def test_template_and_schedule_format(self):
         history=[dict(role='user',content='Uno'),dict(role='assistant',content='Due'),dict(role='user',content='Tre')]
         text=format_conversation(history)
+        self.assertIn("Rispondi nella lingua dell'utente",text)
+        self.assertIn('dai una risposta chiara e completa',text.casefold())
         self.assertIn('<|im_start|>assistant\nDue<|im_end|>',text)
         self.assertTrue(text.endswith('<|im_start|>assistant\n<think>\n\n</think>\n\n'))
         for invalid in ([],history[:-1],[dict(role='assistant',content='No')],[None]):
@@ -391,19 +393,20 @@ class DesktopTests(unittest.TestCase):
         worker.stats.connect(stats.append)
         worker.reply_finished.connect(done.append)
         worker.error.connect(errors.append)
-        worker.generate([dict(role='user',content='Domanda')],self.state.settings)
+        options=dict(self.state.settings,max_tokens=128)
+        worker.generate([dict(role='user',content='Domanda')],options)
         self.assertEqual(''.join(output),'Ciao!')
         self.assertEqual(stats[-1]['rate'],1)
         self.assertEqual(done[-1],'complete')
         self.assertTrue(worker.model.drained)
         self.assertFalse(errors)
         worker.model.max_seq_len=2
-        worker.generate([dict(role='user',content='Domanda')],self.state.settings)
+        worker.generate([dict(role='user',content='Domanda')],options)
         self.assertEqual(done[-1],'error')
         self.assertIn('contesto',errors[-1])
         worker.model.max_seq_len=256
         worker.token.connect(lambda text:worker.stop.set())
-        worker.generate([dict(role='user',content='Domanda')],self.state.settings)
+        worker.generate([dict(role='user',content='Domanda')],options)
         self.assertEqual(done[-1],'stopped')
         self.assertEqual(stats[-1]['tokens'],1)
         self.assertIsNone(stats[-1]['rate'])

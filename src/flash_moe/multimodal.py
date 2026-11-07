@@ -117,7 +117,7 @@ class LocalVisionModel:
             self.close()
             raise
 
-    def generate(self,messages,*,max_tokens=128,temperature=0,seed=0,
+    def generate(self,messages,*,max_tokens=512,temperature=0,seed=0,
                  stop=None,on_text=lambda _:None):
         stop=stop or threading.Event()
         if stop.is_set():raise VisionCancelled()

@@ -353,8 +353,8 @@ RGB-average projector has been removed: it did not execute the trained vision
 tower and its output was not passed to the model. Native OpenVINO vision is
 not implemented. Image requests now use a separate **local llama.cpp
 engine**, which runs the supported model's actual vision tower, projector and
-multimodal prefill. The language model and image encoder run on CPU in v0.1.9
-stable. Text-engine token rates do not apply to this path.
+multimodal prefill. The language model and image encoder run on CPU in the
+stable release. Text-engine token rates do not apply to this path.
 
 You need your language-model GGUF, its **compatible mmproj GGUF**, and a
 llama.cpp runtime that supports that model architecture. **Since v0.1.5 the
@@ -427,7 +427,7 @@ vision startup, compatibility and performance with the exact Hermes/mmproj
 still require target-PC validation.** Automated tests cover transport, pixels,
 history, cleanup and cancellation using a test server, not a trained model.
 
-### CPU-only image encoder (v0.1.9 stable)
+### CPU-only image encoder
 
 The stable release runs both the vision encoder and language model on CPU.
 GPU image-encoder offload is not supported. The installer uses a pinned,
@@ -624,15 +624,19 @@ projections and full attention. If the GPU or its driver is unavailable, use
 
 The `default` preset selects CPU for the main device, GPU for DeltaNet and
 full-attention projections, cache sizes of 320 and 1, deterministic
-sampling, and a 128-token maximum. It uses native expert decode automatically
+sampling, and a 512-token maximum. It uses native expert decode automatically
 when the CPU and compiled DLL support it; otherwise it reports an OpenVINO
 fallback. Explicit command-line flags override the preset. Append a prompt after `default` for a
 one-shot run.
 
-The assistant is instructed to keep its answers concise. `--max-tokens` is
-a **maximum limit**, not a required answer length: generation stops earlier
-if the model emits its end-of-response token. If it reaches the limit, the
-answer may be incomplete; in that case, raise the limit further.
+The assistant is instructed to give clear, complete answers and explain
+important details, while keeping simple answers direct and avoiding filler.
+`--max-tokens` is a **maximum limit**, not a required answer length: generation
+stops earlier if the model emits its end-of-response token. If it reaches the
+limit, the answer may be incomplete; in that case, raise the limit further.
+The default answer limit is 512 tokens; existing settings using the old
+128-token default are raised to 512 (or the available context limit), while
+other explicitly chosen limits are preserved.
 
 After each answer, the program reports generated tokens per second, prompt
 processing time, and some cache statistics. Initial model loading may take
@@ -730,8 +734,8 @@ set `FLASH_MOE_LCPP_EVAL` to its path before running the script.
 - Generation is slow compared with online services and systems with a
   discrete GPU.
 - Performance depends heavily on model-file access and available memory.
-- The concise-answer instruction can help limit answer length, but the
-  model's behavior varies; the token limit can still cut off a long answer.
+- The assistant is prompted to give complete answers, but model behavior
+  varies; the 512-token default limit can still cut off a long answer.
 - This is not yet ready for production use.
 
 ## Code license

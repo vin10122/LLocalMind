@@ -112,8 +112,8 @@ py -3.14 chat.py default
 
 | Opzione | Descrizione | Default |
 |---------|-------------|---------|
-| `--max-tokens N` | Numero massimo di token generati | 128 |
-| `--max-seq N` | Dimensione massima del contesto | 128 |
+| `--max-tokens N` | Numero massimo di token generati | 512 |
+| `--max-seq N` | Dimensione massima del contesto | 2048 |
 | `--temp F` | Temperatura per sampling | 0 |
 | `--cache N` | Dimensione cache esperti quantizzati | 320 |
 | `--weight-cache N` | Dimensione cache pesi convertiti | 1 |

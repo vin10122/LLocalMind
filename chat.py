@@ -167,7 +167,7 @@ class LiveProfiler:
 
 
 def encode_user_turn(tok: GGUFTokenizer, prompt: str) -> list[int]:
-    """Codifica una domanda con l'istruzione di risposta concisa."""
+    """Codifica una domanda con le istruzioni di risposta."""
     formatted = format_conversation([{"role": "user", "content": prompt}])
     return tok.encode(formatted, add_bos=False)
 
@@ -193,8 +193,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--attention-device", default="GPU", choices=("CPU", "GPU", "NPU"),
                         help="dispositivo OpenVINO per le proiezioni full "
                              "attention FP16. Default: GPU (con XMX).")
-    parser.add_argument("--max-tokens", type=int, default=128,
-                        help="token massimi da generare. Default 128.")
+    parser.add_argument("--max-tokens", type=int, default=512,
+                        help="token massimi da generare. Default 512.")
     parser.add_argument("--temp", type=float, default=0.0,
                         help="temperatura del campionamento. 0 = greedy. "
                              "Default 0 (greedy).")
@@ -218,8 +218,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Worker expert nel decode. Default 4.")
     parser.add_argument("--prefill-threads", type=int, default=4,
                         help="Thread OpenVINO CPU per gruppi di token. Default 4.")
-    parser.add_argument("--max-seq", type=int, default=512,
-                        help="lunghezza massima del contesto. Default 512.")
+    parser.add_argument("--max-seq", type=int, default=2048,
+                        help="lunghezza massima del contesto. Default 2048.")
     parser.add_argument("--preload", action="store_true",
                         help="Pre-carica tutti gli expert in cache prima della generazione")
     parser.add_argument("--mmap", action="store_true",

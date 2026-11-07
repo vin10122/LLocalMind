@@ -11,7 +11,7 @@ from .app_paths import user_data_dir
 from .metrics import clean_stats
 from .images import validate_images
 
-DEFAULTS = dict(model_path='', max_tokens=128, max_seq=2048, cache=320,
+DEFAULTS = dict(model_path='', max_tokens=512, max_seq=2048, cache=320,
                 weight_cache=1, expert_workers=4, prefill_threads=4,
                 ssm_device='GPU', attention_device='GPU', temperature=0.0,
                 engine='optimized',vision_executable='',vision_projector='',
@@ -39,6 +39,8 @@ def validate_settings(values):
                            ('expert_workers',1,16), ('prefill_threads',1,16)]:
         if type(result[key]) is not int or not low <= result[key] <= high:
             raise ValueError(f'Impostazione non valida: {key}')
+    if result['max_tokens'] == 128:
+        result['max_tokens'] = min(512, result['max_seq'] - 1)
     if result['max_tokens'] >= result['max_seq']:
         raise ValueError('Il limite di output deve essere inferiore al contesto')
     for key,low,high in (('vision_image_tokens',64,8192),('vision_batch',32,2048),

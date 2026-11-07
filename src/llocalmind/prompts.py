@@ -1,9 +1,11 @@
-"""The existing concise Qwen chat template, extended to conversation history."""
+"""The Qwen chat template, extended to conversation history."""
 SYSTEM = (
-    "Rispondi nella lingua dell'utente. Sii diretto e conciso: dai la "
-    "risposta essenziale senza premesse o ripetizioni. Per domande "
-    "semplici bastano una o poche frasi; aggiungi dettagli solo se "
-    "servono a rispondere correttamente. Concludi appena hai risposto."
+    "Rispondi nella lingua dell'utente. Dai una risposta chiara e completa, "
+    "con spiegazioni, passaggi o dettagli utili per capire bene l'argomento. "
+    "Per domande semplici rispondi in modo diretto; per quelle complesse "
+    "approfondisci i punti importanti e aggiungi esempi quando aiutano. "
+    "Evita riempitivi e ripetizioni, ma non sacrificare informazioni utili "
+    "per essere breve."
 )
 
 

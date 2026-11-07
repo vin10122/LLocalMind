@@ -13,6 +13,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path[:0]=[str(ROOT/'src'),str(ROOT)]
 from llocalmind.state import DEFAULTS,engine_signature,validate_settings
 from llocalmind.images import ImagePayloadCache,chat_messages,import_image
+from llocalmind.prompts import SYSTEM
 from PIL import Image
 
 
@@ -68,6 +69,21 @@ class PerformancePolicyTests(unittest.TestCase):
         import chat
         args=chat.build_parser().parse_args([])
         self.assertEqual((args.vision_threads,args.vision_batch,args.vision_ubatch),(8,2048,1024))
+
+    def test_longer_answer_defaults_and_legacy_settings_migration(self):
+        self.assertEqual(DEFAULTS['max_tokens'],512)
+        legacy=validate_settings({'max_tokens':128})
+        self.assertEqual(legacy['max_tokens'],512)
+        small_context=validate_settings({'max_tokens':128,'max_seq':256})
+        self.assertEqual(small_context['max_tokens'],255)
+        custom=validate_settings({'max_tokens':256})
+        self.assertEqual(custom['max_tokens'],256)
+        import chat
+        args=chat.build_parser().parse_args([])
+        self.assertEqual(args.max_tokens,512)
+        self.assertEqual(args.max_seq,2048)
+        self.assertIn('dai una risposta chiara e completa',SYSTEM.casefold())
+        self.assertIn('non sacrificare informazioni utili',SYSTEM.casefold())
 
     def test_image_payload_is_reused_but_changed_file_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
