@@ -399,7 +399,7 @@ class Qwen3MoEModel:
         shape = tuple(int(s) for s in reversed(t.shape))
 
         if ttype == 1:  # F16
-            return t.data.astype(np.float16).reshape(shape)
+            return np.asarray(t.data,dtype=np.float16).reshape(shape)
         elif ttype == 0:  # F32
             return np.asarray(t.data, dtype=np.float16).reshape(shape)
         else:

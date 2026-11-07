@@ -162,8 +162,10 @@ class KVCache:
 
     def reset(self) -> None:
         shape = (self.max_seq_len, self.num_kv_heads, self.head_dim)
-        self._key_storage = np.empty(shape, dtype=self.dtype)
-        self._value_storage = np.empty(shape, dtype=self.dtype)
+        storage=getattr(self,'_key_storage',None)
+        if storage is None or storage.shape!=shape or storage.dtype!=np.dtype(self.dtype):
+            self._key_storage = np.empty(shape, dtype=self.dtype)
+            self._value_storage = np.empty(shape, dtype=self.dtype)
         self.keys = self._key_storage[:0]
         self.values = self._value_storage[:0]
         self.seq_len = 0
@@ -367,8 +369,13 @@ class AttentionLayer:
     # ---------------------------------------------------------------- cache
 
     def init_cache(self, max_seq_len: int) -> None:
-        self._cache = KVCache(self.num_kv_heads, self.kv_head_dim,
-                              max_seq_len=max_seq_len)
+        if (self._cache is not None and self._cache.max_seq_len==max_seq_len
+                and self._cache.num_kv_heads==self.num_kv_heads
+                and self._cache.head_dim==self.kv_head_dim):
+            self._cache.reset()
+        else:
+            self._cache = KVCache(self.num_kv_heads, self.kv_head_dim,
+                                  max_seq_len=max_seq_len)
 
     @property
     def cache(self) -> KVCache | None:

@@ -18,11 +18,11 @@ high-memory discrete graphics card.
 
 ## Install on Windows
 
-The latest Windows preview is available in [release v0.1.5](https://github.com/vin10122/LLocalMind/releases/tag/v0.1.5):
+The latest Windows preview is available in [release v0.1.6](https://github.com/vin10122/LLocalMind/releases/tag/v0.1.6):
 
 ### Recommended: Windows installer
 
-1. Download **[LLocalMind-Setup-0.1.5-windows-x64.exe](https://github.com/vin10122/LLocalMind/releases/download/v0.1.5/LLocalMind-Setup-0.1.5-windows-x64.exe)**.
+1. Download **[LLocalMind-Setup-0.1.6-windows-x64.exe](https://github.com/vin10122/LLocalMind/releases/download/v0.1.6/LLocalMind-Setup-0.1.6-windows-x64.exe)**.
 2. Run the installer, then open **LLocalMind** from the Start menu.
 3. Open **Impostazioni → Sfoglia**, select your compatible local **GGUF** file,
    and save. Wait for the model status to become **Pronto**, then send a message.
@@ -38,7 +38,7 @@ select CPU for DeltaNet and Full attention under advanced settings.
 
 ### Portable version
 
-1. Download **[LLocalMind-0.1.5-windows-x64-portable.zip](https://github.com/vin10122/LLocalMind/releases/download/v0.1.5/LLocalMind-0.1.5-windows-x64-portable.zip)**.
+1. Download **[LLocalMind-0.1.6-windows-x64-portable.zip](https://github.com/vin10122/LLocalMind/releases/download/v0.1.6/LLocalMind-0.1.6-windows-x64-portable.zip)**.
 2. Extract the **whole ZIP**, then open `LLocalMind\LLocalMind.exe`.
 3. Select the GGUF in settings as described above.
 
@@ -60,7 +60,7 @@ choose the download, then confirm installation. LLocalMind verifies the
 installer's SHA-256, saves the conversation, closes the model and exits. The
 installer updates the same application and reopens it when complete.
 
-**v0.1.5 is a preview, not a stable release.** Starting with this version,
+**v0.1.6 is a preview, not a stable release.** Since v0.1.5,
 the updater includes public prereleases and selects the highest newer numeric
 `MAJOR.MINOR.PATCH` version among the most recent 100 releases. Drafts, equal
 versions and downgrades are excluded. Preview updates are labelled **anteprima**.
@@ -427,6 +427,39 @@ plus its vision encoder may page heavily. **Real image-answer quality, Windows
 vision startup, compatibility and performance with the exact Hermes/mmproj
 still require target-PC validation.** Automated tests cover transport, pixels,
 history, cleanup and cancellation using a test server, not a trained model.
+
+### Vision performance controls (v0.1.6 preview)
+
+The default CPU profile now limits each image to **768 visual tokens**, uses
+batch 512 / microbatch 256 and caps the prompt-cache allowance at 128 MiB.
+These settings are available under advanced options. Reducing visual tokens
+can speed image processing but lose fine details or small text. Warm-up stays
+enabled; disabling it moves some startup work to the first request.
+
+Image payloads and matching prompt prefixes are reused where possible. Startup
+no longer imports the native OpenVINO stack for vision, and irrelevant settings
+no longer reload the model. Native text prefill also batches shared experts on
+long inputs, and reuses compatible KV storage between requests.
+
+**The vision runtime remains CPU-only. No new target-PC vision speed is
+claimed:** the 35B model plus encoder can still exceed the practical RAM
+budget on a 16 GiB PC. See the [performance audit](docs/performance-audit.md)
+for findings, tradeoffs and the limits of the available measurements.
+
+Latest load/request reports are written automatically to
+`%LOCALAPPDATA%\LLocalMind\logs\performance-load.json` and
+`performance-request.json`, without prompts or images. To measure startup and
+two image requests using your saved settings, **close the GUI first**, then run:
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\LLocalMind\LLocalMind-Diagnostics.exe" --benchmark-vision --image "C:\path\image.jpg"
+```
+
+For portable installs, use the diagnostics EXE beside the app. From source:
+`py -3.14 tools\bench_vision.py --image "C:\path\image.jpg"`.
+The report is saved to `%LOCALAPPDATA%\LLocalMind\logs\vision-benchmark.json`.
+The second identical request may benefit from warm-up/prefix caching; compare
+first-token latency and prefill as well as decode tok/s.
 
 ![LLocalMind desktop preview](docs/llocalmind-desktop.png)
 

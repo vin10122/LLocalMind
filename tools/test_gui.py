@@ -140,6 +140,18 @@ class DesktopTests(unittest.TestCase):
         self.assertFalse(window._thread.isRunning())
         self.assertEqual(len(LocalState(self.temp.name).chats[0]['messages']),2)
 
+    def test_stream_bursts_are_coalesced_without_losing_final_text(self):
+        window=self.window()
+        window.current['messages']=[dict(role='assistant',content='')]
+        widget=window._active_reply=window._add_message('assistant','',pending=True)
+        with patch.object(widget,'update_text',wraps=widget.update_text) as render:
+            for _ in range(100):window._token('x')
+            self.assertEqual(render.call_count,1)
+            self.wait(lambda:render.call_count==2)
+            window._reply_finished('complete')
+            self.assertEqual(widget.text,'x'*100)
+            self.assertEqual(render.call_count,3)
+
     def test_per_response_metrics_survive_reload_and_regeneration(self):
         window=self.window()
         window.load_model()

@@ -199,7 +199,7 @@ class SharedExpert:
 
     def forward_batch(self, layer: int, activations: np.ndarray
                       ) -> np.ndarray | None:
-        """Shared contribution for short prefill, reusing weights across tokens."""
+        """Shared contribution for a bounded prefill chunk, reusing weights."""
         weights = self.layers.get(layer)
         if weights is None:
             return None

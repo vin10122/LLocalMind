@@ -1,78 +1,119 @@
-from .key import ExpertKey, StoreStats
-from .manifest import ExpertManifest, ExpertRecord, ExpertTensorSlice
-from .store import ExpertStore, RAMBoundedExpertStore, AsyncExpertStore
-from .paths import MODEL_FILENAME, dll_path, model_path, require_model
-from .dequant import (
-    GGML_BLOCK_INFO,
-    dequantize,
-    dequantize_to,
-    is_aligned,
-    name_of,
-    type_name_map,
-)
-from .norm import RMSNorm, rmsnorm_numpy
-from .rope import RoPE, DEFAULT_HEAD_DIM, DEFAULT_HEAD_COUNT, DEFAULT_KV_HEAD_COUNT, DEFAULT_ROPE_DIM, DEFAULT_FREQ_BASE
-from .attention import AttentionLayer, KVCache, scaled_dot_product_attention, softmax
-from .embedding import EmbeddingLookup, LMHead, argmax_sample, sample
-from .router import ExpertRouter, routers_from_gguf, synthetic_router
-from .tokenizer import GGUFTokenizer, StreamingDetokenizer
-from .backend_ov import OpenVINOExpertBackend
-from .transformer import TransformerBlock
-from .model import Qwen3MoEModel
-from .engine import MoEEngine
-from .multimodal import MultiModalProjector, LocalVisionModel
-from .utils import pack_expert, pack_f32, unpack_f32, pack_f16, unpack_f16, write_manifest
+"""Public exports loaded on demand; vision-only use needs no NumPy/OpenVINO."""
+from importlib import import_module
 
-__all__ = [
-    "ExpertKey",
-    "StoreStats",
-    "ExpertManifest",
-    "ExpertRecord",
-    "ExpertTensorSlice",
-    "ExpertStore",
-    "RAMBoundedExpertStore",
-    "AsyncExpertStore",
-    "MODEL_FILENAME",
-    "dll_path",
-    "model_path",
-    "require_model",
-    "GGML_BLOCK_INFO",
-    "dequantize",
-    "dequantize_to",
-    "is_aligned",
-    "name_of",
-    "type_name_map",
-    "OpenVINOExpertBackend",
-    "ExpertRouter",
-    "routers_from_gguf",
-    "synthetic_router",
-    "MoEEngine",
-    "pack_expert",
-    "pack_f32",
-    "unpack_f32",
-    "pack_f16",
-    "unpack_f16",
-    "write_manifest",
-    "RMSNorm",
-    "rmsnorm_numpy",
-    "RoPE",
-    "DEFAULT_HEAD_DIM",
-    "DEFAULT_HEAD_COUNT",
-    "DEFAULT_KV_HEAD_COUNT",
-    "DEFAULT_ROPE_DIM",
-    "DEFAULT_FREQ_BASE",
-    "AttentionLayer",
-    "KVCache",
-    "scaled_dot_product_attention",
-    "softmax",
-    "EmbeddingLookup",
-    "LMHead",
-    "argmax_sample",
-    "sample",
-    "TransformerBlock",
-    "Qwen3MoEModel",
-    "GGUFTokenizer",
-    "StreamingDetokenizer",
-    "MultiModalProjector",
-    "LocalVisionModel",
-]
+_MODULES = {'ExpertKey': '.key',
+ 'StoreStats': '.key',
+ 'ExpertManifest': '.manifest',
+ 'ExpertRecord': '.manifest',
+ 'ExpertTensorSlice': '.manifest',
+ 'ExpertStore': '.store',
+ 'RAMBoundedExpertStore': '.store',
+ 'AsyncExpertStore': '.store',
+ 'MODEL_FILENAME': '.paths',
+ 'dll_path': '.paths',
+ 'model_path': '.paths',
+ 'require_model': '.paths',
+ 'GGML_BLOCK_INFO': '.dequant',
+ 'dequantize': '.dequant',
+ 'dequantize_to': '.dequant',
+ 'is_aligned': '.dequant',
+ 'name_of': '.dequant',
+ 'type_name_map': '.dequant',
+ 'RMSNorm': '.norm',
+ 'rmsnorm_numpy': '.norm',
+ 'RoPE': '.rope',
+ 'DEFAULT_HEAD_DIM': '.rope',
+ 'DEFAULT_HEAD_COUNT': '.rope',
+ 'DEFAULT_KV_HEAD_COUNT': '.rope',
+ 'DEFAULT_ROPE_DIM': '.rope',
+ 'DEFAULT_FREQ_BASE': '.rope',
+ 'AttentionLayer': '.attention',
+ 'KVCache': '.attention',
+ 'scaled_dot_product_attention': '.attention',
+ 'softmax': '.attention',
+ 'EmbeddingLookup': '.embedding',
+ 'LMHead': '.embedding',
+ 'argmax_sample': '.embedding',
+ 'sample': '.embedding',
+ 'ExpertRouter': '.router',
+ 'routers_from_gguf': '.router',
+ 'synthetic_router': '.router',
+ 'GGUFTokenizer': '.tokenizer',
+ 'StreamingDetokenizer': '.tokenizer',
+ 'OpenVINOExpertBackend': '.backend_ov',
+ 'TransformerBlock': '.transformer',
+ 'Qwen3MoEModel': '.model',
+ 'MoEEngine': '.engine',
+ 'MultiModalProjector': '.multimodal',
+ 'LocalVisionModel': '.multimodal',
+ 'pack_expert': '.utils',
+ 'pack_f32': '.utils',
+ 'unpack_f32': '.utils',
+ 'pack_f16': '.utils',
+ 'unpack_f16': '.utils',
+ 'write_manifest': '.utils'}
+
+__all__ = ['ExpertKey',
+ 'StoreStats',
+ 'ExpertManifest',
+ 'ExpertRecord',
+ 'ExpertTensorSlice',
+ 'ExpertStore',
+ 'RAMBoundedExpertStore',
+ 'AsyncExpertStore',
+ 'MODEL_FILENAME',
+ 'dll_path',
+ 'model_path',
+ 'require_model',
+ 'GGML_BLOCK_INFO',
+ 'dequantize',
+ 'dequantize_to',
+ 'is_aligned',
+ 'name_of',
+ 'type_name_map',
+ 'OpenVINOExpertBackend',
+ 'ExpertRouter',
+ 'routers_from_gguf',
+ 'synthetic_router',
+ 'MoEEngine',
+ 'pack_expert',
+ 'pack_f32',
+ 'unpack_f32',
+ 'pack_f16',
+ 'unpack_f16',
+ 'write_manifest',
+ 'RMSNorm',
+ 'rmsnorm_numpy',
+ 'RoPE',
+ 'DEFAULT_HEAD_DIM',
+ 'DEFAULT_HEAD_COUNT',
+ 'DEFAULT_KV_HEAD_COUNT',
+ 'DEFAULT_ROPE_DIM',
+ 'DEFAULT_FREQ_BASE',
+ 'AttentionLayer',
+ 'KVCache',
+ 'scaled_dot_product_attention',
+ 'softmax',
+ 'EmbeddingLookup',
+ 'LMHead',
+ 'argmax_sample',
+ 'sample',
+ 'TransformerBlock',
+ 'Qwen3MoEModel',
+ 'GGUFTokenizer',
+ 'StreamingDetokenizer',
+ 'MultiModalProjector',
+ 'LocalVisionModel']
+
+
+def __getattr__(name):
+    module = _MODULES.get(name)
+    if module is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    value = getattr(import_module(module, __name__), name)
+    globals()[name] = value
+    return value
+
+
+def __dir__():
+    return sorted(set(globals()) | set(_MODULES))

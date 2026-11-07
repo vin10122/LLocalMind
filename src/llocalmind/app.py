@@ -18,7 +18,7 @@ from .inference import ModelWorker
 from .images import MAX_IMAGES,import_image
 from .metrics import clean_stats, response_summary
 from .settings_dialog import SettingsDialog
-from .state import LocalState, new_chat
+from .state import LocalState, new_chat, engine_signature
 from .theme import apply_theme
 from .update_worker import UpdateTask
 from .updater import UpdateManager
@@ -101,6 +101,10 @@ class MainWindow(QMainWindow):
         self._timer=QTimer(self)
         self._timer.setInterval(350)
         self._timer.timeout.connect(self._animate)
+        self._render_timer=QTimer(self)
+        self._render_timer.setSingleShot(True)
+        self._render_timer.setInterval(40)
+        self._render_timer.timeout.connect(self._flush_reply)
         self._dot=0
         self._phase=''
         if demo:
@@ -388,9 +392,8 @@ class MainWindow(QMainWindow):
         except (OSError,ValueError) as error:
             self._notice(str(error))
             return
-        engine_keys=set(previous)-{'max_tokens','temperature'}
         active=self._loaded_options or previous
-        changed=any(active[key]!=dialog.values[key] for key in engine_keys)
+        changed=engine_signature(active)!=engine_signature(dialog.values)
         if not self.demo and dialog.values['model_path'] and (changed or not self.ready) and not self.busy and not self.loading:
             self.load_model()
 
@@ -492,9 +495,16 @@ class MainWindow(QMainWindow):
     def _token(self,text):
         if self._active_reply is not None:
             message=self.current['messages'][-1]
+            first=not message['content']
             message['content']+=text
-            self._active_reply.update_text(message['content'],pending=True)
+            if first:self._active_reply.update_text(message['content'],pending=True)
+            elif not self._render_timer.isActive():self._render_timer.start()
             self._phase='Generazione'
+
+    @Slot()
+    def _flush_reply(self):
+        if self._active_reply is not None:
+            self._active_reply.update_text(self.current['messages'][-1]['content'],pending=True)
 
     @Slot(dict)
     def _stats(self,stats):
@@ -518,6 +528,7 @@ class MainWindow(QMainWindow):
 
     @Slot(str)
     def _reply_finished(self,status):
+        self._render_timer.stop()
         self.busy=False
         self._timer.stop()
         if self._active_reply is not None:

@@ -18,7 +18,9 @@ def run(args,model_path):
             images=[import_image(args.image,directory)] if args.image else []
             engine=LocalVisionModel(model_path,args.mmproj,args.llama_server,
                 max_seq=args.max_seq,threads=args.expert_workers,prefill_threads=args.prefill_threads,
-                log_path=data_root()/'logs/vision.log')
+                log_path=data_root()/'logs/vision.log',image_max_tokens=args.vision_image_tokens,
+                batch_tokens=args.vision_batch,ubatch_tokens=args.vision_ubatch,
+                cache_mib=args.vision_cache_mib,warmup=not args.vision_no_warmup)
             print('[Vision] llama.cpp locale su CPU; il motore testo OpenVINO non viene caricato.',flush=True)
             engine.start(progress=lambda _,label:print(label,flush=True))
             def ask(prompt):

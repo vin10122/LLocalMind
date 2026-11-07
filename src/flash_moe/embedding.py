@@ -53,7 +53,7 @@ class EmbeddingLookup:
         vocab_size, hidden_size = shape
 
         if tensor_type == 1:  # F16
-            weight = tensor.data.astype(np.float16)
+            weight = np.asarray(tensor.data,dtype=np.float16)
         elif tensor_type in (0,):  # F32
             weight = np.asarray(tensor.data, dtype=np.float16)
         else:
@@ -161,7 +161,7 @@ class LMHead:
 
         dequant_started = time.perf_counter()
         if tensor_type == 1:  # F16
-            weight = tensor.data.astype(np.float16)
+            weight = np.asarray(tensor.data,dtype=np.float16)
         elif tensor_type in (0,):  # F32
             weight = np.asarray(tensor.data, dtype=np.float16)
         else:

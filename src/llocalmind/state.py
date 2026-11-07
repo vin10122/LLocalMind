@@ -14,7 +14,9 @@ from .images import validate_images
 DEFAULTS = dict(model_path='', max_tokens=128, max_seq=2048, cache=320,
                 weight_cache=1, expert_workers=4, prefill_threads=4,
                 ssm_device='GPU', attention_device='GPU', temperature=0.0,
-                engine='optimized',vision_executable='',vision_projector='')
+                engine='optimized',vision_executable='',vision_projector='',
+                vision_image_tokens=768,vision_batch=512,vision_ubatch=256,
+                vision_cache_mib=128,vision_warmup=True)
 
 
 def validate_settings(values):
@@ -34,12 +36,29 @@ def validate_settings(values):
             raise ValueError(f'Impostazione non valida: {key}')
     if result['max_tokens'] >= result['max_seq']:
         raise ValueError('Il limite di output deve essere inferiore al contesto')
+    for key,low,high in (('vision_image_tokens',64,8192),('vision_batch',32,2048),
+                        ('vision_ubatch',32,2048),('vision_cache_mib',0,1024)):
+        if type(result[key]) is not int or not low<=result[key]<=high:
+            raise ValueError('Impostazione vision non valida: '+key)
+    if result['vision_ubatch']>result['vision_batch'] or type(result['vision_warmup']) is not bool:
+        raise ValueError('Profilo vision non valido')
     for key in ('ssm_device','attention_device'):
         if result[key] not in ('CPU','GPU','NPU'):
             raise ValueError('Dispositivo non valido')
     if type(result['temperature']) not in (int,float) or not 0 <= result['temperature'] <= 2:
         raise ValueError('Temperatura non valida')
     return result
+
+
+def engine_signature(values):
+    """Only options actually consumed by the selected engine cause a reload."""
+    common=('engine','model_path','max_seq','expert_workers','prefill_threads')
+    if values['engine']=='vision':
+        keys=common+('vision_executable','vision_projector','vision_image_tokens',
+                     'vision_batch','vision_ubatch','vision_cache_mib','vision_warmup')
+    else:
+        keys=common+('cache','weight_cache','ssm_device','attention_device')
+    return tuple((key,values[key]) for key in keys)
 
 
 def new_chat():

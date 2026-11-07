@@ -1,9 +1,9 @@
 from pathlib import Path
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
                                QFileDialog, QFormLayout, QGroupBox, QHBoxLayout,
                                QLabel, QLineEdit, QMessageBox, QPushButton,
-                               QSpinBox, QVBoxLayout, QWidget)
+                               QScrollArea, QSpinBox, QVBoxLayout, QWidget)
 from . import __version__
 from .state import validate_settings
 
@@ -89,6 +89,10 @@ class SettingsDialog(QDialog):
             ('weight_cache','Cache pesi convertiti',1,2048),
             ('expert_workers','Worker esperti CPU',1,16),
             ('prefill_threads','Thread prefill CPU',1,16),
+            ('vision_image_tokens','Token visivi massimi',64,8192),
+            ('vision_batch','Batch vision',32,2048),
+            ('vision_ubatch','Microbatch vision',32,2048),
+            ('vision_cache_mib','Cache prompt vision (MiB)',0,1024),
         ):
             control=QSpinBox()
             control.setRange(low,high)
@@ -96,6 +100,15 @@ class SettingsDialog(QDialog):
             control.setEnabled(not busy)
             self.controls[name]=control
             form.addRow(title,control)
+        warmup=QCheckBox('Prepara il motore prima di «Pronto»')
+        warmup.setChecked(values['vision_warmup'])
+        warmup.setEnabled(not busy)
+        self.controls['vision_warmup']=warmup
+        form.addRow('Vision',warmup)
+        detail=QLabel('Meno token visivi riducono il lavoro ma possono perdere dettagli e scritte piccole. '
+            'Disattivare la preparazione iniziale accelera l’avvio ma può rallentare la prima risposta.')
+        detail.setWordWrap(True)
+        form.addRow(detail)
         for name,title in (('ssm_device','DeltaNet'),('attention_device','Full attention')):
             control=QComboBox()
             control.addItems(['GPU','CPU','NPU'])
@@ -111,9 +124,13 @@ class SettingsDialog(QDialog):
         self.controls['temperature']=temperature
         form.addRow('Temperatura',temperature)
         group_layout=QVBoxLayout(advanced)
-        group_layout.addWidget(inner)
-        inner.setVisible(False)
-        advanced.toggled.connect(inner.setVisible)
+        scroll=QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setMaximumHeight(240)
+        scroll.setWidget(inner)
+        group_layout.addWidget(scroll)
+        scroll.setVisible(False)
+        advanced.toggled.connect(scroll.setVisible)
         layout.addWidget(advanced)
         about=QHBoxLayout()
         about.addWidget(QLabel(f'LLocalMind {__version__}'))
@@ -147,7 +164,8 @@ class SettingsDialog(QDialog):
         values['engine']=self.engine.currentData()
         for key,edit in self.vision_paths.items():values[key]=edit.text().strip()
         for name,control in self.controls.items():
-            values[name]=control.currentText() if isinstance(control,QComboBox) else control.value()
+            values[name]=(control.currentText() if isinstance(control,QComboBox) else
+                          control.isChecked() if isinstance(control,QCheckBox) else control.value())
         return validate_settings(values)
 
     def request_vision_install(self):

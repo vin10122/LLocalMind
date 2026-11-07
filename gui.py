@@ -19,6 +19,9 @@ def main():
         stream = (folder / 'application.log').open('a', encoding='utf-8', buffering=1)
         sys.stdout = sys.stdout or stream
         sys.stderr = sys.stderr or stream
+    if '--benchmark-vision' in sys.argv[1:]:
+        from llocalmind.vision_benchmark import main as benchmark
+        return benchmark(sys.argv[1:])
     from llocalmind.app import main as run
     return run()
 

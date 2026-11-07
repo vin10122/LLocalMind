@@ -5,9 +5,37 @@ import io
 from pathlib import Path
 import re
 from .prompts import SYSTEM
+from collections import OrderedDict
 
 MAX_IMAGES=4
 MAX_BYTES=20*1024**2
+
+
+class ImagePayloadCache:
+    """Bounded encoded-pixel cache, invalidated when a stored file changes."""
+    def __init__(self,max_bytes=16*1024**2):
+        self.max_bytes=max_bytes
+        self.bytes=0
+        self.entries=OrderedDict()
+
+    def encode(self,path,item):
+        info=path.stat()
+        if info.st_size>MAX_BYTES:raise ValueError('Immagine troppo grande')
+        key=(str(path.resolve()),item['id'],info.st_size,info.st_mtime_ns,info.st_ctime_ns)
+        if key in self.entries:
+            self.entries.move_to_end(key)
+            return self.entries[key]
+        data=path.read_bytes()
+        if hashlib.sha256(data).hexdigest()+'.png'!=item['id']:
+            raise ValueError('Immagine salvata danneggiata')
+        value='data:image/png;base64,'+base64.b64encode(data).decode('ascii')
+        if len(value)<=self.max_bytes:
+            while self.entries and self.bytes+len(value)>self.max_bytes:
+                _,old=self.entries.popitem(last=False)
+                self.bytes-=len(old)
+            self.entries[key]=value
+            self.bytes+=len(value)
+        return value
 
 
 def validate_images(images):
@@ -36,7 +64,10 @@ def import_image(filename,directory):
     with Image.open(filename) as source:
         if source.format not in ('PNG','JPEG','WEBP') or source.width*source.height>32_000_000:
             raise ValueError('Usa PNG, JPEG o WebP fino a 32 megapixel')
+        # JPEG can decode at reduced resolution before allocating full pixels.
+        source.draft('RGB',(2048,2048))
         oriented=ImageOps.exif_transpose(source)
+        oriented.thumbnail((2048,2048))
         rgba=oriented.convert('RGBA')
         image=Image.new('RGB',rgba.size,'white')
         image.paste(rgba,mask=rgba.getchannel('A'))
@@ -54,10 +85,11 @@ def import_image(filename,directory):
     return item
 
 
-def chat_messages(messages,directory):
+def chat_messages(messages,directory,*,cache=None):
     if not messages or len(messages)%2!=1:
         raise ValueError('La conversazione deve terminare con una domanda')
     result=[dict(role='system',content=SYSTEM)]
+    cache=cache if cache is not None else ImagePayloadCache(max_bytes=0)
     for index,message in enumerate(messages):
         role='user' if index%2==0 else 'assistant'
         if (not isinstance(message,dict) or message.get('role')!=role
@@ -71,13 +103,9 @@ def chat_messages(messages,directory):
             for item in images:
                 path=image_path(directory,item)
                 try:
-                    if path.stat().st_size>MAX_BYTES:raise ValueError('Immagine troppo grande')
-                    data=path.read_bytes()
+                    encoded=cache.encode(path,item)
                 except OSError as error:
                     raise ValueError('Immagine non disponibile: '+item['name']) from error
-                if hashlib.sha256(data).hexdigest()+'.png'!=item['id']:
-                    raise ValueError('Immagine salvata danneggiata')
-                content.append(dict(type='image_url',image_url=dict(
-                    url='data:image/png;base64,'+base64.b64encode(data).decode('ascii'))))
+                content.append(dict(type='image_url',image_url=dict(url=encoded)))
         result.append(dict(role=role,content=content))
     return result

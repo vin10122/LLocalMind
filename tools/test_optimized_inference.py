@@ -114,7 +114,7 @@ class OptimizedInferenceTests(unittest.TestCase):
         self.assertGreater(int(compiled.get_property("INFERENCE_NUM_THREADS")), 0)
         self.assertEqual(backend.inference_threads, 1)
 
-    def test_short_shared_batch_matches_scalar_and_respects_boundaries(self):
+    def test_chunked_shared_batch_matches_scalar_and_respects_boundaries(self):
         store = self.store(count=4)
         backend = self.backend(store)
         router = synthetic_router(16, 4, 2, seed=19)
@@ -128,12 +128,13 @@ class OptimizedInferenceTests(unittest.TestCase):
         # An independent per-token shared reference keeps the original MoE
         # routing and reduction, without selecting the SharedExpert batch path.
         scalar = SimpleNamespace(forward=shared.forward)
-        for count in (15, 16, 128, 129):
+        for count in (15, 16, 128, 129,257,1155):
             x = (self.rng.standard_normal((count, 16)) * .1).astype(np.float32)
             expected = run_moe_sequence(0, x, router, backend, 16, 16, scalar)
             with patch.object(shared, "forward_batch", wraps=shared.forward_batch) as batch:
                 actual = run_moe_sequence(0, x, router, backend, 16, 16, shared)
-                self.assertEqual(batch.call_count, int(16 <= count <= 128))
+                self.assertEqual(batch.call_count,(count+127)//128 if count>=16 else 0)
+                self.assertTrue(all(call.args[1].shape[0]<=128 for call in batch.call_args_list))
             np.testing.assert_allclose(actual, expected, atol=1e-7, rtol=1e-5)
         x = np.zeros(16, np.float32)
         with patch.object(shared, "forward_batch", wraps=shared.forward_batch) as batch:

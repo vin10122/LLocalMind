@@ -24,6 +24,10 @@ def clean_stats(value):
     if tokens<2:
         result['rate']=None
     result['interrupted']=value.get('interrupted') is True
+    for key in ('input_seconds','startup_seconds'):
+        if key in value:result[key]=_number(value[key])
+    for key in ('prompt_tokens','image_max_tokens','evaluated_prompt_tokens','cached_tokens'):
+        if type(value.get(key)) is int and value[key]>=0:result[key]=value[key]
     return result
 
 

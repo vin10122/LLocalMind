@@ -194,6 +194,12 @@ class Message(QFrame):
             tooltip='Servono almeno due token e un tempo di generazione valido per misurare i tok/s.'
         if stats and stats['interrupted']:
             tooltip+=' Generazione interrotta.'
+        if stats and stats.get('prefill') is not None:
+            tooltip+=f"\nElaborazione prompt: {stats['prefill']:.2f} s."
+        if stats and stats.get('prompt_tokens') is not None:
+            tooltip+=f"\nPrompt: {stats['prompt_tokens']} token; cache: {stats.get('cached_tokens','n/d')}."
+        if stats and stats.get('image_max_tokens') is not None:
+            tooltip+=f"\nLimite per immagine: {stats['image_max_tokens']} token visivi."
         self.metrics_label.setToolTip(tooltip)
 
     def update_text(self,text,pending=False):

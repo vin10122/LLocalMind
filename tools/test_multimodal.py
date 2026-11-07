@@ -181,7 +181,7 @@ class MultimodalTests(unittest.TestCase):
     def test_cli_vision_bypasses_native_model_and_sends_pixels(self):
         import chat
         engine=Mock();engine.generate.return_value=dict(tokens=2,rate=2)
-        with patch('chat.model_path',return_value=self.model),patch('chat.Qwen3MoEModel') as native, \
+        with patch('chat.model_path',return_value=self.model),patch('chat._load_text_model') as native, \
                 patch('llocalmind.vision_cli.LocalVisionModel',return_value=engine):
             self.assertEqual(chat.main(['--mmproj',str(self.projector),'--llama-server',sys.executable,
                 '--image',str(self.source),'Cosa vedi?']),0)
@@ -192,7 +192,7 @@ class MultimodalTests(unittest.TestCase):
 
     def test_cli_missing_mmproj_is_rejected_before_native_load(self):
         import chat
-        with patch('chat.model_path',return_value=self.model),patch('chat.Qwen3MoEModel') as native:
+        with patch('chat.model_path',return_value=self.model),patch('chat._load_text_model') as native:
             self.assertEqual(chat.main(['--image',str(self.source),'Domanda']),1)
             native.assert_not_called()
 

@@ -68,6 +68,8 @@ jobs:
       - name: Test packaged EXE
         shell: pwsh
         run: |
+          & .\dist\LLocalMind\LLocalMind-Diagnostics.exe --benchmark-vision --help
+          if ($LASTEXITCODE -ne 0) { throw "Packaged vision benchmark unavailable" }
           .\tools\smoke_windows.ps1 -Executable .\dist\LLocalMind\LLocalMind-Diagnostics.exe -Report .\build\diagnostic-smoke.json -Screenshot .\build\diagnostic-gui.png
           .\tools\smoke_windows.ps1 -Executable .\dist\LLocalMind\LLocalMind.exe -Report .\build\portable-smoke.json -Screenshot .\build\portable-gui.png
       - name: Install current Inno Setup
@@ -156,6 +158,9 @@ jobs:
           - Portable: extract the whole portable ZIP, then open `LLocalMind/LLocalMind.exe`.
           - No Python installation is required. GGUF models are external and are not included.
           - Each generated answer shows its token count and measured decode speed; these metrics are saved with conversations.
+          - New: bounded visual-token/batch/cache defaults, image/prefix reuse, lazy vision imports and engine-specific reloads. Advanced settings expose the speed/detail tradeoff.
+          - New: native long-prompt shared-expert batching, reusable KV storage and coalesced GUI streaming.
+          - New: local load/request reports and `LLocalMind-Diagnostics.exe --benchmark-vision --image PATH` (close the GUI first). No target-PC vision speed is claimed.
           - New: Settings → Installa motore vision downloads, verifies and configures the official Windows CPU llama.cpp runtime automatically, without administrator rights.
           - The updater now includes public preview releases, selects the highest newer numeric version, and continues to exclude drafts and verify installer SHA-256. Older stable-only apps need this preview installer run manually once.
           - The runtime is pinned to b12110 with a verified SHA-256; cancellation cleans temporary files and existing installations are preserved.
@@ -166,6 +171,6 @@ jobs:
           - Updates use the current vin10122/LLocalMind repository; older previews can be upgraded by running this installer without uninstalling first.
           - Choose your compatible GGUF in Settings. Intel GPU/NPU support requires appropriate drivers.
           - CI checks the GUI, CPU OpenVINO, native kernels and installer without a GGUF. Full-model quality/performance on the target PC still needs manual validation.
-          - SHA-256 sidecars are included. This preview is not code-signed and is not offered by the stable auto-updater until promoted to a stable release.
+          - SHA-256 sidecars are included. This preview is not code-signed. Updaters since v0.1.5 include public previews; older stable-only apps require manual installation.
           NOTES
           gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Windows preview" --notes-file release-notes.md

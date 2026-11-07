@@ -55,13 +55,14 @@ if _blas_threads < 1:
 for _variable in ("OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "BLIS_NUM_THREADS"):
     os.environ[_variable] = str(_blas_threads)
 
-import gguf  # noqa: E402
-from run_q4k_f16_openvino import dequant_to_f16  # noqa: E402
-from flash_moe import Qwen3MoEModel, StreamingDetokenizer  # noqa: E402
 from flash_moe.paths import model_path  # noqa: E402
 from flash_moe.progress import StartupProgress  # noqa: E402
-from flash_moe.tokenizer import GGUFTokenizer  # noqa: E402
 from llocalmind.prompts import format_conversation  # noqa: E402
+
+
+def _load_text_model(*args,**kwargs):
+    from flash_moe.model import Qwen3MoEModel
+    return Qwen3MoEModel(*args,**kwargs)
 
 
 class LiveProfiler:
@@ -235,6 +236,13 @@ def build_parser() -> argparse.ArgumentParser:
                              "proiettore multimodale (richiede --mmproj).")
     parser.add_argument("--llama-server", type=str,
                         help="Eseguibile llama-server locale per vision; altrimenti cercato nel PATH")
+    parser.add_argument('--vision-image-tokens',type=int,default=768,
+                        help='Massimo token visivi: meno token velocizzano ma riducono i dettagli')
+    parser.add_argument('--vision-batch',type=int,default=512)
+    parser.add_argument('--vision-ubatch',type=int,default=256)
+    parser.add_argument('--vision-cache-mib',type=int,default=128)
+    parser.add_argument('--vision-no-warmup',action='store_true',
+                        help='Salta il riscaldamento; avvio più rapido ma prima risposta potenzialmente più lenta')
     return parser
 
 
@@ -269,6 +277,7 @@ def ask(model: Qwen3MoEModel, tok: GGUFTokenizer, prompt: str,
     su piu' token e va completato prima di stampare, altrimenti in coda
     all'output spunta un segnaposto al posto di un carattere.
     """
+    from flash_moe.tokenizer import StreamingDetokenizer
     ids = encode_user_turn(tok, prompt)
     if len(ids) + args.max_tokens - 1 > args.max_seq:
         raise ValueError(
@@ -389,6 +398,9 @@ def main(argv: list[str] | None = None) -> int:
         from llocalmind.vision_cli import run
         return run(args,path)
 
+    from run_q4k_f16_openvino import dequant_to_f16
+    from flash_moe.tokenizer import GGUFTokenizer
+
     console = sys.stdout
     startup_progress = StartupProgress(console)
 
@@ -404,7 +416,7 @@ def main(argv: list[str] | None = None) -> int:
     started = time.perf_counter()
     startup_logs = io.StringIO()
     with startup_progress, redirect_stdout(startup_logs):
-        model = Qwen3MoEModel(
+        model = _load_text_model(
             path, device=args.device, max_seq_len=args.max_seq,
             cache_capacity=args.cache, dequant_fn=dequant_to_f16,
             weight_cache_capacity=args.weight_cache,

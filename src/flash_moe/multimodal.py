@@ -29,7 +29,8 @@ class MultiModalProjector:
 
 class LocalVisionModel:
     def __init__(self, model, projector, executable=None, *, max_seq=2048,
-                 threads=4, prefill_threads=4, log_path=None):
+                 threads=4, prefill_threads=4, log_path=None,image_max_tokens=768,
+                 batch_tokens=512,ubatch_tokens=256,cache_mib=128,warmup=True):
         self.model=Path(model).expanduser().resolve()
         self.projector=Path(projector).expanduser().resolve()
         found=shutil.which(str(executable)) if executable else shutil.which('llama-server')
@@ -41,6 +42,15 @@ class LocalVisionModel:
         self.max_seq=max_seq
         self.threads=threads
         self.prefill_threads=prefill_threads
+        if (not 64<=image_max_tokens<=8192 or not 32<=ubatch_tokens<=batch_tokens<=2048
+                or not 0<=cache_mib<=1024 or type(warmup) is not bool):
+            raise ValueError('Profilo prestazioni vision non valido')
+        self.image_max_tokens=image_max_tokens
+        self.batch_tokens=batch_tokens
+        self.ubatch_tokens=ubatch_tokens
+        self.cache_mib=cache_mib
+        self.warmup=warmup
+        self.startup_seconds=None
         self.log_path=Path(log_path) if log_path else Path.cwd()/'vision.log'
         self.key=secrets.token_hex(32)
         self.alias='llocalmind-'+secrets.token_hex(16)
@@ -56,6 +66,7 @@ class LocalVisionModel:
         return http.client.HTTPConnection('127.0.0.1',self.port,timeout=timeout)
 
     def start(self,stop=None,progress=lambda *_:None):
+        started=time.perf_counter()
         stop=stop or threading.Event()
         if stop.is_set():raise VisionCancelled()
         try:
@@ -69,7 +80,11 @@ class LocalVisionModel:
                 '--host','127.0.0.1','--port',str(self.port),'--api-key',self.key,
                 '--alias',self.alias,'-c',str(self.max_seq),'-np','1','-ngl','0',
                 '--no-mmproj-offload','--no-webui','--jinja','--no-context-shift',
+                '--image-min-tokens','64','--image-max-tokens',str(self.image_max_tokens),
+                '-b',str(self.batch_tokens),'-ub',str(self.ubatch_tokens),
+                '--cache-ram',str(self.cache_mib),'--no-cache-idle-slots',
                 '-t',str(self.threads),'-tb',str(self.prefill_threads)]
+            if not self.warmup:command.append('--no-warmup')
             self.process=subprocess.Popen(command,cwd=self.executable.parent,
                 env=child_environment(),
                 stdin=subprocess.DEVNULL,stdout=self.log,stderr=subprocess.STDOUT,
@@ -88,6 +103,7 @@ class LocalVisionModel:
                     if response.status==200:
                         data=json.loads(response.read(65536))
                         if any(m.get('id')==self.alias for m in data.get('data',[])):
+                            self.startup_seconds=time.perf_counter()-started
                             progress(100,'Vision pronta · CPU')
                             return
                 except (OSError,http.client.HTTPException):pass
@@ -106,7 +122,7 @@ class LocalVisionModel:
             raise RuntimeError('Motore vision chiuso: ricarica il modello')
         payload=dict(messages=messages,stream=True,stream_options=dict(include_usage=True),
             max_tokens=max_tokens,temperature=temperature,seed=seed,
-            chat_template_kwargs=dict(enable_thinking=False))
+            cache_prompt=True,id_slot=0,chat_template_kwargs=dict(enable_thinking=False))
         conn=self._connection()
         done=threading.Event()
         active_socket=None
@@ -136,6 +152,12 @@ class LocalVisionModel:
             response=conn.getresponse()
             if response.status!=200:
                 detail=response.read(8192).decode('utf-8',errors='replace')
+                try:problem=json.loads(detail).get('error',{})
+                except (ValueError,AttributeError):problem={}
+                if isinstance(problem,dict) and problem.get('type')=='exceed_context_size_error':
+                    raise ValueError(f"Contesto insufficiente: richiesta {problem.get('n_prompt_tokens','?')} token, "
+                        f"limite {problem.get('n_ctx',self.max_seq)}. Riduci i token visivi o la cronologia, "
+                        'oppure aumenta il contesto nelle impostazioni se la RAM lo consente.')
                 raise ValueError('Vision: richiesta rifiutata; verifica contesto e mmproj. '+detail)
             while not stop.is_set():
                 line=response.readline(2*1024**2)
@@ -162,6 +184,9 @@ class LocalVisionModel:
             seconds=ms/1000 if type(ms) in (int,float) and ms>0 else None
             prompt=timings.get('prompt_ms')
             return dict(tokens=tokens,first_token=first,decode_seconds=seconds,
+                prompt_tokens=usage.get('prompt_tokens',timings.get('prompt_n')),
+                evaluated_prompt_tokens=timings.get('prompt_n'),cached_tokens=timings.get('cache_n'),
+                startup_seconds=self.startup_seconds,image_max_tokens=self.image_max_tokens,
                 prefill=prompt/1000 if type(prompt) in (int,float) else None,
                 rate=tokens/seconds if seconds and tokens>1 else None)
         except (OSError,http.client.HTTPException) as error:

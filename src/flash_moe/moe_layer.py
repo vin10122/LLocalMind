@@ -172,9 +172,9 @@ def run_moe_sequence(
         if prefetch_many is not None:
             prefetch_many(keys[index + 1:index + 1 + lookahead])
 
-    # Keep the tested optimization bounded to short prompts. Decode and
-    # longer inputs retain the original shared-expert path.
-    batch_shared = (16 <= token_count <= 128
+    # Bound intermediate matrices, not the total prompt length. Long prompts
+    # otherwise perform one shared-expert matvec per token per layer.
+    batch_shared = (16 <= token_count
                     and isinstance(shared_expert, SharedExpert))
     result = np.zeros((token_count, hidden_size), dtype=np.float32)
     for token_index, routes in enumerate(routed):
@@ -189,7 +189,8 @@ def run_moe_sequence(
             if shared_out is not None:
                 result[token_index] += shared_out
     if batch_shared:
-        shared_out = shared_expert.forward_batch(layer, activations)
-        if shared_out is not None:
-            result += shared_out
+        for start in range(0,token_count,128):
+            shared_out = shared_expert.forward_batch(layer, activations[start:start+128])
+            if shared_out is not None:
+                result[start:start+128] += shared_out
     return result

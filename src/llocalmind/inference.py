@@ -24,8 +24,10 @@ class ModelWorker(QObject):
         self.model = None
         self.tokenizer = None
         self.vision = None
+        self.image_cache = None
 
     def _close_model(self):
+        self.image_cache=None
         if self.vision is not None:
             engine,self.vision=self.vision,None
             engine.close()
@@ -43,6 +45,7 @@ class ModelWorker(QObject):
 
     @Slot(str, dict)
     def load(self, filename, options):
+        started=time.perf_counter()
         try:
             self._close_model()
             gc.collect()
@@ -56,11 +59,21 @@ class ModelWorker(QObject):
                 from .app_paths import data_root
                 self.vision=LocalVisionModel(path,options['vision_projector'],options['vision_executable'],
                     max_seq=options['max_seq'],threads=options['expert_workers'],
-                    prefill_threads=options['prefill_threads'],log_path=data_root()/'logs/vision.log')
+                    prefill_threads=options['prefill_threads'],log_path=data_root()/'logs/vision.log',
+                    image_max_tokens=options['vision_image_tokens'],batch_tokens=options['vision_batch'],
+                    ubatch_tokens=options['vision_ubatch'],cache_mib=options['vision_cache_mib'],
+                    warmup=options['vision_warmup'])
+                from .images import ImagePayloadCache
+                self.image_cache=ImagePayloadCache()
                 try:self.vision.start(self.stop,self.progress.emit)
                 except VisionCancelled:
                     self._close_model()
                     return
+                from .performance import record,memory_snapshot
+                record('load','vision',dict(seconds=time.perf_counter()-started,
+                    image_max_tokens=options['vision_image_tokens'],batch=options['vision_batch'],
+                    ubatch=options['vision_ubatch'],cache_mib=options['vision_cache_mib'],warmup=options['vision_warmup'],
+                    memory=memory_snapshot(self.vision.process.pid)))
                 self.loaded.emit(path.stem+' · Vision CPU')
                 return
             os.environ['FLASH_MOE_GGUF'] = str(path)
@@ -84,6 +97,8 @@ class ModelWorker(QObject):
                 return
             self.progress.emit(99, 'Preparazione del tokenizer')
             self.tokenizer = GGUFTokenizer(self.model.reader)
+            from .performance import record
+            record('load','optimized',dict(seconds=time.perf_counter()-started))
             self.progress.emit(100, 'Modello pronto')
             self.loaded.emit(path.stem)
         except Exception as error:
@@ -102,10 +117,18 @@ class ModelWorker(QObject):
                 from flash_moe.multimodal import VisionCancelled
                 from .images import chat_messages
                 try:
-                    self.stats.emit(self.vision.generate(
-                        chat_messages(messages,options['_attachment_directory']),
+                    prepared=time.perf_counter()
+                    request=chat_messages(messages,options['_attachment_directory'],cache=self.image_cache)
+                    prepare_seconds=time.perf_counter()-prepared
+                    stats=dict(self.vision.generate(request,
                         max_tokens=options['max_tokens'],temperature=options['temperature'],
                         stop=self.stop,on_text=self.token.emit))
+                    stats['input_seconds']=prepare_seconds
+                    if stats.get('first_token') is not None:stats['first_token']+=prepare_seconds
+                    from .performance import record,memory_snapshot
+                    from .metrics import clean_stats
+                    record('request','vision',dict(clean_stats(stats) or {},memory=memory_snapshot(self.vision.process.pid)))
+                    self.stats.emit(stats)
                 except VisionCancelled:status='stopped'
                 return
             if self.model is None or self.tokenizer is None:
@@ -147,10 +170,13 @@ class ModelWorker(QObject):
             # Exclude the first token's sampling, and any discarded token
             # generated while a cooperative stop was being requested.
             seconds=max(0.0,last_generation-first_generation) if first_generation is not None else 0.0
-            self.stats.emit(dict(tokens=produced, first_token=first,
+            stats=dict(tokens=produced, first_token=first,
                                  prefill=float(timings['prefill_seconds']),
                                  decode_seconds=seconds,
-                                 rate=(produced-1)/seconds if produced > 1 and seconds > 0 else None))
+                                 rate=(produced-1)/seconds if produced > 1 and seconds > 0 else None)
+            from .performance import record
+            record('request','optimized',stats)
+            self.stats.emit(stats)
         except Exception as error:
             status = 'error'
             self.error.emit(str(error))
