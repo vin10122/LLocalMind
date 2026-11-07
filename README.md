@@ -2,7 +2,7 @@
 
 # LLocalMind
 
-**An experimental project for running MoE language models locally on Intel
+**An experimental project made in Italy 🇮🇹 for running MoE language models locally on Intel
 hardware with OpenVINO.**
 
 This project explores splitting inference work between the CPU and integrated
