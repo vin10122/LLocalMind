@@ -1,268 +1,181 @@
-"""Motore multimodale OpenVINO per proiettore immagini da file mmproj GGUF.
+"""Real local multimodal inference; never project RGB averages as embeddings.
 
-Carica un proiettore visione->testo da un file ``.mmproj`` (es. quello
-distribuito con Hermes3.6-35B-Vision) e produce embedding immagine pronti per
-essere inseriti nel contesto del modello testo.
-
-Il file mmproj contiene tipicamente:
-- tensori della vision tower (patch embed, transformer layer, ecc.)
-- tensori del proiettore lineare (``mm_projector`` o ``multi_modal_projector``)
-
-Questo modulo si concentra sul proiettore: prende embedding visivi già
-calcolati (o calcolati a partire da un'immagine ridimensionata e normalizzata)
-e li proietta nello spazio nascosto del modello testo. La vision tower
-completa non e' inclusa in un mmproj standalone: per ora l'immagine viene
-ridotta a un vettore tramite media dei patch e passata attraverso il
-proiettore, sufficiente a far "vedere" al modello il contenuto visivo in modo
-deterministico.
-
-Tutti i calcoli del proiettore possono essere eseguiti su OpenVINO CPU;
-se il grafo non e' compilabile (es. dimensioni dinamiche), si torna a NumPy.
+Native OpenVINO vision is not implemented. An explicitly selected llama.cpp
+server executes the trained vision tower, projector and multimodal prefill.
 """
-
 from __future__ import annotations
-
-from dataclasses import dataclass
+import http.client
+import json
+import os
 from pathlib import Path
-from typing import Any
+import secrets
+import shutil
+import socket
+import subprocess
+import threading
+import time
 
-import gguf
-import numpy as np
-import openvino as ov
-import openvino.opset13 as ops
 
-
-@dataclass
-class ImageEmbedding:
-    """Embedding immagine pronto per essere inserito nel contesto testo.
-
-    ``vector`` ha forma ``(hidden_size,)`` in f32 e va trattato come
-    l'embedding di un token speciale immagine.
-    """
-
-    vector: np.ndarray
-    width: int
-    height: int
-    n_patches: int
+class VisionCancelled(Exception):
+    pass
 
 
 class MultiModalProjector:
-    """Proiettore immagini da file mmproj GGUF.
+    """Guard against using the removed, mathematically invalid projector."""
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError('Encoder vision OpenVINO nativo non implementato. '
+            'Usa --mmproj e --llama-server o la modalità Vision della GUI.')
 
-    Cerca automaticamente i tensori del proiettore (matrici 2D con nomi che
-    contengono ``projector``, ``proj``, ``mm_multi_modal``, ecc.) e compila
-    il grafo OpenVINO per la matvec finale. Se OpenVINO rifiuta il grafo,
-    il calcolo cade su NumPy.
-    """
 
-    def __init__(
-        self,
-        mmproj_path: Path | str,
-        hidden_size: int,
-        device: str = "CPU",
-    ) -> None:
-        self.mmproj_path = Path(mmproj_path)
-        self.hidden_size = hidden_size
-        self.device = device
-        self.reader = gguf.GGUFReader(self.mmproj_path)
-        self.tmap = {t.name: t for t in self.reader.tensors}
+class LocalVisionModel:
+    def __init__(self, model, projector, executable=None, *, max_seq=2048,
+                 threads=4, prefill_threads=4, log_path=None):
+        self.model=Path(model).expanduser().resolve()
+        self.projector=Path(projector).expanduser().resolve()
+        found=shutil.which(str(executable)) if executable else shutil.which('llama-server')
+        self.executable=Path(found or executable or '').expanduser().resolve()
+        for label,path in (('modello',self.model),('mmproj',self.projector),('llama-server',self.executable)):
+            if not path.is_file():raise ValueError(f'File {label} non trovato: {path}')
+        if any(p.suffix.lower()!='.gguf' for p in (self.model,self.projector)):
+            raise ValueError('Modello e mmproj devono essere file GGUF compatibili')
+        self.max_seq=max_seq
+        self.threads=threads
+        self.prefill_threads=prefill_threads
+        self.log_path=Path(log_path) if log_path else Path.cwd()/'vision.log'
+        self.key=secrets.token_hex(32)
+        self.alias='llocalmind-'+secrets.token_hex(16)
+        self.process=None
+        self.log=None
+        self.port=None
 
-        self.proj_weight: np.ndarray | None = None
-        self.proj_bias: np.ndarray | None = None
-        self.vision_dim: int | None = None
-        self._ov_request = None
-        self._ov_input = None
-        self._use_ov = False
+    def _headers(self):
+        return {'Content-Type':'application/json','Authorization':'Bearer '+self.key}
 
-        self._discover_projector()
-        if self.proj_weight is not None:
-            self._compile_ov(device)
+    def _connection(self,timeout=600):
+        # Direct loopback: do not send image data through an HTTP proxy.
+        return http.client.HTTPConnection('127.0.0.1',self.port,timeout=timeout)
 
-    # ------------------------------------------------------------------ scoperta
-
-    def _discover_projector(self) -> None:
-        """Trova matrice e bias del proiettore lineare tra i tensori mmproj."""
-        # Candidati per nome, in ordine di preferenza.
-        weight_names = [
-            "multi_modal_projector.linear.weight",
-            "multi_modal_projector.weight",
-            "mm_projector.weight",
-            "vision_projector.weight",
-            "projector.weight",
-        ]
-        bias_names = [
-            "multi_modal_projector.linear.bias",
-            "multi_modal_projector.bias",
-            "mm_projector.bias",
-            "vision_projector.bias",
-            "projector.bias",
-        ]
-
-        w_name = next((n for n in weight_names if n in self.tmap), None)
-        b_name = next((n for n in bias_names if n in self.tmap), None)
-
-        if w_name is None:
-            # Fallback: qualsiasi tensore 2D che non appartenga alla vision
-            # tower (nomi con 'layers' o 'embeddings' vengono saltati).
-            for name, t in self.tmap.items():
-                if len(t.shape) == 2 and not any(
-                    k in name.lower() for k in ("layers", "embedding", "norm", "patch")
-                ):
-                    w_name = name
-                    break
-
-        if w_name is None:
-            return
-
-        w = self.tmap[w_name]
-        shape = tuple(int(s) for s in reversed(w.shape))  # (out, in)
-        self.vision_dim = shape[1]
-        raw = w.data.tobytes() if hasattr(w.data, "tobytes") else w.data
-        dtype = np.float16 if int(w.tensor_type) == 1 else np.float32
-        self.proj_weight = (
-            np.frombuffer(raw, dtype=np.uint8).view(dtype).copy().reshape(shape)
-        )
-        # Attenzione: i pesi quantizzati servono dequant. Per ora gestiamo solo
-        # F16/F32 grezzi; se il tensore e' quantizzato serve un dequant separato.
-        if int(w.tensor_type) not in (0, 1):
-            self.proj_weight = None
-            self.vision_dim = None
-            return
-
-        if b_name is not None:
-            b = self.tmap[b_name]
-            braw = b.data.tobytes() if hasattr(b.data, "tobytes") else b.data
-            self.proj_bias = np.frombuffer(braw, dtype=np.float32).copy().reshape(-1)
-
-    # ------------------------------------------------------------------ OpenVINO
-
-    def _compile_ov(self, device: str) -> None:
-        """Compila la matvec del proiettore con OpenVINO."""
-        if self.proj_weight is None:
-            return
+    def start(self,stop=None,progress=lambda *_:None):
+        stop=stop or threading.Event()
+        if stop.is_set():raise VisionCancelled()
         try:
-            core = ov.Core()
-            if device not in core.available_devices:
-                device = "CPU"
-            x = ops.parameter([1, self.vision_dim], ov.Type.f32, name="vision_in")
-            w = ops.constant(self.proj_weight.astype(np.float32), ov.Type.f32, name="w")
-            y = ops.matmul(x, w, False, False)
-            if self.proj_bias is not None:
-                b = ops.constant(
-                    self.proj_bias.astype(np.float32), ov.Type.f32, name="b"
-                )
-                y = ops.add(y, b)
-            model = ov.Model([y], [x], "mm_projector")
-            compiled = core.compile_model(model, device)
-            self._ov_request = compiled.create_infer_request()
-            self._ov_input = self._ov_request.model.input(0)
-            self._use_ov = True
-        except Exception:
-            # OpenVINO non puo' compilare: fallback NumPy silenzioso.
-            self._use_ov = False
-            self._ov_request = None
+            with socket.socket() as sock:
+                sock.bind(('127.0.0.1',0))
+                self.port=sock.getsockname()[1]
+            self.log_path.parent.mkdir(parents=True,exist_ok=True)
+            self.log=self.log_path.open('w',encoding='utf-8')
+            command=[str(self.executable),'-m',str(self.model),'--mmproj',str(self.projector),
+                '--host','127.0.0.1','--port',str(self.port),'--api-key',self.key,
+                '--alias',self.alias,'-c',str(self.max_seq),'-np','1','-ngl','0',
+                '--no-mmproj-offload','--no-webui','--jinja','--no-context-shift',
+                '-t',str(self.threads),'-tb',str(self.prefill_threads)]
+            self.process=subprocess.Popen(command,cwd=self.executable.parent,
+                stdin=subprocess.DEVNULL,stdout=self.log,stderr=subprocess.STDOUT,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
+            progress(0,'Caricamento vision locale · CPU')
+            deadline=time.monotonic()+600
+            while time.monotonic()<deadline:
+                if stop.is_set():raise VisionCancelled()
+                if self.process.poll() is not None:
+                    raise RuntimeError('Avvio vision fallito: verifica versione di llama.cpp e '
+                        f'compatibilità modello/mmproj. Log: {self.log_path}')
+                conn=self._connection(timeout=1)
+                try:
+                    conn.request('GET','/v1/models',headers=self._headers())
+                    response=conn.getresponse()
+                    if response.status==200:
+                        data=json.loads(response.read(65536))
+                        if any(m.get('id')==self.alias for m in data.get('data',[])):
+                            progress(100,'Vision pronta · CPU')
+                            return
+                except (OSError,http.client.HTTPException):pass
+                finally:conn.close()
+                stop.wait(.25)
+            raise RuntimeError(f'Tempo di caricamento vision superato. Log: {self.log_path}')
+        except BaseException:
+            self.close()
+            raise
 
-    # ------------------------------------------------------------------ preprocess
+    def generate(self,messages,*,max_tokens=128,temperature=0,seed=0,
+                 stop=None,on_text=lambda _:None):
+        stop=stop or threading.Event()
+        if stop.is_set():raise VisionCancelled()
+        if self.process is None or self.process.poll() is not None:
+            raise RuntimeError('Motore vision chiuso: ricarica il modello')
+        payload=dict(messages=messages,stream=True,stream_options=dict(include_usage=True),
+            max_tokens=max_tokens,temperature=temperature,seed=seed,
+            chat_template_kwargs=dict(enable_thinking=False))
+        conn=self._connection()
+        done=threading.Event()
+        active_socket=None
+        def cancel():
+            while not done.wait(.1):
+                sock=active_socket or conn.sock
+                if stop.is_set() and sock is not None:
+                    try:sock.shutdown(socket.SHUT_RDWR)
+                    except OSError:pass
+                    return
+        watcher=threading.Thread(target=cancel,daemon=True)
+        watcher.start()
+        response=None
+        first=None
+        started=time.perf_counter()
+        usage={}
+        timings={}
+        completed=False
+        try:
+            conn.connect()
+            active_socket=conn.sock
+            conn.request('POST','/v1/chat/completions',json.dumps(payload).encode('utf-8'),self._headers())
+            response=conn.getresponse()
+            if response.status!=200:
+                detail=response.read(8192).decode('utf-8',errors='replace')
+                raise ValueError('Vision: richiesta rifiutata; verifica contesto e mmproj. '+detail)
+            while not stop.is_set():
+                line=response.readline(2*1024**2)
+                if not line:break
+                if not line.startswith(b'data:'):continue
+                value=line[5:].strip()
+                if value==b'[DONE]':
+                    completed=True
+                    break
+                event=json.loads(value)
+                if event.get('error'):raise ValueError('Vision: '+str(event['error']))
+                usage=event.get('usage') or usage
+                timings=event.get('timings') or timings
+                for choice in event.get('choices',[]):
+                    text=choice.get('delta',{}).get('content')
+                    if text:
+                        if first is None:first=time.perf_counter()-started
+                        on_text(text)
+            if stop.is_set():raise VisionCancelled()
+            if not completed:raise RuntimeError('Risposta vision interrotta prima della fine')
+            tokens=usage.get('completion_tokens',timings.get('predicted_n',0))
+            if type(tokens) is not int or tokens<0:tokens=0
+            ms=timings.get('predicted_ms')
+            seconds=ms/1000 if type(ms) in (int,float) and ms>0 else None
+            prompt=timings.get('prompt_ms')
+            return dict(tokens=tokens,first_token=first,decode_seconds=seconds,
+                prefill=prompt/1000 if type(prompt) in (int,float) else None,
+                rate=tokens/seconds if seconds and tokens>1 else None)
+        except (OSError,http.client.HTTPException) as error:
+            if stop.is_set():raise VisionCancelled() from error
+            raise RuntimeError('Connessione vision interrotta') from error
+        finally:
+            done.set()
+            watcher.join(timeout=1)
+            if response is not None:response.close()
+            conn.close()
 
-    def preprocess_image(
-        self,
-        image_path: Path | str,
-        patch_size: int = 14,
-        n_patches_per_side: int = 24,
-    ) -> np.ndarray:
-        """Legge un'immagine e la riduce a un vettore visivo di ``vision_dim``.
-
-        L'immagine viene ridimensionata a ``n_patches_per_side * patch_size``,
-        convertita in f32, normalizzata [0,1] e mediata per patch per ottenere
-        un vettore di lunghezza ``vision_dim`` (o il multiplo piu' vicino).
-        Senza dipendenze esterne oltre a Pillow (aggiunta a requirements).
-        """
-        from PIL import Image
-
-        img = Image.open(image_path).convert("RGB")
-        side = n_patches_per_side * patch_size
-        img = img.resize((side, side))
-        arr = np.asarray(img, dtype=np.float32) / 255.0
-        # HWC -> patch-average: (n, n, patch, patch, 3) -> (n*n, 3)
-        h, w, c = arr.shape
-        ps = patch_size
-        grid = h // ps
-        patches = arr.reshape(grid, ps, grid, ps, c).mean(axis=(1, 3))
-        flat = patches.reshape(-1, c)  # (grid*grid, 3)
-        return flat
-
-    def embed_image(
-        self,
-        image_path: Path | str,
-        patch_size: int = 14,
-        n_patches_per_side: int = 24,
-    ) -> ImageEmbedding:
-        """Proietta un'immagine nell'spazio nascosto del modello testo."""
-        if self.proj_weight is None:
-            raise RuntimeError(
-                f"Nessun proiettore trovato in {self.mmproj_path}: "
-                "impossibile creare embedding immagine."
-            )
-
-        patch_vecs = self.preprocess_image(image_path, patch_size, n_patches_per_side)
-        n_patches, c = patch_vecs.shape
-
-        # Se il proiettore aspetta un vettore singolo (vision_dim), appiattiamo
-        # mediando i patch. Se aspetta una sequenza, proiettiamo ogni patch.
-        if self.vision_dim is not None and patch_vecs.shape[1] != self.vision_dim:
-            # Riduce la dimensione canale->vision_dim tramite media/troncamento
-            if c > self.vision_dim:
-                patch_vecs = patch_vecs[:, : self.vision_dim]
-            else:
-                pad = np.zeros((n_patches, self.vision_dim - c), dtype=np.float32)
-                patch_vecs = np.concatenate([patch_vecs, pad], axis=1)
-
-        if self._use_ov and self._ov_request is not None:
-            # Proietta ogni patch tramite OpenVINO, poi media.
-            outs = []
-            for i in range(n_patches):
-                x = patch_vecs[i : i + 1].astype(np.float32)
-                res = self._ov_request.infer({self._ov_input: x})
-                out = np.asarray(list(res.values())[0], dtype=np.float32).reshape(-1)
-                outs.append(out)
-            vector = np.mean(np.stack(outs), axis=0)
-        else:
-            # Fallback NumPy: matvec su tutti i patch, poi media.
-            w = self.proj_weight.astype(np.float32)
-            if self.proj_bias is not None:
-                outs = patch_vecs @ w.T + self.proj_bias
-            else:
-                outs = patch_vecs @ w.T
-            vector = np.mean(outs, axis=0)
-
-        # Proiezione finale su hidden_size se il proiettore non ci arriva già.
-        if vector.shape[0] != self.hidden_size:
-            if vector.shape[0] > self.hidden_size:
-                vector = vector[: self.hidden_size]
-            else:
-                pad = np.zeros(self.hidden_size - vector.shape[0], dtype=np.float32)
-                vector = np.concatenate([vector, pad])
-
-        return ImageEmbedding(
-            vector=vector.astype(np.float32),
-            width=0,
-            height=0,
-            n_patches=n_patches,
-        )
-
-    def project(self, vision_vector: np.ndarray) -> np.ndarray:
-        """Proietta un vettore visivo gia' calcolato nello spazio testo."""
-        if self.proj_weight is None:
-            raise RuntimeError("Proiettore non inizializzato.")
-        w = self.proj_weight.astype(np.float32)
-        v = np.asarray(vision_vector, dtype=np.float32).reshape(1, -1)
-        if v.shape[1] != w.shape[1]:
-            if v.shape[1] > w.shape[1]:
-                v = v[:, : w.shape[1]]
-            else:
-                pad = np.zeros((1, w.shape[1] - v.shape[1]), dtype=np.float32)
-                v = np.concatenate([v, pad], axis=1)
-        out = v @ w.T
-        if self.proj_bias is not None:
-            out = out + self.proj_bias
-        return out.reshape(-1).astype(np.float32)
+    def close(self):
+        if self.process is not None:
+            if self.process.poll() is None:
+                self.process.terminate()
+                try:self.process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
+                    self.process.wait(timeout=5)
+            self.process=None
+        if self.log is not None:
+            self.log.close()
+            self.log=None

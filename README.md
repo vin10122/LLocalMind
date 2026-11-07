@@ -18,11 +18,11 @@ high-memory discrete graphics card.
 
 ## Install on Windows
 
-The latest stable Windows version is available in [release v0.1.2](https://github.com/vin10122/LLocalMind/releases/tag/v0.1.2):
+The latest stable Windows version is available in [release v0.1.3](https://github.com/vin10122/LLocalMind/releases/tag/v0.1.3):
 
 ### Recommended: Windows installer
 
-1. Download **[LLocalMind-Setup-0.1.2-windows-x64.exe](https://github.com/vin10122/LLocalMind/releases/download/v0.1.2/LLocalMind-Setup-0.1.2-windows-x64.exe)**.
+1. Download **[LLocalMind-Setup-0.1.3-windows-x64.exe](https://github.com/vin10122/LLocalMind/releases/download/v0.1.3/LLocalMind-Setup-0.1.3-windows-x64.exe)**.
 2. Run the installer, then open **LLocalMind** from the Start menu.
 3. Open **Impostazioni → Sfoglia**, select your compatible local **GGUF** file,
    and save. Wait for the model status to become **Pronto**, then send a message.
@@ -38,7 +38,7 @@ select CPU for DeltaNet and Full attention under advanced settings.
 
 ### Portable version
 
-1. Download **[LLocalMind-0.1.2-windows-x64-portable.zip](https://github.com/vin10122/LLocalMind/releases/download/v0.1.2/LLocalMind-0.1.2-windows-x64-portable.zip)**.
+1. Download **[LLocalMind-0.1.3-windows-x64-portable.zip](https://github.com/vin10122/LLocalMind/releases/download/v0.1.3/LLocalMind-0.1.3-windows-x64-portable.zip)**.
 2. Extract the **whole ZIP**, then open `LLocalMind\LLocalMind.exe`.
 3. Select the GGUF in settings as described above.
 
@@ -60,7 +60,7 @@ choose the download, then confirm installation. LLocalMind verifies the
 installer's SHA-256, saves the conversation, closes the model and exits. The
 installer updates the same application and reopens it when complete.
 
-**v0.1.2 is published on the stable update channel.** The in-app checker
+**v0.1.3 is published on the stable update channel.** The in-app checker
 offers newer stable versions only; it does not offer previews or reinstall
 the version already running. To install a preview, or to update manually, download the new setup EXE from [Releases](https://github.com/vin10122/LLocalMind/releases),
 close LLocalMind and run it over the existing installation. **Do not uninstall
@@ -339,6 +339,66 @@ design, with the LL/M logo and bundled Sora/Manrope fonts. It includes saved
 conversations, multi-turn context, streaming answers, Copy, Regenerate, Stop,
 local text-file attachment and model/settings selection. User data is stored
 outside the program directory. The existing PowerShell chat remains available.
+
+### Image input (v0.1.3 and newer)
+
+The optimized Intel/OpenVINO engine is **text-only**. The former experimental
+RGB-average projector has been removed: it did not execute the trained vision
+tower and its output was not passed to the model. Native OpenVINO vision is
+not implemented. Image requests now use a separate **local llama.cpp CPU
+engine**, which runs the supported model's actual vision tower, projector and
+multimodal prefill. Text-engine token rates do not apply to this path.
+
+You need your language-model GGUF, its **compatible mmproj GGUF**, and a recent
+[llama.cpp Windows CPU distribution](https://github.com/ggml-org/llama.cpp/releases)
+that supports that model architecture. Extract the whole distribution and
+keep its DLLs beside `llama-server.exe`. LLocalMind does not download these files.
+Compatibility of the Hermes Final/APEX GGUF with the projector from the MTP
+repository remains unverified; a similar filename alone is not a guarantee.
+
+In the desktop app, open **Impostazioni**, select **Testo e immagini · llama.cpp locale
+CPU**, then choose `llama-server.exe` and the matching mmproj. Select the normal
+language-model GGUF in the model field. Save and wait for **Pronto**; the
+previous engine is closed before the vision engine loads, avoiding two loaded
+language models. Use the paperclip to attach PNG, JPEG or WebP files and send
+your question. Sending an image alone uses a default description request.
+Image previews and references are retained in the saved conversation and used
+in subsequent turns and regenerated answers. To resume the optimized text
+engine, select **Testo · Intel ottimizzato** and start a text-only chat.
+
+For a CLI test, set `FLASH_MOE_GGUF` to your language-model file, then use your
+actual executable, projector and image paths:
+
+```powershell
+py -3.14 chat.py default --llama-server "C:\llama.cpp\llama-server.exe" --mmproj "D:\models\mmproj-model-F16.gguf" --image "C:\Users\valer\Pictures\foto.jpg" "Descrivi questa immagine."
+```
+
+This branch runs before native-model allocation. Without `--mmproj`, `--image`
+is rejected. `--llama-server` may be omitted if the executable is on `PATH`.
+In interactive CLI mode, the image supplied at launch accompanies each
+independent question; `/exit` exits. GUI conversations retain multi-turn history.
+
+The server binds to `127.0.0.1`, uses a random API key and is closed with the
+app or on engine changes. Images go to that process as PNG pixel data; no cloud
+vision service is used. GUI **Stop** also interrupts the request before the
+first token. Diagnostics are in `%LOCALAPPDATA%\LLocalMind\logs\vision.log`.
+Response tok/s use server token counts and decode timings; when timings are
+absent, the GUI reports that the rate is unavailable. Network chunks are never
+counted as tokens. Interrupted requests may omit final metrics.
+
+Up to four images per GUI message are accepted, at most 20 MiB and 32 megapixels
+per input. Image orientation is applied, transparency is composited on white,
+metadata is removed and the longest edge is reduced to 2048 pixels without
+upscaling. This can lose fine text/details. Copies live in the user data folder
+under `data/images`; back it up with `conversations.json`. Deleting chats
+currently leaves those image copies; automatic cleanup is not implemented.
+
+Visual tokens consume context too. If the server reports a context limit,
+increase context only if RAM permits. On 16 GiB systems the large Hermes model
+plus its vision encoder may page heavily. **Real image-answer quality, Windows
+vision startup, compatibility and performance with the exact Hermes/mmproj
+still require target-PC validation.** Automated tests cover transport, pixels,
+history, cleanup and cancellation using a test server, not a trained model.
 
 ![LLocalMind desktop preview](docs/llocalmind-desktop.png)
 

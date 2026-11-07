@@ -9,10 +9,12 @@ import uuid
 
 from .app_paths import user_data_dir
 from .metrics import clean_stats
+from .images import validate_images
 
 DEFAULTS = dict(model_path='', max_tokens=128, max_seq=2048, cache=320,
                 weight_cache=1, expert_workers=4, prefill_threads=4,
-                ssm_device='GPU', attention_device='GPU', temperature=0.0)
+                ssm_device='GPU', attention_device='GPU', temperature=0.0,
+                engine='optimized',vision_executable='',vision_projector='')
 
 
 def validate_settings(values):
@@ -22,8 +24,9 @@ def validate_settings(values):
     for key in result:
         if key in values:
             result[key] = values[key]
-    if not isinstance(result['model_path'], str):
-        raise ValueError('Percorso del modello non valido')
+    for key in ('model_path','vision_executable','vision_projector'):
+        if not isinstance(result[key],str):raise ValueError('Percorso non valido')
+    if result['engine'] not in ('optimized','vision'):raise ValueError('Motore non valido')
     for key, low, high in [('max_tokens',1,4096), ('max_seq',256,16384),
                            ('cache',1,2048), ('weight_cache',1,2048),
                            ('expert_workers',1,16), ('prefill_threads',1,16)]:
@@ -65,6 +68,9 @@ class LocalState:
                     if (not isinstance(message,dict) or message.get('role') not in ('user','assistant')
                             or not isinstance(message.get('content'),str)):
                         raise ValueError('Messaggio non valido')
+                    validate_images(message.get('images',[]))
+                    if message.get('images') and message['role']!='user':
+                        raise ValueError('Le immagini devono essere associate a una domanda')
                     if 'stats' in message:
                         stats=clean_stats(message['stats'])
                         if stats is None:

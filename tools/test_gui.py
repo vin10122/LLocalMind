@@ -25,6 +25,7 @@ from llocalmind.prompts import format_conversation
 from llocalmind.state import LocalState,validate_settings
 from llocalmind.theme import apply_theme
 from llocalmind.widgets import Message,schedule_parts
+from PIL import Image
 
 
 class FakeWorker(ModelWorker):
@@ -194,6 +195,64 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual(list(Path(self.temp.name).glob('*.tmp')),[])
         with self.assertRaises(ValueError):validate_settings([])
         with self.assertRaises(ValueError):validate_settings(dict(temperature=float('nan')))
+
+    def test_image_only_send_persistence_and_text_mode_guard(self):
+        self.state.settings['engine']='vision'
+        window=self.window()
+        window.load_model()
+        self.wait(lambda:window.ready)
+        source=Path(self.temp.name)/'red.png'
+        Image.new('RGB',(32,32),'red').save(source)
+        window.add_image(source)
+        self.assertEqual(len(window._pending_images),1)
+        self.assertFalse(window.attachments.isHidden())
+        window._clear_images()
+        self.assertTrue(window.attachments.isHidden())
+        window.add_image(source)
+        window.send()
+        self.wait(lambda:not window.busy)
+        sent=window._worker.history[0]
+        self.assertEqual(sent['content'],'Descrivi questa immagine.')
+        self.assertEqual(sent['images'][0]['name'],'red.png')
+        self.assertFalse(window._pending_images)
+        source.unlink()
+        restored=LocalState(self.temp.name)
+        self.assertEqual(restored.chats[0]['messages'][0],sent)
+        window.state=restored
+        window._render()
+        window.state.settings['engine']='optimized'
+        window.input.setPlainText('Ancora?')
+        window.send()
+        self.assertFalse(window.busy)
+        self.assertIn('immagini',window.notice.text())
+        self.assertEqual(window.input.toPlainText(),'Ancora?')
+
+    def test_vision_worker_closes_native_and_preserves_cancel_status(self):
+        from unittest.mock import Mock
+        from flash_moe.multimodal import VisionCancelled
+        worker=ModelWorker()
+        native=worker.model=Mock()
+        worker.tokenizer=Mock()
+        model=Path(self.temp.name)/'model.gguf'
+        model.touch()
+        options=dict(self.state.settings,engine='vision',_attachment_directory=self.temp.name)
+        done=[];errors=[]
+        worker.reply_finished.connect(done.append)
+        worker.error.connect(errors.append)
+        with patch('flash_moe.multimodal.LocalVisionModel') as factory:
+            engine=factory.return_value
+            engine.generate.return_value=dict(tokens=2,rate=2)
+            worker.load(str(model),options)
+            native.backend.close.assert_called_once()
+            native.store.close.assert_called_once()
+            self.assertIsNone(worker.model)
+            worker.generate([dict(role='user',content='Domanda')],options)
+            engine.generate.side_effect=VisionCancelled()
+            worker.generate([dict(role='user',content='Domanda')],options)
+            self.assertEqual(done,['complete','stopped'])
+            self.assertFalse(errors)
+            worker.shutdown()
+            engine.close.assert_called_once()
 
     def test_template_and_schedule_format(self):
         history=[dict(role='user',content='Uno'),dict(role='assistant',content='Due'),dict(role='user',content='Tre')]

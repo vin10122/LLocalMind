@@ -20,7 +20,7 @@ from .backend_ov import OpenVINOExpertBackend
 from .transformer import TransformerBlock
 from .model import Qwen3MoEModel
 from .engine import MoEEngine
-from .multimodal import MultiModalProjector, ImageEmbedding
+from .multimodal import MultiModalProjector, LocalVisionModel
 from .utils import pack_expert, pack_f32, unpack_f32, pack_f16, unpack_f16, write_manifest
 
 __all__ = [
@@ -74,5 +74,5 @@ __all__ = [
     "GGUFTokenizer",
     "StreamingDetokenizer",
     "MultiModalProjector",
-    "ImageEmbedding",
+    "LocalVisionModel",
 ]

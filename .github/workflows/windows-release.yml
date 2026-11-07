@@ -60,11 +60,14 @@ jobs:
       - name: Run source tests
         shell: pwsh
         run: |
+          .\tools\test_installer.ps1
           $env:FLASH_MOE_TEST_NATIVE = "$env:GITHUB_WORKSPACE\src\flash_moe\moe_quant_dot.dll"
           python tools/test_updater.py
           if ($LASTEXITCODE -ne 0) { throw "Updater tests failed" }
           python tools/test_gui.py
           if ($LASTEXITCODE -ne 0) { throw "GUI tests failed" }
+          python tools/test_multimodal.py
+          if ($LASTEXITCODE -ne 0) { throw "Multimodal tests failed" }
           python tools/test_optimized_inference.py
           if ($LASTEXITCODE -ne 0) { throw "Inference tests failed" }
       - name: Build portable application
@@ -161,6 +164,10 @@ jobs:
           - Portable: extract the whole portable ZIP, then open `LLocalMind/LLocalMind.exe`.
           - No Python installation is required. GGUF models are external and are not included.
           - Each generated answer shows its token count and measured decode speed; these metrics are saved with conversations.
+          - New: local image attachments in the GUI and CLI, with persistent image history and a CPU llama.cpp vision engine.
+          - Vision requires a separately installed compatible llama-server executable, language-model GGUF and matching mmproj GGUF; these are not bundled. The optimized OpenVINO engine remains text-only.
+          - Fixed Windows Python launcher arguments and batch quoting; removed the invalid RGB-average projector.
+          - Vision transport, cancellation, installer syntax and GUI behavior are tested automatically. Actual Hermes/mmproj compatibility, image-answer quality and vision performance still need validation on the target PC.
           - Updates use the current vin10122/LLocalMind repository; older previews can be upgraded by running this installer without uninstalling first.
           - Choose your compatible GGUF in Settings. Intel GPU/NPU support requires appropriate drivers.
           - CI checks the GUI, CPU OpenVINO, native kernels and installer without a GGUF. Full-model quality/performance on the target PC still needs manual validation.

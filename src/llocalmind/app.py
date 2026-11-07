@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (QApplication, QDialog, QFileDialog, QFrame, QHBox
     QProgressBar, QPushButton, QScrollArea, QToolButton, QVBoxLayout, QWidget)
 
 from .inference import ModelWorker
+from .images import MAX_IMAGES,import_image
 from .metrics import clean_stats, response_summary
 from .settings_dialog import SettingsDialog
 from .state import LocalState, new_chat
@@ -71,6 +72,7 @@ class MainWindow(QMainWindow):
         self._update_jobs=[]
         self._message_widgets=[]
         self._active_reply=None
+        self._pending_images=[]
         self._stop=threading.Event()
         self.setWindowTitle('LLocalMind' + (' · Anteprima' if demo else ''))
         self.setWindowIcon(QIcon(str(ASSETS/'logo.png')))
@@ -211,7 +213,7 @@ class MainWindow(QMainWindow):
         self.attach=QToolButton()
         self.attach.setIcon(icon('clip'))
         self.attach.setIconSize(QSize(26,26))
-        self.attach.setToolTip('Allega un file di testo locale')
+        self.attach.setToolTip('Allega testo o immagini locali')
         self.attach.clicked.connect(self.attach_text)
         compose.addWidget(self.attach)
         self.input=Composer()
@@ -223,6 +225,18 @@ class MainWindow(QMainWindow):
         self.send_button.setIconSize(QSize(26,26))
         self.send_button.clicked.connect(self.send_or_stop)
         compose.addWidget(self.send_button)
+        self.attachments=QWidget()
+        attachment_row=QHBoxLayout(self.attachments)
+        attachment_row.setContentsMargins(0,0,0,0)
+        self.attachment_names=QLabel()
+        self.attachment_names.setTextFormat(Qt.TextFormat.PlainText)
+        self.attachment_names.setWordWrap(True)
+        attachment_row.addWidget(self.attachment_names,1)
+        clear=QPushButton('Rimuovi immagini')
+        clear.clicked.connect(self._clear_images)
+        attachment_row.addWidget(clear)
+        self.attachments.hide()
+        main.addWidget(self.attachments)
         main.addWidget(composer)
         main.addWidget(self._line())
         footer=QHBoxLayout()
@@ -253,6 +267,7 @@ class MainWindow(QMainWindow):
         self.new_button.setEnabled(not blocked)
         self.chat_list.setEnabled(not blocked)
         self.attach.setEnabled(not blocked)
+        self.attachments.setEnabled(not blocked)
         self.input.setReadOnly(blocked)
         self.send_button.setEnabled(self.demo or self.busy or (self.ready and not blocked))
         self.send_button.setIcon(icon('stop' if self.busy else 'send','#f5f2eb'))
@@ -277,7 +292,7 @@ class MainWindow(QMainWindow):
         while self.messages.count():
             self.messages.takeAt(0).widget().deleteLater()
         for message in self.current['messages']:
-            self._add_message(message['role'],message['content'],stats=message.get('stats'))
+            self._add_message(message['role'],message['content'],stats=message.get('stats'),images=message.get('images'))
         if not self.current['messages']:
             welcome=QLabel('Uno spazio tranquillo per le tue idee.\nScrivi una domanda per iniziare.')
             welcome.setObjectName('muted')
@@ -289,8 +304,8 @@ class MainWindow(QMainWindow):
             self._show_footer(self.current['messages'][-1].get('stats'))
         self._buttons()
 
-    def _add_message(self,role,text,pending=False,stats=None):
-        widget=Message(role,text,pending,stats)
+    def _add_message(self,role,text,pending=False,stats=None,images=None):
+        widget=Message(role,text,pending,stats,images=images,directory=self.state.directory)
         widget.copy_requested.connect(lambda text:QApplication.clipboard().setText(text))
         widget.regenerate_requested.connect(self.regenerate)
         self._message_widgets.append(widget)
@@ -302,6 +317,7 @@ class MainWindow(QMainWindow):
 
     def _select(self,index):
         if index>=0 and not self.busy and not self.loading:
+            self._clear_images()
             self.current_id=self.state.chats[index]['id']
             self._render()
 
@@ -309,6 +325,7 @@ class MainWindow(QMainWindow):
         if self.busy or self.loading:
             return
         chat=new_chat()
+        self._clear_images()
         self.state.chats.insert(0,chat)
         self.current_id=chat['id']
         self._refresh_list()
@@ -335,6 +352,7 @@ class MainWindow(QMainWindow):
             self.state.chats=[new_chat()]
         if self.current_id==removed['id']:
             self.current_id=self.state.chats[0]['id']
+            self._clear_images()
         self._refresh_list()
         self._render()
         self._save()
@@ -375,7 +393,10 @@ class MainWindow(QMainWindow):
         self._timer.start()
         self._notice('')
         self._buttons()
-        self.load_requested.emit(self.state.settings['model_path'],self.state.settings.copy())
+        self.load_requested.emit(self.state.settings['model_path'],self._options())
+
+    def _options(self):
+        return dict(self.state.settings,_attachment_directory=str(self.state.directory))
 
     @Slot(int,str)
     def _progress(self,percent,label):
@@ -392,7 +413,9 @@ class MainWindow(QMainWindow):
         self.ready=True
         self._timer.stop()
         self._set_status('Pronto')
-        self.subtitle.setText('Hermes 3.6 · 35B A3B' if name.lower().startswith('hermes3.6-35b') else name)
+        if name.lower().startswith('hermes3.6-35b'):
+            name='Hermes 3.6 · 35B A3B'+(' · Vision CPU' if self.state.settings['engine']=='vision' else '')
+        self.subtitle.setText(name)
         self._buttons()
 
     def send_or_stop(self):
@@ -407,13 +430,20 @@ class MainWindow(QMainWindow):
             self._notice('Anteprima grafica: avvia la GUI senza --demo e seleziona un GGUF per chattare.')
             return
         text=self.input.toPlainText().strip()
-        if not text or not self.ready or self.busy or self.loading or self._closing:
+        if not (text or self._pending_images) or not self.ready or self.busy or self.loading or self._closing:
             return
+        if self.state.settings['engine']!='vision' and (self._pending_images or any(m.get('images') for m in self.current['messages'])):
+            self._notice('Questa chat contiene immagini: seleziona Vision locale o apri una nuova chat di testo.')
+            return
+        text=text or 'Descrivi questa immagine.'
         self.input.clear()
         chat=self.current
         if not chat['messages']:
             chat['title']=' '.join(text.split())[:45]
-        chat['messages'].append(dict(role='user',content=text))
+        message=dict(role='user',content=text)
+        if self._pending_images:message['images']=copy.deepcopy(self._pending_images)
+        chat['messages'].append(message)
+        self._clear_images()
         self._render()
         self._start_reply()
         self._refresh_list()
@@ -422,6 +452,9 @@ class MainWindow(QMainWindow):
         if not self.ready or self.busy or self.loading or self._closing:
             return
         messages=self.current['messages']
+        if self.state.settings['engine']!='vision' and any(m.get('images') for m in messages):
+            self._notice('Seleziona Vision locale per rigenerare questa risposta con immagini.')
+            return
         if messages and messages[-1]['role']=='assistant':
             messages.pop()
             self._render()
@@ -441,7 +474,7 @@ class MainWindow(QMainWindow):
         self._notice('')
         self._buttons()
         self._save()
-        self.generate_requested.emit(history,self.state.settings.copy())
+        self.generate_requested.emit(history,self._options())
 
     @Slot(str)
     def _token(self,text):
@@ -508,17 +541,40 @@ class MainWindow(QMainWindow):
         self._set_status(self._phase+'.'*self._dot,'busy')
 
     def attach_text(self):
-        path,_=QFileDialog.getOpenFileName(self,'Allega testo locale',str(Path.home()),'Testo (*.txt *.md)')
+        path,_=QFileDialog.getOpenFileName(self,'Allega file locale',str(Path.home()),
+            'Testo e immagini (*.txt *.md *.png *.jpg *.jpeg *.webp)')
         if not path:
             return
         try:
             filename=Path(path)
+            if filename.suffix.lower() in ('.png','.jpg','.jpeg','.webp'):
+                self.add_image(filename)
+                return
             if filename.stat().st_size>1024**2:
                 raise ValueError('Il file supera 1 MiB; seleziona un estratto piu\' breve.')
             text=filename.read_text(encoding='utf-8-sig')
             self.input.insertPlainText(f'\n[{filename.name}]\n{text}\n')
         except (OSError,UnicodeError,ValueError) as error:
             self._notice(str(error))
+
+    def add_image(self,path):
+        if self.busy or self.loading or self._closing:return
+        if self.state.settings['engine']!='vision':
+            self._notice('Per le immagini seleziona Vision locale nelle impostazioni e indica llama-server e mmproj.')
+            return
+        try:
+            if self.state.read_only:raise ValueError(self.state.warning)
+            if len(self._pending_images)>=MAX_IMAGES:raise ValueError('Massimo quattro immagini per messaggio')
+            self._pending_images.append(import_image(path,self.state.directory))
+            self.attachment_names.setText(' · '.join(item['name'] for item in self._pending_images))
+            self.attachments.show()
+            self._notice('')
+        except (OSError,ValueError) as error:self._notice(str(error))
+
+    def _clear_images(self):
+        self._pending_images.clear()
+        self.attachments.hide()
+        self.attachment_names.clear()
 
     def check_updates(self):
         self._start_update('check')

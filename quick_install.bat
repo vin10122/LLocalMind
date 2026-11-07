@@ -39,7 +39,7 @@ echo ============================================================
 echo.
 echo Per compilare i kernel nativi (opzionale ma consigliato):
 echo   .\scripts\compile_native_expert.bat
-    .\scripts\compile_dequant_k.bat
+echo   .\scripts\compile_dequant_k.bat
 echo.
 echo Per avviare il chat:
 echo   .\run_chat.bat

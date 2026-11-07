@@ -15,6 +15,8 @@ def format_conversation(messages):
         role = 'user' if index % 2 == 0 else 'assistant'
         if not isinstance(message,dict) or message.get('role') != role or not isinstance(message.get('content'),str):
             raise ValueError('Ordine dei messaggi non valido')
+        if message.get('images'):
+            raise ValueError('Questa chat contiene immagini: seleziona Vision locale nelle impostazioni.')
         parts.append(f"<|im_start|>{role}\n{message['content']}<|im_end|>\n")
     parts.append('<|im_start|>assistant\n<think>\n\n</think>\n\n')
     return ''.join(parts)

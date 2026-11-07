@@ -22,7 +22,8 @@ Per dettagli, leggi README.md
 param(
     [switch]$SkipChecks = $false,
     [switch]$NoCompile = $false,
-    [string]$PythonPath = "py -3.14"
+    [string]$PythonPath = "py",
+    [string[]]$PythonArguments = @("-3.14")
 )
 
 # Configurazione
@@ -94,7 +95,7 @@ Write-Success "Sistema: Windows 64-bit"
 # Verifica Python
 Write-Info "Verifica Python 3.14+..."
 try {
-    $pythonOutput = & $PythonPath --version 2>$null
+    $pythonOutput = & $PythonPath @PythonArguments --version 2>$null
     if ($LASTEXITCODE -ne 0) {
         throw "Python non trovato"
     }
@@ -117,7 +118,8 @@ try {
 # Verifica pip
 Write-Info "Verifica pip..."
 try {
-    & $PythonPath -m pip --version 2>$null | Out-Null
+    & $PythonPath @PythonArguments -m pip --version 2>$null | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "pip non disponibile" }
     Write-Success "pip disponibile"
 } catch {
     Write-ErrorMsg "pip non disponibile. Reinstalla Python."
@@ -158,7 +160,7 @@ if (Test-Path $venvPath) {
 } else {
     Write-Info "Creazione ambiente virtuale Python..."
     try {
-        & $PythonPath -m venv $venvPath
+        & $PythonPath @PythonArguments -m venv $venvPath
         if ($LASTEXITCODE -ne 0) {
             throw "Creazione venv fallita"
         }
@@ -259,9 +261,11 @@ cd /d "%~dp0"
 
 REM Attiva ambiente virtuale
 if exist ".venv\Scripts\python.exe" (
-    set "PYTHON=".venv\Scripts\python.exe"
+    set "PYTHON=.venv\Scripts\python.exe"
+    set "PYTHON_ARGS="
 ) else (
-    set "PYTHON=py -3.14"
+    set "PYTHON=py"
+    set "PYTHON_ARGS=-3.14"
 )
 
 REM Imposta variabili ambiente per BLAS
@@ -270,7 +274,7 @@ set MKL_NUM_THREADS=1
 set BLIS_NUM_THREADS=1
 
 REM Avvia chat
-%PYTHON% chat.py default
+"%PYTHON%" %PYTHON_ARGS% chat.py default %*
 
 pause
 "@
@@ -286,16 +290,18 @@ chcp 65001 >nul
 cd /d "%~dp0"
 
 if exist ".venv\Scripts\python.exe" (
-    set "PYTHON=".venv\Scripts\python.exe"
+    set "PYTHON=.venv\Scripts\python.exe"
+    set "PYTHON_ARGS="
 ) else (
-    set "PYTHON=py -3.14"
+    set "PYTHON=py"
+    set "PYTHON_ARGS=-3.14"
 )
 
 set OPENBLAS_NUM_THREADS=1
 set MKL_NUM_THREADS=1
 set BLIS_NUM_THREADS=1
 
-%PYTHON% tools\bench_stability.py default --native-decode native --max-tokens 512 --max-seq 2048
+"%PYTHON%" %PYTHON_ARGS% tools\bench_stability.py default --native-decode native --max-tokens 512 --max-seq 2048
 
 pause
 "@
@@ -315,7 +321,7 @@ Write-Info "PER INIZIARE:"
 Write-Host ""
 Write-Host "  1. Posiziona il file modello GGUF nella directory del progetto"
 Write-Host "     OR impostare il percorso con:"
-Write-Host "     \$env:FLASH_MOE_GGUF = \"D:\\percorso\\al\\modello.gguf\""
+Write-Host '     $env:FLASH_MOE_GGUF = "D:\percorso\al\modello.gguf"'
 Write-Host ""
 Write-Host "  2. Esegui il chat client:"
 Write-Host "     .\run_chat.bat"

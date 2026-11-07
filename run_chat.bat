@@ -11,9 +11,11 @@ cd /d "%~dp0"
 
 REM Attiva ambiente virtuale
 if exist ".venv\Scripts\python.exe" (
-    set "PYTHON=".venv\Scripts\python.exe"
+    set "PYTHON=.venv\Scripts\python.exe"
+    set "PYTHON_ARGS="
 ) else (
-    set "PYTHON=py -3.14"
+    set "PYTHON=py"
+    set "PYTHON_ARGS=-3.14"
 )
 
 REM Imposta variabili ambiente per BLAS (1 thread per prestazioni ottimali)
@@ -22,6 +24,6 @@ set MKL_NUM_THREADS=1
 set BLIS_NUM_THREADS=1
 
 REM Avvia chat con preset default
-%PYTHON% chat.py default
+"%PYTHON%" %PYTHON_ARGS% chat.py default %*
 
 pause

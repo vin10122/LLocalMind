@@ -23,8 +23,12 @@ class ModelWorker(QObject):
         self.stop = stop or threading.Event()
         self.model = None
         self.tokenizer = None
+        self.vision = None
 
     def _close_model(self):
+        if self.vision is not None:
+            engine,self.vision=self.vision,None
+            engine.close()
         model, self.model = self.model, None
         self.tokenizer = None
         if model is not None:
@@ -47,6 +51,18 @@ class ModelWorker(QObject):
             path = Path(filename).expanduser().resolve()
             if not path.is_file() or path.suffix.lower() != '.gguf':
                 raise ValueError('Seleziona un file GGUF esistente')
+            if options.get('engine')=='vision':
+                from flash_moe.multimodal import LocalVisionModel,VisionCancelled
+                from .app_paths import data_root
+                self.vision=LocalVisionModel(path,options['vision_projector'],options['vision_executable'],
+                    max_seq=options['max_seq'],threads=options['expert_workers'],
+                    prefill_threads=options['prefill_threads'],log_path=data_root()/'logs/vision.log')
+                try:self.vision.start(self.stop,self.progress.emit)
+                except VisionCancelled:
+                    self._close_model()
+                    return
+                self.loaded.emit(path.stem+' · Vision CPU')
+                return
             os.environ['FLASH_MOE_GGUF'] = str(path)
             self.progress.emit(0, 'Preparazione del modello')
             from flash_moe.model import Qwen3MoEModel
@@ -82,6 +98,16 @@ class ModelWorker(QObject):
         status = 'complete'
         stream = None
         try:
+            if self.vision is not None:
+                from flash_moe.multimodal import VisionCancelled
+                from .images import chat_messages
+                try:
+                    self.stats.emit(self.vision.generate(
+                        chat_messages(messages,options['_attachment_directory']),
+                        max_tokens=options['max_tokens'],temperature=options['temperature'],
+                        stop=self.stop,on_text=self.token.emit))
+                except VisionCancelled:status='stopped'
+                return
             if self.model is None or self.tokenizer is None:
                 raise RuntimeError('Carica prima un modello')
             from flash_moe.tokenizer import StreamingDetokenizer

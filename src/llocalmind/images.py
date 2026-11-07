@@ -1,0 +1,83 @@
+"""Local, metadata-free image copies and actual multimodal request content."""
+import base64
+import hashlib
+import io
+from pathlib import Path
+import re
+from .prompts import SYSTEM
+
+MAX_IMAGES=4
+MAX_BYTES=20*1024**2
+
+
+def validate_images(images):
+    if not isinstance(images,list) or len(images)>MAX_IMAGES:
+        raise ValueError('Massimo quattro immagini per messaggio')
+    for item in images:
+        if (not isinstance(item,dict) or not isinstance(item.get('id'),str)
+            or not re.fullmatch(r'[0-9a-f]{64}\.png',item['id'])
+            or not isinstance(item.get('name'),str) or len(item['name'])>255):
+            raise ValueError('Riferimento immagine non valido')
+    return images
+
+
+def image_path(directory,item):
+    validate_images([item])
+    path=Path(directory)/'images'/item['id']
+    if path.is_symlink():raise ValueError('Riferimento immagine non valido')
+    return path
+
+
+def import_image(filename,directory):
+    from PIL import Image,ImageOps
+    filename=Path(filename)
+    if not filename.is_file() or filename.stat().st_size>MAX_BYTES:
+        raise ValueError('Seleziona un’immagine locale di massimo 20 MiB')
+    with Image.open(filename) as source:
+        if source.format not in ('PNG','JPEG','WEBP') or source.width*source.height>32_000_000:
+            raise ValueError('Usa PNG, JPEG o WebP fino a 32 megapixel')
+        oriented=ImageOps.exif_transpose(source)
+        rgba=oriented.convert('RGBA')
+        image=Image.new('RGB',rgba.size,'white')
+        image.paste(rgba,mask=rgba.getchannel('A'))
+        image.thumbnail((2048,2048))
+        # Construct from pixels so EXIF, comments and profiles are not copied.
+        image=Image.frombytes('RGB',image.size,image.tobytes())
+        buffer=io.BytesIO()
+        image.save(buffer,format='PNG')
+    data=buffer.getvalue()
+    if len(data)>MAX_BYTES:raise ValueError('Immagine convertita troppo grande')
+    item=dict(id=hashlib.sha256(data).hexdigest()+'.png',name=filename.name[:255])
+    path=image_path(directory,item)
+    path.parent.mkdir(parents=True,exist_ok=True)
+    if not path.exists():path.write_bytes(data)
+    return item
+
+
+def chat_messages(messages,directory):
+    if not messages or len(messages)%2!=1:
+        raise ValueError('La conversazione deve terminare con una domanda')
+    result=[dict(role='system',content=SYSTEM)]
+    for index,message in enumerate(messages):
+        role='user' if index%2==0 else 'assistant'
+        if (not isinstance(message,dict) or message.get('role')!=role
+            or not isinstance(message.get('content'),str)):
+            raise ValueError('Ordine dei messaggi non valido')
+        images=validate_images(message.get('images',[]))
+        content=message['content']
+        if images:
+            if role!='user':raise ValueError('Immagini consentite solo nelle domande')
+            content=[dict(type='text',text=content)]
+            for item in images:
+                path=image_path(directory,item)
+                try:
+                    if path.stat().st_size>MAX_BYTES:raise ValueError('Immagine troppo grande')
+                    data=path.read_bytes()
+                except OSError as error:
+                    raise ValueError('Immagine non disponibile: '+item['name']) from error
+                if hashlib.sha256(data).hexdigest()+'.png'!=item['id']:
+                    raise ValueError('Immagine salvata danneggiata')
+                content.append(dict(type='image_url',image_url=dict(
+                    url='data:image/png;base64,'+base64.b64encode(data).decode('ascii'))))
+        result.append(dict(role=role,content=content))
+    return result

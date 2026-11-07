@@ -7,6 +7,7 @@ from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton,
                                QSizePolicy, QTextBrowser, QToolButton, QVBoxLayout)
 from .metrics import clean_stats, response_summary
+from .images import image_path
 
 ASSETS = Path(__file__).with_name('assets')
 NAVY = '#122c40'
@@ -114,7 +115,7 @@ class Message(QFrame):
     copy_requested=Signal(str)
     regenerate_requested=Signal()
 
-    def __init__(self,role,text='',pending=False,stats=None):
+    def __init__(self,role,text='',pending=False,stats=None,*,images=None,directory=None):
         super().__init__()
         self.role=role
         self.text=text
@@ -131,6 +132,18 @@ class Message(QFrame):
             self.bubble.setMaximumWidth(720)
             row.addWidget(self.bubble)
             layout.addLayout(row)
+            for item in images or []:
+                image_row=QHBoxLayout()
+                image_row.addStretch()
+                preview=QLabel()
+                preview.setTextFormat(Qt.TextFormat.PlainText)
+                pixmap=QPixmap(str(image_path(directory,item)))
+                if pixmap.isNull():preview.setText('Immagine non disponibile: '+item['name'])
+                else:preview.setPixmap(pixmap.scaled(200,140,Qt.AspectRatioMode.KeepAspectRatio,
+                                                  Qt.TransformationMode.SmoothTransformation))
+                preview.setToolTip(item['name'])
+                image_row.addWidget(preview)
+                layout.addLayout(image_row)
         else:
             heading=QHBoxLayout()
             heading.setSpacing(10)

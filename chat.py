@@ -229,11 +229,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--profile-startup", action="store_true",
                         help="Mostra la durata delle fasi di caricamento")
     parser.add_argument("--mmproj", type=str,
-                        help="Percorso al file .mmproj per il proiettore "
-                             "visione->testo (multimodal).")
+                        help="File GGUF mmproj compatibile per il motore vision locale")
     parser.add_argument("--image", type=str,
                         help="Percorso a un'immagine da processare con il "
                              "proiettore multimodale (richiede --mmproj).")
+    parser.add_argument("--llama-server", type=str,
+                        help="Eseguibile llama-server locale per vision; altrimenti cercato nel PATH")
     return parser
 
 
@@ -384,6 +385,10 @@ def main(argv: list[str] | None = None) -> int:
         print("Imposta FLASH_MOE_GGUF per puntare altrove.", flush=True)
         return 1
 
+    if args.mmproj or args.image or args.llama_server:
+        from llocalmind.vision_cli import run
+        return run(args,path)
+
     console = sys.stdout
     startup_progress = StartupProgress(console)
 
@@ -411,7 +416,6 @@ def main(argv: list[str] | None = None) -> int:
             use_mmap=args.mmap,
             profile_startup=args.profile_startup,
             startup_progress=startup_progress,
-            mmproj_path=args.mmproj,
         )
         startup_stage = time.perf_counter()
         startup_progress(99, "Loading tokenizer")
@@ -420,21 +424,6 @@ def main(argv: list[str] | None = None) -> int:
             print(f"[Startup] lettura tokenizer GGUF: "
                   f"{time.perf_counter() - startup_stage:.2f} s", flush=True)
         profiler = LiveProfiler(model) if args.profile_live else None
-
-        # Elabora immagine con il proiettore multimodale, se richiesta.
-        if args.image is not None:
-            if model.mmproj is None:
-                print("errore: --image richiede --mmproj.", flush=True)
-                model.close()
-                return 1
-            from pathlib import Path
-            emb = model.embed_image(args.image)
-            if emb is not None:
-                print(f"[Immagine] {args.image}: embedding "
-                      f"({emb.vector.shape[0]} dim, {emb.n_patches} patch)",
-                      flush=True)
-            else:
-                print("[Immagine] proiettore non disponibile.", flush=True)
 
         # Pre-caricamento expert se richiesto
         if args.preload:

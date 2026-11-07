@@ -273,3 +273,11 @@ Con le ottimizzazioni piu' recenti (Q3_K, DeltaNet):
 - Non tutte le funzionalita' sono state testate estensivamente
 
 Grazie per provare Intel-Optimized-MoE!
+# Python launcher selection
+
+`install.ps1` defaults to executable `py` with argument `-3.14`. For a direct
+Python executable, pass arguments separately, for example:
+
+```powershell
+.\install.ps1 -PythonPath 'C:\Python314\python.exe' -PythonArguments @()
+```

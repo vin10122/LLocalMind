@@ -35,6 +35,42 @@ class SettingsDialog(QDialog):
         hint.setWordWrap(True)
         hint.setObjectName('muted')
         layout.addWidget(hint)
+        vision_form=QFormLayout()
+        self.engine=QComboBox()
+        self.engine.addItem('Testo · Intel ottimizzato','optimized')
+        self.engine.addItem('Testo e immagini · llama.cpp locale CPU','vision')
+        self.engine.setCurrentIndex(self.engine.findData(values['engine']))
+        self.engine.setEnabled(not busy)
+        vision_form.addRow('Motore',self.engine)
+        self.vision_fields=QWidget()
+        fields=QFormLayout(self.vision_fields)
+        fields.setContentsMargins(0,0,0,0)
+        self.vision_paths={}
+        for key,label,file_filter in (
+            ('vision_executable','llama-server','Eseguibile (llama-server.exe llama-server)'),
+            ('vision_projector','mmproj compatibile','GGUF (*.gguf)')):
+            row=QHBoxLayout()
+            edit=QLineEdit(values[key])
+            edit.setEnabled(not busy)
+            self.vision_paths[key]=edit
+            button=QPushButton('Sfoglia…')
+            button.setEnabled(not busy)
+            def choose(_=False,control=edit,title=label,filter_=file_filter):
+                filename,_=QFileDialog.getOpenFileName(self,title,str(Path.home()),filter_)
+                if filename:control.setText(filename)
+            button.clicked.connect(choose)
+            row.addWidget(edit,1)
+            row.addWidget(button)
+            fields.addRow(label,row)
+        note=QLabel('Serve una versione di llama.cpp che supporti il modello e il suo mmproj. '
+                   'Elaborazione locale su CPU; prestazioni e RAM diverse dal motore Intel. '
+                   'Mantieni le DLL accanto a llama-server.exe.')
+        note.setWordWrap(True)
+        fields.addRow(note)
+        vision_form.addRow(self.vision_fields)
+        self.vision_fields.setVisible(self.engine.currentData()=='vision')
+        self.engine.currentIndexChanged.connect(lambda:self.vision_fields.setVisible(self.engine.currentData()=='vision'))
+        layout.addLayout(vision_form)
         advanced=QGroupBox('Parametri avanzati · configurazione consigliata preimpostata')
         advanced.setCheckable(True)
         advanced.setChecked(False)
@@ -102,12 +138,20 @@ class SettingsDialog(QDialog):
     def accept(self):
         values=self.values.copy()
         values['model_path']=self.path.text().strip()
+        values['engine']=self.engine.currentData()
+        for key,edit in self.vision_paths.items():values[key]=edit.text().strip()
         for name,control in self.controls.items():
             values[name]=control.currentText() if isinstance(control,QComboBox) else control.value()
         try:
             self.values=validate_settings(values)
             if values['model_path'] and not Path(values['model_path']).is_file():
                 raise ValueError('Il file del modello selezionato non esiste')
+            if values['engine']=='vision':
+                for key in ('vision_executable','vision_projector'):
+                    if not values[key] or not Path(values[key]).is_file():
+                        raise ValueError('Seleziona llama-server e il mmproj compatibile')
+                if Path(values['vision_projector']).suffix.lower()!='.gguf':
+                    raise ValueError('Il mmproj deve essere un file GGUF')
         except ValueError as error:
             QMessageBox.warning(self,'Impostazioni',str(error))
             return
