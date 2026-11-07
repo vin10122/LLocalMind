@@ -147,197 +147,71 @@ sponsored by Apple.
 
 ## Status and results
 
-The first model tested was **Hermes 3.6 35B A3B**, a Qwen3.6-MoE-based model
-in GGUF format. The model file is not included in this repository; you need
-to obtain it separately.
+The current test model is **Hermes 3.6 35B A3B** in GGUF format. Model files
+are external and are not included in the application.
 
-The current configuration combines **native quantized CPU decode with four
-expert workers**, OpenVINO expert prefill with four CPU threads, batched
-DeltaNet projections on the GPU, a sliding eight-expert prefetch window,
-router weights promoted to FP32 once per layer, and native FP32 DeltaNet
-recurrence during decode. The recurrence and its
-state remain sequential FP32 operations. Raw expert cache: **320**; converted
-weight cache: **1**. Native batched expert prefill was tested and excluded
-because the complete prompt ran slower.
+Recent user-reported desktop runs on an **Intel Core Ultra 5 226V, integrated
+Arc 130V and 15.7 GiB usable RAM**, on Windows **with the AC adapter connected**,
+show approximately **6–8 tok/s during generation**, or around **4–5 tok/s
+with a cold cache**. With a warm cache, **peaks can rise substantially above
+these ranges**. Peak speed is variable and should not be confused with the
+average speed of a complete answer or a guaranteed sustained rate.
 
-Manual runs used an **Intel Core Ultra 5 226V, integrated Arc 130V graphics,
-15.7 GiB usable RAM, and Python 3.14 on Windows**:
+These are approximate observations from local use, not a controlled benchmark
+or a rate guaranteed on other PCs, models, contexts or execution engines.
+Warm-up, OS file cache, expert routing, available RAM, drivers, power mode and
+temperature affect the result. They do not isolate the effect of any single optimization. Keep AC power and performance settings consistent when
+comparing runs, and report cold-cache and warm-cache results separately.
 
-| Power / request | Prompt tokens | Prefill | Generated tokens | Generation time | Generation speed |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Battery, first request | 88 | 57.0 s | 95 | 101.7 s | 0.934 tok/s |
-| AC adapter, first request | 88 | 43.1 s | 95 | 82.8 s | 1.148 tok/s |
-| AC adapter, repeated request in the same process | 88 | 22.8 s | 95 | 55.8 s | 1.702 tok/s |
-| AC adapter, different question in the same process | 81 | 22.7 s | 94 | 56.1 s | 1.677 tok/s |
+**Generation speed excludes prefill and the wait for the first token.** Image
+encoding and prompt processing can still take much longer than generation.
+Use the per-response metrics and local performance reports to measure these
+phases separately; a one-token response does not measure decode throughput.
+The native Intel/OpenVINO text engine and the llama.cpp vision engine are
+separate execution paths, so their rates should be compared under matching
+conditions rather than treated as interchangeable.
 
-**Connecting the AC adapter improved the observed performance.** Comparing
-the two first requests, prefill fell by about 24% and generation speed rose
-by about 23%. These are observations from manual runs, not a controlled
-power benchmark. Compilation, OS file cache, power settings, temperature,
-and prompt routing also affect the results. The faster repeated request
-benefits from warm-up as well; do not attribute its entire gain to AC power.
-For comparisons, keep the power source and performance mode consistent and
-report first-request and warmed-request timings separately.
+### Execution paths and validation
 
-The earlier measurements above came from the first temporary native-decode
-configuration; the newer Q3_K/DeltaNet results are recorded below. Full-model measurements of this final
-integration still need to be repeated on the target Windows PC. A native
-decode comparison matched 16 greedy token IDs; four forced-input logits
-checks had maximum relative error below 0.0006. The same 95-token answer
-was observed with the optimized DeltaNet prefill. This is a numerical smoke
-check, not proof of general answer-quality parity. The first generated token
-comes from prefill logits: a one-token run does **not** measure decode speed.
+The optimized text path uses native quantized CPU decode with four expert
+workers, OpenVINO expert prefill with four CPU threads, GPU projections,
+native FP32 DeltaNet decode recurrence, an eight-expert sliding prefetch
+window and router weights converted to FP32 once per layer. Default raw
+expert cache: **320**; converted weight cache: **1**. Grouped attention avoids
+replicating KV heads; compatible KV storage is reused across requests.
+Shared-expert prefill uses bounded matrix batches for inputs of at least
+16 tokens, including long prompts. The default BLAS thread count is **1**;
+OpenVINO's explicit thread settings are separate.
 
-### Q3_K and DeltaNet update: all new measurements on AC power
+The vision path uses llama.cpp, with both the language model and image encoder
+on CPU. See [image input](#image-input-v013-and-newer) for runtime installation
+and configuration.
 
-The latest tests below were **all run with the AC adapter connected**, on
-that same Intel PC, using four expert workers, raw cache 320 and converted
-cache 1. They used temporary launchers with the kernels now integrated here:
+Automated tests validate components, numerical comparisons, GUI behavior,
+process cleanup and Windows packaging. They do not establish general
+answer-quality parity or a full-model performance guarantee. See the
+[performance audit](docs/performance-audit.md) for implementation details,
+remaining bottlenecks and measurement limits.
 
-| Run | Input tokens | Prefill | Generated tokens | Generation time | CLI rate | Decode-step rate, approximately |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| First request with checks | 101 | 32.4 s | 64 | 31.9 s | 2.004 tok/s | 1.97 tok/s |
-| Second request, same session | 98 | 26.6 s | 64 | 31.8 s | 2.010 tok/s | 1.98 tok/s |
-| Longer generation, new session | 117 | 32.2 s | 351 | 186.9 s | 1.878 tok/s | 1.87 tok/s |
+### Check sustained generation from source
 
-The approximate decode-step rate uses `(generated_tokens - 1) / generation_time`,
-because the first token comes from prefill. The timer also includes sampling
-and, on the first request, temporary numerical checks/microbenchmarks. These
-are manual observations with varying cache and thermal conditions; **stable
-2+ tok/s has not been established**. The long test used a 512-token output
-limit and stopped at EOS after 351 tokens. Its input contained 117 tokens,
-so this measures sustained generation rather than long-context performance.
-
-The Q3_K kernel extracts signed values before widening to AVX2 32-bit lanes
-and uses constant shifts, retaining the original FMA accumulation order and
-FP16 rounding. All tested Q3 expert samples from layers 5–34 matched the old
-native kernel bit for bit. A same-expert Windows microbenchmark measured
-1.502 to 0.750 ms (2.00x); another measured 1.390 to 0.607 ms (2.29x).
-These single-expert ratios are **not** whole-model speedups.
-
-The DeltaNet kernel processes all value heads in one native call, leaving
-convolution, normalization, projection devices and token recurrence order
-unchanged. Target-PC checks compared local outputs, recurrent state and
-convolution state with the previous path, with observed maximum relative
-errors below 5e-7. This does not prove general answer-quality parity.
-The native recurrence is enabled only after prefill; OpenVINO/NumPy prefill
-is retained. `--native-decode openvino` also retains the NumPy recurrence.
-
-A larger raw cache of 640 was rejected: in one 32-token diagnostic run,
-generation increased from 18.1 to 24.0 seconds. Cache misses, logical read
-bytes and physical storage traffic are different quantities; zero demand
-misses does not imply no prefetch waits or memory pressure.
-
-### Long-context update (AC power)
-
-The current CLI also uses **FP32 grouped matrix attention without replicated
-KV heads**, preallocated FP16 KV buffers, and **one BLAS thread**. Expert
-workers remain **4**, raw cache **320**, converted cache **1**. All tests in
-this section used the AC adapter. The last baseline run additionally
-confirmed Windows' AC performance mode and AcerSense Performance mode;
-earlier runs did not consistently record both settings.
-
-| Execution policy | Input tokens | Generated tokens | Prefill | Generation time | Effective decode rate |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Previous published attention | 1155 | 413 | 207.6 s | 374.8 s | 1.100 tok/s |
-| GQA without replicated KV, einsum | 1155 | 413 | 179.4 s | 259.3 s | 1.589 tok/s |
-| FP32 grouped matmul + preallocated KV + BLAS=1 | 1155 | 425 | 153.2 s | 236.3 s | 1.795 tok/s |
-
-The effective decode rate excludes the first token from prefill. These are
-separate manual runs, not a controlled isolated attribution of each gain.
-For the long FP32/KV run, full 64-step windows ranged from **1.680 to 1.912
-tok/s**, median step time was **539.3 ms** and p95 was **640.8 ms**. Shorter
-128-step trials ranged around **1.82–1.94 tok/s** overall, sometimes exceeding
-2 tok/s in a single window. **2+ tok/s sustained on long inputs remains a
-goal, not a demonstrated result.** FP32 attention changes rounding; synthetic
-comparisons with the replicated reference passed, but general answer-quality
-parity is not established.
-
-The CLI sets `OPENBLAS_NUM_THREADS`, `MKL_NUM_THREADS`, and
-`BLIS_NUM_THREADS` before loading NumPy, using **1** by default. This affects
-the process only and leaves OpenVINO's explicit thread settings separate.
-To experiment, set `FLASH_MOE_BLAS_THREADS` before launching the CLI.
-When importing the model directly, configure BLAS before importing NumPy.
-Unrestricted BLAS threading severely slowed one grouped-matmul trial.
-KV storage is allocated for `--max-seq` up front: at 2048 positions, ten
-layers with 2 KV heads and head dimension 256 reserve about **40 MiB** in
-total. Very large maximum contexts therefore increase reserved storage.
-
-Rejected experiments include six expert workers, overlapping shared-expert
-execution, persistent GGUF handles, and mmap for the measured read workload.
-A SIMD Q3 scale variant remained experimental: a 62-pair decode A/B test
-showed **1.027x mean forward throughput**, zero compared-output error, and
-only **31/62 candidate wins**. It is not enabled in this update.
-
-#### Run a complete multiline input and check stability
-
-Save a UTF-8 input file, then run the normal chat:
+Save the complete input as a UTF-8 file and run:
 
 ```powershell
 py -3.14 chat.py default --prompt-file .\input.txt --max-tokens 512 --max-seq 2048 --native-decode native
 ```
 
-For timing windows, use the included benchmark, with the same input file:
+For per-window decode timings:
 
 ```powershell
 py -3.14 tools\bench_stability.py --prompt-file .\input.txt default --native-decode native --max-tokens 512 --max-seq 2048
 ```
 
 The benchmark reports 64-step windows, median and p95 decode latency,
-excluding the first token. A partial final window is identified separately.
-The output limit does not force generation to continue past EOS. The input
-plus output budget must fit `--max-seq`; the CLI checks this before prefill.
-A final benchmark of this source integration should still be repeated on the
-Windows target; the measurements above used temporary equivalent variants.
-
-Automated tests check individual components such as attention,
-dequantization, and the DeltaNet path. They are not a full validation of
-answer quality or reliability across different PCs.
-
-### Short-prompt Q6 update (AC power)
-
-The integrated native kernel now computes Q6_K dot products directly with
-AVX2, retaining FP16 weight/graph rounding and the existing accumulation
-order. Shared experts run as FP32 matrix batches for **16–128 prompt tokens**,
-including the chat template. Longer inputs and single-token shared-expert
-decode retain their previous paths. The normal four-worker expert prefetch
-is retained.
-
-Manual Windows measurements on the same Intel Core Ultra 5 226V / Arc 130V
-PC, **with the AC adapter connected**, used repeated requests in the same
-process. Each row below generated the same 89-token response from a
-94-token input:
-
-| Variant / repeated run | Prefill | Generation | CLI rate | Approx. effective decode rate |
-|---|---:|---:|---:|---:|
-| Batched shared prefill, previous native kernel | 19.1 s | 38.0 s | 2.344 tok/s | 2.32 tok/s |
-| Batched shared prefill + fused Q6, run 1 | 19.0 s | 35.4 s | 2.513 tok/s | 2.49 tok/s |
-| Batched shared prefill + fused Q6, run 2 | 18.8 s | 35.0 s | 2.545 tok/s | 2.51 tok/s |
-| Batched shared prefill + fused Q6, later run | 20.2 s | 37.6 s | 2.368 tok/s | 2.34 tok/s |
-
-Effective rates use 88 decode steps, excluding the first token supplied by
-prefill; generation timing also includes sampling. These are separate manual
-runs, not a controlled paired benchmark. Warm-up, file cache and PC conditions
-affect results: **3 tok/s and these rates on long prompts are not established**.
-The shared batch affects prefill only; it does not directly accelerate decode.
-
-All nine Q6-layer checks matched the previous native expert output bit for
-bit for the checked real-expert inputs. Shared-expert batch checks across
-40 layers had relative error below `1e-6`; batching can change rounding and
-does not establish general answer-quality parity. Synthetic native checks and
-integration tests also pass; final source integration should be checked again
-on the target Windows PC.
-
-The Q4+Q6 and direct-read-without-prefetch experiments are **not enabled**:
-their measured whole-chat runs did not improve the selected Q6 configuration.
-No temporary Python launchers are needed after updating. Close running chats,
-update and rebuild the native decode DLL once:
-
-```powershell
-git pull --ff-only origin master
-scripts\compile_native_expert.bat
-py -3.14 chat.py default --native-decode native --expert-workers 4 --max-tokens 128
-```
+excluding the first token from prefill. Partial final windows are identified.
+The output limit does not force generation past EOS; the input and output
+budget must fit the configured context. These commands test the native text
+path; use the vision benchmark documented below for image requests.
 
 ## LLocalMind desktop app
 
@@ -452,12 +326,10 @@ SHA-256-verified official llama.cpp Windows CPU runtime; an app update does
 not delete older external runtime files. Users upgrading from a preview can
 click **Installa / aggiorna motore vision CPU** to select the CPU runtime.
 
-One user run reported **305 s to first token** and **6.18 tok/s** generation
-before this change. That is the motivation for accelerating pre-response
-work, not a controlled benchmark or a result for this new release. The
-performance report now records `encoder_device` alongside prompt/cache counts
-and timings. Compare the same image and history, on AC power, before claiming
-a speedup.
+The generation ranges above do not describe image-prefill latency. The
+performance report records `encoder_device` alongside prompt/cache counts and
+timings. Compare the same image and history, on AC power, before attributing
+a change in first-token latency to a particular configuration.
 
 ### Vision performance controls
 
