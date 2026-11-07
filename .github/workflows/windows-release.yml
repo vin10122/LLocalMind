@@ -155,11 +155,12 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<'NOTES'
-          Initial Windows preview of LLocalMind.
+          Windows preview of LLocalMind.
 
           - Installer: download `LLocalMind-Setup-*-windows-x64.exe`.
           - Portable: extract the whole portable ZIP, then open `LLocalMind/LLocalMind.exe`.
           - No Python installation is required. GGUF models are external and are not included.
+          - Each generated answer shows its token count and measured decode speed; these metrics are saved with conversations.
           - Choose your compatible GGUF in Settings. Intel GPU/NPU support requires appropriate drivers.
           - CI checks the GUI, CPU OpenVINO, native kernels and installer without a GGUF. Full-model quality/performance on the target PC still needs manual validation.
           - SHA-256 sidecars are included. This preview is not code-signed and is not offered by the stable auto-updater until promoted to a stable release.

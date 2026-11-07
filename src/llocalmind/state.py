@@ -8,6 +8,7 @@ import tempfile
 import uuid
 
 from .app_paths import user_data_dir
+from .metrics import clean_stats
 
 DEFAULTS = dict(model_path='', max_tokens=128, max_seq=2048, cache=320,
                 weight_cache=1, expert_workers=4, prefill_threads=4,
@@ -64,6 +65,12 @@ class LocalState:
                     if (not isinstance(message,dict) or message.get('role') not in ('user','assistant')
                             or not isinstance(message.get('content'),str)):
                         raise ValueError('Messaggio non valido')
+                    if 'stats' in message:
+                        stats=clean_stats(message['stats'])
+                        if stats is None:
+                            message.pop('stats')
+                        else:
+                            message['stats']=stats
             if len({c['id'] for c in chats}) != len(chats):
                 raise ValueError('Identificatori duplicati')
             self.chats = chats

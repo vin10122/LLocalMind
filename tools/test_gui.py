@@ -20,6 +20,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 from llocalmind.app import MainWindow
 from llocalmind.inference import ModelWorker
+from llocalmind.metrics import clean_stats, response_summary
 from llocalmind.prompts import format_conversation
 from llocalmind.state import LocalState,validate_settings
 from llocalmind.theme import apply_theme
@@ -34,11 +35,13 @@ class FakeWorker(ModelWorker):
     @Slot(list,dict)
     def generate(self,messages,options):
         self.history=copy.deepcopy(messages)
+        count=0
         for _ in range(50):
             if self.stop.is_set():break
+            count+=1
             self.token.emit('test ')
             QThread.msleep(3)
-        self.stats.emit(dict(tokens=50,first_token=.01,rate=2.5))
+        self.stats.emit(dict(tokens=count,first_token=.01 if count else None,rate=2.5 if count>1 else None))
         self.reply_finished.emit('stopped' if self.stop.is_set() else 'complete')
 
 
@@ -133,6 +136,50 @@ class DesktopTests(unittest.TestCase):
         self.assertFalse(window._thread.isRunning())
         self.assertEqual(len(LocalState(self.temp.name).chats[0]['messages']),2)
 
+    def test_per_response_metrics_survive_reload_and_regeneration(self):
+        window=self.window()
+        window.load_model()
+        self.wait(lambda:window.ready)
+        for question in ('Prima domanda','Seconda domanda'):
+            window.input.setPlainText(question)
+            window.send()
+            self.assertIsNotNone(window._active_reply, f'{question}: ready={window.ready} busy={window.busy} loading={window.loading} closing={window._closing} messages={len(window.current["messages"])}')
+            self.assertTrue(window._active_reply.metrics_label.isHidden())
+            self.wait(lambda:not window.busy)
+            self.assertEqual(window._message_widgets[-1].metrics_label.text(),'2,50 tok/s · 50 token')
+        restored=LocalState(self.temp.name)
+        replies=[m for m in restored.chats[0]['messages'] if m['role']=='assistant']
+        self.assertEqual(len(replies),2)
+        self.assertTrue(all(m['stats']['rate']==2.5 for m in replies))
+        window.state=restored
+        window._render()
+        labels=[w.metrics_label.text() for w in window._message_widgets if w.role=='assistant']
+        self.assertEqual(labels,['2,50 tok/s · 50 token']*2)
+        window.regenerate()
+        self.assertTrue(window._active_reply.metrics_label.isHidden())
+        self.wait(lambda:not window.busy)
+        self.assertEqual(len(window.current['messages']),4)
+        self.assertEqual(window.current['messages'][-1]['stats']['tokens'],50)
+
+    def test_old_chats_and_unmeasurable_response_metrics(self):
+        widget=Message('assistant','Una vecchia risposta')
+        self.assertTrue(widget.metrics_label.isHidden())
+        widget.set_stats(dict(tokens=1,rate=100.0))
+        self.assertNotIn('100',widget.metrics_label.text())
+        self.assertIn('non misurabili',widget.metrics_label.text())
+        self.assertEqual(response_summary(dict(tokens=0,rate=None)),'')
+        self.assertIsNone(clean_stats(dict(tokens=True,rate=2)))
+        for invalid in (float('nan'),float('inf'),-1,10**1000):
+            self.assertIsNone(clean_stats(dict(tokens=3,rate=invalid))['rate'])
+        self.state.chats[0]['messages']=[dict(role='assistant',content='Testo',stats=dict(tokens=3,rate=float('nan')))]
+        path=Path(self.temp.name)/'conversations.json'
+        path.write_text(json.dumps(self.state.chats),encoding='utf-8')
+        restored=LocalState(self.temp.name)
+        self.assertFalse(restored.read_only)
+        self.assertIsNone(restored.chats[0]['messages'][0]['stats']['rate'])
+        restored.save_chats()
+        widget.deleteLater()
+
     def test_atomic_storage_and_corrupt_archive_preserved(self):
         self.state.chats[0]['messages']=[dict(role='user',content='Caffè e tè')]
         self.state.save_chats()
@@ -182,7 +229,9 @@ class DesktopTests(unittest.TestCase):
             last_stream_timings=dict(generation_seconds=1,prefill_seconds=.5)
             def stream(self,*args,**kwargs):
                 try:
+                    self.last_stream_timings=dict(generation_seconds=.1,prefill_seconds=.5)
                     yield 1,0
+                    self.last_stream_timings=dict(generation_seconds=1.1,prefill_seconds=.5)
                     yield 2,1
                 finally:self.drained=True
         worker=ModelWorker()

@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (QApplication, QDialog, QFileDialog, QFrame, QHBox
     QProgressBar, QPushButton, QScrollArea, QToolButton, QVBoxLayout, QWidget)
 
 from .inference import ModelWorker
+from .metrics import clean_stats, response_summary
 from .settings_dialog import SettingsDialog
 from .state import LocalState, new_chat
 from .theme import apply_theme
@@ -82,12 +83,12 @@ class MainWindow(QMainWindow):
         self.load_requested.connect(self._worker.load)
         self.generate_requested.connect(self._worker.generate)
         self.shutdown_requested.connect(self._worker.shutdown)
-        self._worker.progress.connect(self._progress)
-        self._worker.loaded.connect(self._loaded)
-        self._worker.token.connect(self._token)
-        self._worker.stats.connect(self._stats)
-        self._worker.error.connect(self._error)
-        self._worker.reply_finished.connect(self._reply_finished)
+        self._worker.progress.connect(self._progress,Qt.ConnectionType.QueuedConnection)
+        self._worker.loaded.connect(self._loaded,Qt.ConnectionType.QueuedConnection)
+        self._worker.token.connect(self._token,Qt.ConnectionType.QueuedConnection)
+        self._worker.stats.connect(self._stats,Qt.ConnectionType.QueuedConnection)
+        self._worker.error.connect(self._error,Qt.ConnectionType.QueuedConnection)
+        self._worker.reply_finished.connect(self._reply_finished,Qt.ConnectionType.QueuedConnection)
         self._worker.finished.connect(self._thread.quit)
         self._thread.finished.connect(self._worker.deleteLater)
         self._thread.finished.connect(self._worker_finished)
@@ -276,7 +277,7 @@ class MainWindow(QMainWindow):
         while self.messages.count():
             self.messages.takeAt(0).widget().deleteLater()
         for message in self.current['messages']:
-            self._add_message(message['role'],message['content'])
+            self._add_message(message['role'],message['content'],stats=message.get('stats'))
         if not self.current['messages']:
             welcome=QLabel('Uno spazio tranquillo per le tue idee.\nScrivi una domanda per iniziare.')
             welcome.setObjectName('muted')
@@ -284,10 +285,12 @@ class MainWindow(QMainWindow):
             welcome.setMinimumHeight(200)
             self.messages.addWidget(welcome)
         self.stats_label.clear()
+        if self.current['messages']:
+            self._show_footer(self.current['messages'][-1].get('stats'))
         self._buttons()
 
-    def _add_message(self,role,text,pending=False):
-        widget=Message(role,text,pending)
+    def _add_message(self,role,text,pending=False,stats=None):
+        widget=Message(role,text,pending,stats)
         widget.copy_requested.connect(lambda text:QApplication.clipboard().setText(text))
         widget.regenerate_requested.connect(self.regenerate)
         self._message_widgets.append(widget)
@@ -374,12 +377,14 @@ class MainWindow(QMainWindow):
         self._buttons()
         self.load_requested.emit(self.state.settings['model_path'],self.state.settings.copy())
 
+    @Slot(int,str)
     def _progress(self,percent,label):
         if not self._closing:
             self._phase=f'Caricamento {percent}%'
             self.subtitle.setText(label)
             self._animate()
 
+    @Slot(str)
     def _loaded(self,name):
         if self._closing:
             return
@@ -427,6 +432,7 @@ class MainWindow(QMainWindow):
         history=copy.deepcopy(messages)
         messages.append(dict(role='assistant',content=''))
         self._active_reply=self._add_message('assistant','',pending=True)
+        self.stats_label.clear()
         self.busy=True
         self._stop.clear()
         self._phase='Elaborazione del prompt'
@@ -437,6 +443,7 @@ class MainWindow(QMainWindow):
         self._save()
         self.generate_requested.emit(history,self.state.settings.copy())
 
+    @Slot(str)
     def _token(self,text):
         if self._active_reply is not None:
             message=self.current['messages'][-1]
@@ -444,19 +451,36 @@ class MainWindow(QMainWindow):
             self._active_reply.update_text(message['content'],pending=True)
             self._phase='Generazione'
 
+    @Slot(dict)
     def _stats(self,stats):
-        rate=stats.get('rate')
+        stats=clean_stats(stats)
+        if stats is None or self._active_reply is None:
+            return
+        self.current['messages'][-1]['stats']=stats
+        self._active_reply.set_stats(stats)
+        self._show_footer(stats)
+
+    def _show_footer(self,stats):
+        stats=clean_stats(stats)
+        if stats is None:
+            self.stats_label.clear()
+            return
         first=stats.get('first_token')
-        text=f'{number(rate)} tok/s' if rate is not None else f"{stats['tokens']} token"
+        text=response_summary(stats)
         if first is not None:
             text+=f' · {number(first,0)} s al primo token'
         self.stats_label.setText(text)
 
+    @Slot(str)
     def _reply_finished(self,status):
         self.busy=False
         self._timer.stop()
         if self._active_reply is not None:
-            self._active_reply.update_text(self.current['messages'][-1]['content'])
+            message=self.current['messages'][-1]
+            self._active_reply.update_text(message['content'])
+            if 'stats' in message:
+                message['stats']['interrupted']=status=='stopped'
+                self._active_reply.set_stats(message['stats'])
         self._active_reply=None
         self._save()
         if not self._closing:
@@ -466,6 +490,7 @@ class MainWindow(QMainWindow):
                 self._notice('Generazione interrotta.')
             self.input.setFocus()
 
+    @Slot(str)
     def _error(self,error):
         if self._closing:
             return

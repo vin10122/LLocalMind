@@ -6,6 +6,7 @@ from PySide6.QtGui import QDesktopServices, QFontMetrics, QIcon, QPainter, QPixm
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton,
                                QSizePolicy, QTextBrowser, QToolButton, QVBoxLayout)
+from .metrics import clean_stats, response_summary
 
 ASSETS = Path(__file__).with_name('assets')
 NAVY = '#122c40'
@@ -113,7 +114,7 @@ class Message(QFrame):
     copy_requested=Signal(str)
     regenerate_requested=Signal()
 
-    def __init__(self,role,text='',pending=False):
+    def __init__(self,role,text='',pending=False,stats=None):
         super().__init__()
         self.role=role
         self.text=text
@@ -159,9 +160,28 @@ class Message(QFrame):
             row.addWidget(self.copy_button)
             row.addWidget(self.regenerate_button)
             row.addStretch()
+            self.metrics_label=QLabel()
+            self.metrics_label.setObjectName('responseStats')
+            self.metrics_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            row.addWidget(self.metrics_label)
             column.addLayout(row)
             layout.addWidget(content)
         self.update_text(text,pending=pending)
+        self.set_stats(stats)
+
+    def set_stats(self,value):
+        if self.role!='assistant':
+            return
+        stats=clean_stats(value)
+        text=response_summary(stats)
+        self.metrics_label.setText(text)
+        self.metrics_label.setVisible(bool(text))
+        tooltip='Media della generazione dopo il primo token; elaborazione del prompt esclusa.'
+        if stats and stats['rate'] is None:
+            tooltip='Servono almeno due token e un tempo di generazione valido per misurare i tok/s.'
+        if stats and stats['interrupted']:
+            tooltip+=' Generazione interrotta.'
+        self.metrics_label.setToolTip(tooltip)
 
     def update_text(self,text,pending=False):
         self.text=text

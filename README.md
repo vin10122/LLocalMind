@@ -18,11 +18,11 @@ high-memory discrete graphics card.
 
 ## Install on Windows
 
-The first Windows preview is available in [release v0.1.0](https://github.com/vin10122/Intel-optimized-MoE-streaming/releases/tag/v0.1.0):
+The latest Windows preview is available in [release v0.1.1](https://github.com/vin10122/Intel-optimized-MoE-streaming/releases/tag/v0.1.1):
 
 ### Recommended: Windows installer
 
-1. Download **[LLocalMind-Setup-0.1.0-windows-x64.exe](https://github.com/vin10122/Intel-optimized-MoE-streaming/releases/download/v0.1.0/LLocalMind-Setup-0.1.0-windows-x64.exe)**.
+1. Download **[LLocalMind-Setup-0.1.1-windows-x64.exe](https://github.com/vin10122/Intel-optimized-MoE-streaming/releases/download/v0.1.1/LLocalMind-Setup-0.1.1-windows-x64.exe)**.
 2. Run the installer, then open **LLocalMind** from the Start menu.
 3. Open **Impostazioni → Sfoglia**, select your compatible local **GGUF** file,
    and save. Wait for the model status to become **Pronto**, then send a message.
@@ -38,7 +38,7 @@ select CPU for DeltaNet and Full attention under advanced settings.
 
 ### Portable version
 
-1. Download **[LLocalMind-0.1.0-windows-x64-portable.zip](https://github.com/vin10122/Intel-optimized-MoE-streaming/releases/download/v0.1.0/LLocalMind-0.1.0-windows-x64-portable.zip)**.
+1. Download **[LLocalMind-0.1.1-windows-x64-portable.zip](https://github.com/vin10122/Intel-optimized-MoE-streaming/releases/download/v0.1.1/LLocalMind-0.1.1-windows-x64-portable.zip)**.
 2. Extract the **whole ZIP**, then open `LLocalMind\LLocalMind.exe`.
 3. Select the GGUF in settings as described above.
 
@@ -60,7 +60,7 @@ choose the download, then confirm installation. LLocalMind verifies the
 installer's SHA-256, saves the conversation, closes the model and exits. The
 installer updates the same application and reopens it when complete.
 
-**v0.1.0 is a preview.** The in-app checker offers stable releases only; it
+**v0.1.1 is a preview.** The in-app checker offers stable releases only; it
 does not offer newer previews. To install another preview, or to update
 manually, download the new setup EXE from [Releases](https://github.com/vin10122/Intel-optimized-MoE-streaming/releases),
 close LLocalMind and run it over the existing installation. **Do not uninstall
@@ -362,6 +362,13 @@ py -3.14 gui.py --demo
 The preview uses temporary conversations and labels its status as an
 **anteprima**; it reports no fabricated live performance. Normal sessions
 display measured effective decode speed and time to the first token.
+
+Each generated answer also shows **tok/s and token count below that answer**.
+These measurements are saved with the conversation and restored when it is
+reopened. The rate excludes prompt processing and the first token's sampling;
+a one-token answer is marked as unmeasurable. Older answers with no recorded
+measurements do not receive estimated numbers. Regenerating an answer replaces
+its measurements; interrupted answers retain their available measured stats.
 
 ### Windows EXE builds (developers)
 

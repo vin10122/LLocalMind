@@ -42,6 +42,7 @@ QToolButton#send { background: #122c40; border-radius: 24px; }
 QToolButton#send:hover { background: #294a63; }
 QToolButton#send:disabled { background: #71899b; }
 QLabel#footer { color: #506d85; font-size: 12px; }
+QLabel#responseStats { color: #506d85; font-size: 12px; }
 QLabel#notice { background: #e0ebf3; color: #25485f; padding: 12px 16px; border-radius: 12px; }
 QLabel#dialogTitle { font-family: 'Sora'; font-size: 20px; font-weight: 600; }
 QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox { background: #ffffff; border: 1px solid #becfda; border-radius: 9px; padding: 8px; }

@@ -92,6 +92,8 @@ class ModelWorker(QObject):
             decoder = StreamingDetokenizer(self.tokenizer)
             started = time.perf_counter()
             first = None
+            first_generation = None
+            last_generation = 0.0
             produced = 0
             stream = self.model.stream(ids, max_new_tokens=options['max_tokens'],
                                        temperature=options['temperature'],
@@ -102,8 +104,10 @@ class ModelWorker(QObject):
                     status = 'stopped'
                     break
                 produced = count
+                last_generation=float(self.model.last_stream_timings['generation_seconds'])
                 if first is None:
                     first = time.perf_counter() - started
+                    first_generation = last_generation
                 text = decoder.push(token)
                 if text:
                     self.token.emit(text)
@@ -114,9 +118,12 @@ class ModelWorker(QObject):
             if final:
                 self.token.emit(final)
             timings = self.model.last_stream_timings
-            seconds = float(timings['generation_seconds'])
+            # Exclude the first token's sampling, and any discarded token
+            # generated while a cooperative stop was being requested.
+            seconds=max(0.0,last_generation-first_generation) if first_generation is not None else 0.0
             self.stats.emit(dict(tokens=produced, first_token=first,
                                  prefill=float(timings['prefill_seconds']),
+                                 decode_seconds=seconds,
                                  rate=(produced-1)/seconds if produced > 1 and seconds > 0 else None))
         except Exception as error:
             status = 'error'
