@@ -80,6 +80,48 @@ class DesktopTests(unittest.TestCase):
         QTest.qWait(30)
         return window
 
+    def test_language_switch_preserves_draft_history_model_and_pending_images(self):
+        window=self.window()
+        window.ready=True
+        window.current['messages']=[dict(role='user',content='Copia'),dict(role='assistant',content='Pronto')]
+        window.current['title']='Impostazioni'
+        window.input.setPlainText('Bozza italiana ancora qui')
+        window._pending_images=[dict(id='a'*64+'.png',name='foto.png')]
+        loaded=[]
+        window.load_requested.connect(lambda *args:loaded.append(args))
+        original_thread=window._thread
+        window.change_language('en')
+        self.assertEqual(window.new_button.text(),'New chat')
+        self.assertEqual(window.language_button.text(),'Language')
+        self.assertEqual(window.input.placeholderText(),'Where shall we start?')
+        self.assertEqual(window.input.toPlainText(),'Bozza italiana ancora qui')
+        self.assertEqual(window.current['title'],'Impostazioni')
+        self.assertEqual(window.current['messages'][-1]['content'],'Pronto')
+        self.assertEqual(window._message_widgets[0].bubble.text(),'Copia')
+        self.wait(lambda:window.attachments.isVisible())
+        self.assertEqual(window._pending_images[0]['name'],'foto.png')
+        self.assertIs(window._thread,original_thread)
+        self.assertFalse(loaded)
+        self.assertEqual(LocalState(self.temp.name).settings['language'],'en')
+        dialog=SettingsDialog(window.state.settings,lambda:None)
+        self.assertEqual(dialog.windowTitle(),'Settings · LLocalMind')
+        self.assertEqual(dialog.language.currentData(),'en')
+        self.assertEqual(dialog.collected_values()['language'],'en')
+        dialog.deleteLater()
+        window.change_language('it')
+        self.assertEqual(window.new_button.text(),'Nuova chat')
+        self.assertEqual(window.input.toPlainText(),'Bozza italiana ancora qui')
+
+    def test_language_cannot_change_during_generation(self):
+        window=self.window()
+        window.busy=True
+        window._buttons()
+        self.assertFalse(window.language_button.isEnabled())
+        window.change_language('en')
+        self.assertEqual(window.state.settings['language'],'it')
+        self.assertEqual(window.new_button.text(),'Nuova chat')
+        window.busy=False
+
     def test_layout_logo_fonts_and_preview_without_inference(self):
         window=self.window(demo=True)
         self.assertEqual(window.chat_list.count(),3)

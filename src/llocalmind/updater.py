@@ -6,6 +6,7 @@ the installer it must save chats, close the model, then exit the application.
 """
 
 from __future__ import annotations
+from .i18n import tr
 
 from dataclasses import dataclass
 import hashlib
@@ -38,14 +39,14 @@ class DownloadCancelled(UpdateError):
 
 def version_tuple(version: str) -> tuple[int, int, int]:
     if not isinstance(version, str) or not re.fullmatch(r"v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", version):
-        raise UpdateError(f"Versione non valida: {version!r}")
+        raise UpdateError(tr('Versione non valida: {version}',version=repr(version)))
     return tuple(map(int, version.removeprefix("v").split(".")))
 
 
 class _HTTPSRedirects(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         if urlparse(newurl).scheme != "https":
-            raise UpdateError("Redirect dell'aggiornamento senza HTTPS")
+            raise UpdateError(tr("Redirect dell'aggiornamento senza HTTPS"))
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
@@ -79,7 +80,7 @@ class UpdateManager:
 
     def _request(self, url, accept="application/octet-stream"):
         if urlparse(url).scheme != "https":
-            raise UpdateError("URL dell'aggiornamento senza HTTPS")
+            raise UpdateError(tr("URL dell'aggiornamento senza HTTPS"))
         request = Request(url, headers={
             "User-Agent": f"LLocalMind/{self.current_version}",
             "Accept": accept,
@@ -93,7 +94,7 @@ class UpdateManager:
         expected = (f"https://github.com/{REPOSITORY}/releases/download/"
                     f"{quote(tag, safe='')}/{quote(name, safe='')}")
         if asset.get("browser_download_url") != expected:
-            raise UpdateError("L'asset non appartiene alla release GitHub prevista")
+            raise UpdateError(tr("L'asset non appartiene alla release GitHub prevista"))
         return expected
 
     def check(self) -> Release | None:
@@ -105,7 +106,7 @@ class UpdateManager:
             error.close()
             if error.code == 404:
                 return None
-            raise UpdateError(f"Controllo GitHub fallito (HTTP {error.code})") from error
+            raise UpdateError(tr('Controllo GitHub fallito (HTTP {code})',code=error.code)) from error
         except (OSError, URLError) as error:
             raise UpdateError("Impossibile contattare GitHub") from error
         if len(raw) > 2 * 1024**2:
@@ -142,12 +143,12 @@ class UpdateManager:
             sidecar = next((a for a in assets if a.get("name") == name + ".sha256"), None)
             checksum_url = self._asset_url(sidecar, tag) if sidecar else None
             if sha256 is None and checksum_url is None:
-                raise UpdateError("La release non contiene un checksum SHA-256")
+                raise UpdateError(tr("La release non contiene un checksum SHA-256"))
             return Release(version, tag, str(data.get("name") or tag),
                            str(data.get("body") or ""), name, url, size,
                            sha256, checksum_url, data.get('prerelease') is True)
         except (KeyError, TypeError, ValueError, StopIteration) as error:
-            raise UpdateError("Release senza installer Windows valido per LLocalMind") from error
+            raise UpdateError(tr("Release senza installer Windows valido per LLocalMind")) from error
 
     def _checksum(self, release):
         if release.sha256 is not None:
@@ -155,28 +156,28 @@ class UpdateManager:
         with self._request(release.checksum_url) as response:
             raw = response.read(8193)
         if len(raw) > 8192:
-            raise UpdateError("File checksum troppo grande")
+            raise UpdateError(tr("File checksum troppo grande"))
         try:
             text = raw.decode("ascii").strip()
         except UnicodeDecodeError as error:
-            raise UpdateError("Checksum non valido") from error
+            raise UpdateError(tr("Checksum non valido")) from error
         match = re.fullmatch(r"([0-9a-fA-F]{64})  " + re.escape(release.asset_name), text)
         if not match:
-            raise UpdateError("Checksum non valido o riferito a un altro file")
+            raise UpdateError(tr("Checksum non valido o riferito a un altro file"))
         return match[1].lower()
 
     def _validate_release(self, release):
         version = ".".join(map(str, version_tuple(release.version)))
         if version_tuple(release.tag) != version_tuple(version):
-            raise UpdateError("Tag e versione della release non corrispondenti")
+            raise UpdateError(tr("Tag e versione della release non corrispondenti"))
         name = f"LLocalMind-Setup-{version}-windows-x64.exe"
         if release.asset_name != name:
-            raise UpdateError("Nome installer non valido")
+            raise UpdateError(tr("Nome installer non valido"))
         self._asset_url({"name": name, "browser_download_url": release.download_url}, release.tag)
         if type(release.size) is not int or not 0 < release.size <= MAX_INSTALLER_BYTES:
-            raise UpdateError("Dimensione installer non valida")
+            raise UpdateError(tr("Dimensione installer non valida"))
         if release.sha256 is not None and not re.fullmatch(r"[0-9a-f]{64}", release.sha256):
-            raise UpdateError("Checksum non valido")
+            raise UpdateError(tr("Checksum non valido"))
         if release.checksum_url:
             self._asset_url({"name": name + ".sha256", "browser_download_url": release.checksum_url}, release.tag)
         if release.sha256 is None and release.checksum_url is None:
@@ -206,7 +207,7 @@ class UpdateManager:
                             break
                         received += len(chunk)
                         if received > release.size:
-                            raise UpdateError("Installer piu' grande del previsto")
+                            raise UpdateError(tr("Installer piu' grande del previsto"))
                         output.write(chunk)
                         digest.update(chunk)
                         if progress:
@@ -214,7 +215,7 @@ class UpdateManager:
             if received != release.size:
                 raise UpdateError("Download incompleto")
             if digest.hexdigest() != expected:
-                raise UpdateError("Checksum SHA-256 dell'installer non corrispondente")
+                raise UpdateError(tr("Checksum SHA-256 dell'installer non corrispondente"))
             if cancel is not None and cancel.is_set():
                 raise DownloadCancelled("Download annullato")
             destination = self.directory / release.asset_name
@@ -224,7 +225,7 @@ class UpdateManager:
         except (OSError, URLError) as error:
             if isinstance(error, HTTPError):
                 error.close()
-            raise UpdateError("Download dell'aggiornamento fallito") from error
+            raise UpdateError(tr("Download dell'aggiornamento fallito")) from error
         finally:
             if temporary is not None:
                 temporary.unlink(missing_ok=True)
@@ -239,15 +240,15 @@ class UpdateManager:
             raise UpdateError("Installazione disponibile solo nell'app Windows compilata")
         self._validate_release(update.release)
         if version_tuple(update.release.version) <= version_tuple(self.current_version):
-            raise UpdateError("L'aggiornamento non e' piu' recente")
+            raise UpdateError(tr("L'aggiornamento non e' piu' recente"))
         path = update.path.resolve()
         if path != self.directory.resolve() / update.release.asset_name:
-            raise UpdateError("Installer fuori dalla cartella aggiornamenti")
+            raise UpdateError(tr("Installer fuori dalla cartella aggiornamenti"))
         try:
             with path.open("rb") as stream:
                 digest = hashlib.file_digest(stream, "sha256").hexdigest()
             if digest != update.sha256 or (update.release.sha256 and digest != update.release.sha256):
-                raise UpdateError("L'installer e' cambiato dopo il download")
+                raise UpdateError(tr("L'installer e' cambiato dopo il download"))
             # Inno Setup uses a stable AppId to upgrade in place, per user.
             return subprocess.Popen([
                 str(path), "/SILENT", "/NORESTART", "/CLOSEAPPLICATIONS", "/RELAUNCH=1",

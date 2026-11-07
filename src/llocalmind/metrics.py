@@ -1,4 +1,5 @@
 """Persistent per-response metrics; no inference or Qt dependencies."""
+from .i18n import tr, language
 import math
 
 
@@ -39,6 +40,7 @@ def response_summary(value):
         return ''
     count=stats['tokens']
     if stats['rate'] is None:
-        return f'{count} token · tok/s non misurabili'
-    rate=f"{stats['rate']:.2f}".replace('.',',')
-    return f'{rate} tok/s · {count} token'
+        return (f'{count} '+('token' if count==1 else 'tokens')+' · tok/s unavailable') if language()=='en' else f'{count} token · tok/s non misurabili'
+    rate=f"{stats['rate']:.2f}"
+    if language()!='en':rate=rate.replace('.',',')
+    return f'{rate} tok/s · {count} '+(('token' if count==1 else 'tokens') if language()=='en' else 'token')

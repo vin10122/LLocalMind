@@ -1,5 +1,6 @@
 """Small, atomic user settings and conversation store (outside the app)."""
 from __future__ import annotations
+from .i18n import tr
 
 import json
 import os
@@ -16,12 +17,12 @@ DEFAULTS = dict(model_path='', max_tokens=512, max_seq=2048, cache=320,
                 ssm_device='GPU', attention_device='GPU', temperature=0.0,
                 engine='optimized',vision_executable='',vision_projector='',
                 vision_image_tokens=768,vision_batch=2048,vision_ubatch=1024,
-                vision_threads=8,vision_cache_mib=128,vision_warmup=True)
+                vision_threads=8,vision_cache_mib=128,vision_warmup=True,language='it')
 
 
 def validate_settings(values):
     if not isinstance(values,dict):
-        raise ValueError('Impostazioni non valide')
+        raise ValueError(tr('Impostazioni non valide'))
     result = dict(DEFAULTS)
     for key in result:
         if key in values:
@@ -31,30 +32,31 @@ def validate_settings(values):
             result['vision_batch'] = 2048
         if result['vision_ubatch'] == 256:
             result['vision_ubatch'] = 1024
+    if result['language'] not in ('it','en'):raise ValueError('Unsupported language')
     for key in ('model_path','vision_executable','vision_projector'):
-        if not isinstance(result[key],str):raise ValueError('Percorso non valido')
-    if result['engine'] not in ('optimized','vision'):raise ValueError('Motore non valido')
+        if not isinstance(result[key],str):raise ValueError(tr('Percorso non valido'))
+    if result['engine'] not in ('optimized','vision'):raise ValueError(tr('Motore non valido'))
     for key, low, high in [('max_tokens',1,4096), ('max_seq',256,16384),
                            ('cache',1,2048), ('weight_cache',1,2048),
                            ('expert_workers',1,16), ('prefill_threads',1,16)]:
         if type(result[key]) is not int or not low <= result[key] <= high:
-            raise ValueError(f'Impostazione non valida: {key}')
+            raise ValueError(tr('Impostazione non valida: {key}',key=key))
     if result['max_tokens'] == 128:
         result['max_tokens'] = min(512, result['max_seq'] - 1)
     if result['max_tokens'] >= result['max_seq']:
-        raise ValueError('Il limite di output deve essere inferiore al contesto')
+        raise ValueError(tr('Il limite di output deve essere inferiore al contesto'))
     for key,low,high in (('vision_image_tokens',64,8192),('vision_batch',32,2048),
                         ('vision_ubatch',32,2048),('vision_threads',1,16),
                         ('vision_cache_mib',0,1024)):
         if type(result[key]) is not int or not low<=result[key]<=high:
-            raise ValueError('Impostazione vision non valida: '+key)
+            raise ValueError(tr('Impostazione vision non valida: ')+key)
     if result['vision_ubatch']>result['vision_batch'] or type(result['vision_warmup']) is not bool:
-        raise ValueError('Profilo vision non valido')
+        raise ValueError(tr('Profilo vision non valido'))
     for key in ('ssm_device','attention_device'):
         if result[key] not in ('CPU','GPU','NPU'):
-            raise ValueError('Dispositivo non valido')
+            raise ValueError(tr('Dispositivo non valido'))
     if type(result['temperature']) not in (int,float) or not 0 <= result['temperature'] <= 2:
-        raise ValueError('Temperatura non valida')
+        raise ValueError(tr('Temperatura non valida'))
     return result
 
 
@@ -71,7 +73,7 @@ def engine_signature(values):
 
 
 def new_chat():
-    return dict(id=uuid.uuid4().hex, title='Nuova conversazione', messages=[])
+    return dict(id=uuid.uuid4().hex, title=tr('Nuova conversazione'), messages=[])
 
 
 class LocalState:
@@ -86,18 +88,18 @@ class LocalState:
             self.settings = validate_settings(config)
             chats = self._read('conversations.json', [])
             if not isinstance(chats, list):
-                raise ValueError('Archivio conversazioni non valido')
+                raise ValueError(tr('Archivio conversazioni non valido'))
             for chat in chats:
                 if not isinstance(chat, dict) or not all(isinstance(chat.get(k),str) for k in ('id','title')):
-                    raise ValueError('Conversazione non valida')
+                    raise ValueError(tr('Conversazione non valida'))
                 if not isinstance(chat.get('messages'),list):
-                    raise ValueError('Messaggi non validi')
+                    raise ValueError(tr('Messaggi non validi'))
                 for message in chat['messages']:
                     if (not isinstance(message,dict) or message.get('role') not in ('user','assistant')
                             or not isinstance(message.get('content'),str)):
-                        raise ValueError('Messaggio non valido')
+                        raise ValueError(tr('Messaggio non valido'))
                     if 'web_search' in message and type(message['web_search']) is not bool:
-                        raise ValueError('Impostazione ricerca web non valida')
+                        raise ValueError(tr('Impostazione ricerca web non valida'))
                     validate_images(message.get('images',[]))
                     if message.get('images') and message['role']!='user':
                         raise ValueError('Le immagini devono essere associate a una domanda')
@@ -108,11 +110,11 @@ class LocalState:
                         else:
                             message['stats']=stats
             if len({c['id'] for c in chats}) != len(chats):
-                raise ValueError('Identificatori duplicati')
+                raise ValueError(tr('Identificatori duplicati'))
             self.chats = chats
         except (OSError, ValueError, TypeError) as error:
             # Do not silently overwrite an archive that could not be read.
-            self.warning = f'Archivio locale non leggibile: {error}. I file originali non saranno sovrascritti.'
+            self.warning = tr('Archivio locale non leggibile: {error}. I file originali non saranno sovrascritti.',error=error)
             self.read_only = True
         if not self.chats:
             self.chats = [new_chat()]

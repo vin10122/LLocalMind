@@ -1,5 +1,6 @@
 """LLocalMind desktop chat, based on the approved rounded blue mockup."""
 from __future__ import annotations
+from .i18n import tr, set_language, language
 
 import argparse
 import copy
@@ -26,25 +27,26 @@ from .widgets import ASSETS, Composer, Message, action, icon, logo_label
 
 
 def number(value,places=1):
-    return f'{value:.{places}f}'.replace('.',',')
+    text=f'{value:.{places}f}'
+    return text if language()=='en' else text.replace('.',',')
 
 
 class UpdateProgress(QDialog):
     def __init__(self,kind,cancel,parent):
         super().__init__(parent)
         self.cancel=cancel
-        self.setWindowTitle('Motore vision' if kind=='runtime' else 'Aggiornamenti LLocalMind')
+        self.setWindowTitle(tr('Motore vision') if kind=='runtime' else tr('Aggiornamenti LLocalMind'))
         self.setMinimumWidth(380)
         layout=QVBoxLayout(self)
         layout.setContentsMargins(24,24,24,24)
         layout.setSpacing(16)
-        self.label=QLabel('Installazione motore vision…' if kind=='runtime' else
-                         'Controllo aggiornamenti…' if kind=='check' else 'Download aggiornamento…')
+        self.label=QLabel(tr('Installazione motore vision…') if kind=='runtime' else
+                         tr('Controllo aggiornamenti…') if kind=='check' else tr('Download aggiornamento…'))
         layout.addWidget(self.label)
         self.bar=QProgressBar()
         self.bar.setRange(0,0 if kind=='check' else 100)
         layout.addWidget(self.bar)
-        button=QPushButton('Annulla')
+        button=QPushButton(tr('Annulla'))
         button.clicked.connect(self.reject)
         layout.addWidget(button)
 
@@ -62,6 +64,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.demo=demo
         self.state=state or LocalState()
+        set_language(self.state.settings['language'])
         self.current_id=self.state.chats[0]['id']
         self.busy=False
         self.ready=False
@@ -77,7 +80,7 @@ class MainWindow(QMainWindow):
         self._active_reply=None
         self._pending_images=[]
         self._stop=threading.Event()
-        self.setWindowTitle('LLocalMind' + (' · Anteprima' if demo else ''))
+        self.setWindowTitle('LLocalMind' + (tr(' · Anteprima') if demo else ''))
         self.setWindowIcon(QIcon(str(ASSETS/'logo.png')))
         self.resize(1400,900)
         self.setMinimumSize(1024,700)
@@ -143,11 +146,11 @@ class MainWindow(QMainWindow):
         brand.addStretch()
         side.addLayout(brand)
         side.addSpacing(12)
-        self.new_button=action('Nuova chat','plus',name='newChat')
+        self.new_button=action(tr('Nuova chat'),'plus',name='newChat')
         self.new_button.clicked.connect(self.new_conversation)
         side.addWidget(self.new_button)
         side.addSpacing(4)
-        section=QLabel('LE TUE CHAT')
+        section=QLabel(tr('LE TUE CHAT'))
         section.setObjectName('section')
         side.addWidget(section)
         self.chat_list=QListWidget()
@@ -164,10 +167,14 @@ class MainWindow(QMainWindow):
         dot=QLabel('●')
         dot.setStyleSheet('color: #51b86b;')
         pill_row.addWidget(dot)
-        pill_row.addWidget(QLabel('Tutto sul tuo PC'))
+        pill_row.addWidget(QLabel(tr('Tutto sul tuo PC')))
         pill_row.addStretch()
         side.addWidget(pill)
-        settings=action('Impostazioni','settings',color='#f5f2eb',name='sidebarAction')
+        self.language_button=action(tr('Lingua / Language'),'globe',color='#f5f2eb',name='sidebarAction')
+        self.language_button.setObjectName('languageButton')
+        self.language_button.clicked.connect(self.choose_language)
+        side.addWidget(self.language_button)
+        settings=action(tr('Impostazioni'),'settings',color='#f5f2eb',name='sidebarAction')
         settings.clicked.connect(self.settings)
         side.addWidget(settings)
         row.addWidget(sidebar)
@@ -176,10 +183,10 @@ class MainWindow(QMainWindow):
         main.setSpacing(14)
         heading=QHBoxLayout()
         title_col=QVBoxLayout()
-        title=QLabel('Il tuo spazio per pensare')
+        title=QLabel(tr('Il tuo spazio per pensare'))
         title.setObjectName('heading')
         title_col.addWidget(title)
-        self.subtitle=QLabel('Scegli un modello GGUF nelle impostazioni')
+        self.subtitle=QLabel(tr('Scegli un modello GGUF nelle impostazioni'))
         self.subtitle.setObjectName('subtitle')
         self.subtitle.setWordWrap(True)
         title_col.addWidget(self.subtitle)
@@ -194,7 +201,7 @@ class MainWindow(QMainWindow):
         status_row.addWidget(self.status_label)
         heading.addWidget(status,0,Qt.AlignmentFlag.AlignTop)
         main.addLayout(heading)
-        self._set_status('Non caricato','idle')
+        self._set_status(tr('Non caricato'),'idle')
         main.addWidget(self._line())
         self.notice=QLabel()
         self.notice.setTextFormat(Qt.TextFormat.PlainText)
@@ -221,15 +228,15 @@ class MainWindow(QMainWindow):
         self.attach=QToolButton()
         self.attach.setIcon(icon('clip'))
         self.attach.setIconSize(QSize(26,26))
-        self.attach.setToolTip('Allega testo o immagini locali')
+        self.attach.setToolTip(tr('Allega testo o immagini locali'))
         self.attach.clicked.connect(self.attach_text)
         compose.addWidget(self.attach)
-        self.web_search_button=QPushButton('Ricerca web')
+        self.web_search_button=QPushButton(tr('Ricerca web'))
         self.web_search_button.setObjectName('webSearch')
         self.web_search_button.setCheckable(True)
         self.web_search_button.setToolTip(
-            'Facoltativa e disattivata di default. Invia la domanda a DuckDuckGo '
-            'e legge fino a tre pagine HTTPS pubbliche.')
+            tr('Facoltativa e disattivata di default. Invia la domanda a DuckDuckGo '
+            'e legge fino a tre pagine HTTPS pubbliche.'))
         compose.addWidget(self.web_search_button)
         self.input=Composer()
         self.input.submitted.connect(self.send)
@@ -247,7 +254,7 @@ class MainWindow(QMainWindow):
         self.attachment_names.setTextFormat(Qt.TextFormat.PlainText)
         self.attachment_names.setWordWrap(True)
         attachment_row.addWidget(self.attachment_names,1)
-        clear=QPushButton('Rimuovi immagini')
+        clear=QPushButton(tr('Rimuovi immagini'))
         clear.clicked.connect(self._clear_images)
         attachment_row.addWidget(clear)
         self.attachments.hide()
@@ -255,7 +262,7 @@ class MainWindow(QMainWindow):
         main.addWidget(composer)
         main.addWidget(self._line())
         footer=QHBoxLayout()
-        label=QLabel('Elaborazione locale')
+        label=QLabel(tr('Elaborazione locale'))
         label.setObjectName('footer')
         footer.addWidget(label)
         footer.addStretch()
@@ -279,6 +286,7 @@ class MainWindow(QMainWindow):
 
     def _buttons(self):
         blocked=self.busy or self.loading or self._closing
+        self.language_button.setEnabled(not blocked)
         self.new_button.setEnabled(not blocked)
         self.chat_list.setEnabled(not blocked)
         self.attach.setEnabled(not blocked)
@@ -288,7 +296,7 @@ class MainWindow(QMainWindow):
         self.input.setReadOnly(blocked)
         self.send_button.setEnabled(self.demo or self.busy or (self.ready and not blocked))
         self.send_button.setIcon(icon('stop' if self.busy else 'send','#f5f2eb'))
-        self.send_button.setToolTip('Interrompi' if self.busy else 'Invia · Maiusc+Invio per andare a capo')
+        self.send_button.setToolTip(tr('Interrompi') if self.busy else tr('Invia · Maiusc+Invio per andare a capo'))
         assistants=[w for w in self._message_widgets if w.role=='assistant']
         for widget in assistants:
             widget.regenerate_button.setEnabled(not blocked and self.ready and widget is assistants[-1])
@@ -297,7 +305,8 @@ class MainWindow(QMainWindow):
         self.chat_list.blockSignals(True)
         self.chat_list.clear()
         for index,chat in enumerate(self.state.chats):
-            item=QListWidgetItem(icon('chat','#eaf1f6'),chat['title'])
+            title=tr('Nuova conversazione') if not chat['messages'] and chat['title'] in ('Nuova conversazione','New conversation') else chat['title']
+            item=QListWidgetItem(icon('chat','#eaf1f6'),title)
             item.setToolTip(chat['title'])
             self.chat_list.addItem(item)
             if chat['id']==self.current_id:
@@ -312,7 +321,7 @@ class MainWindow(QMainWindow):
             self._add_message(message['role'],message['content'],stats=message.get('stats'),
                               images=message.get('images'),web_search=message.get('web_search',False))
         if not self.current['messages']:
-            welcome=QLabel('Uno spazio tranquillo per le tue idee.\nScrivi una domanda per iniziare.')
+            welcome=QLabel(tr('Uno spazio tranquillo per le tue idee.\nScrivi una domanda per iniziare.'))
             welcome.setObjectName('muted')
             welcome.setAlignment(Qt.AlignmentFlag.AlignCenter)
             welcome.setMinimumHeight(200)
@@ -361,10 +370,10 @@ class MainWindow(QMainWindow):
             return
         index=self.chat_list.row(item)
         menu=QMenu(self)
-        remove=menu.addAction('Elimina conversazione')
+        remove=menu.addAction(tr('Elimina conversazione'))
         if menu.exec(self.chat_list.mapToGlobal(position)) is not remove:
             return
-        if QMessageBox.question(self,'Elimina conversazione','Eliminare questa conversazione salvata?')!=QMessageBox.StandardButton.Yes:
+        if QMessageBox.question(self,tr('Elimina conversazione'),tr('Eliminare questa conversazione salvata?'))!=QMessageBox.StandardButton.Yes:
             return
         removed=self.state.chats.pop(index)
         if not self.state.chats:
@@ -380,11 +389,44 @@ class MainWindow(QMainWindow):
         try:
             self.state.save_chats()
         except (OSError,ValueError) as error:
-            self._notice('Salvataggio non riuscito: '+str(error))
+            self._notice(tr('Salvataggio non riuscito: ')+str(error))
 
     def _notice(self,text):
         self.notice.setText(text)
         self.notice.setVisible(bool(text))
+
+    def choose_language(self):
+        if self.busy or self.loading or self._closing:return
+        menu=QMenu(self)
+        for code,title in (('it','Italiano'),('en','English')):
+            entry=menu.addAction(title)
+            entry.setCheckable(True)
+            entry.setChecked(code==self.state.settings['language'])
+            entry.triggered.connect(lambda checked=False,value=code:self.change_language(value))
+        menu.exec(self.language_button.mapToGlobal(self.language_button.rect().bottomLeft()))
+
+    def change_language(self,code,*,save=True):
+        if self.busy or self.loading or self._closing:return
+        if save:
+            try:self.state.save_settings(dict(self.state.settings,language=code))
+            except (OSError,ValueError) as error:
+                self._notice(str(error));return
+        draft=self.input.toPlainText()
+        research=self.web_search_button.isChecked()
+        subtitle=self.subtitle.text() if self.ready else None
+        set_language(code)
+        self.setWindowTitle('LLocalMind'+(tr(' · Anteprima') if self.demo else ''))
+        self._build()
+        self.input.setPlainText(draft)
+        self.web_search_button.setChecked(research)
+        self._refresh_list()
+        self._render()
+        if subtitle:self.subtitle.setText(subtitle)
+        self._set_status(tr('Pronto') if self.ready else tr('Non caricato'),'ready' if self.ready else 'idle')
+        if self._pending_images:
+            self.attachment_names.setText(' · '.join(item['name'] for item in self._pending_images))
+            self.attachments.show()
+        self._buttons()
 
     def settings(self,*,draft=None):
         from .vision_runtime import supported_platform
@@ -404,6 +446,8 @@ class MainWindow(QMainWindow):
         except (OSError,ValueError) as error:
             self._notice(str(error))
             return
+        if previous['language']!=dialog.values['language']:
+            self.change_language(dialog.values['language'],save=False)
         active=self._loaded_options or previous
         changed=engine_signature(active)!=engine_signature(dialog.values)
         if not self.demo and dialog.values['model_path'] and (changed or not self.ready) and not self.busy and not self.loading:
@@ -415,7 +459,7 @@ class MainWindow(QMainWindow):
         self.ready=False
         self.loading=True
         self._stop.clear()
-        self._phase='Caricamento del modello'
+        self._phase=tr('Caricamento del modello')
         self._timer.start()
         self._notice('')
         self._buttons()
@@ -428,8 +472,8 @@ class MainWindow(QMainWindow):
     @Slot(int,str)
     def _progress(self,percent,label):
         if not self._closing:
-            self._phase=f'Caricamento {percent}%'
-            self.subtitle.setText(label)
+            self._phase=tr('Caricamento {percent}%',percent=percent)
+            self.subtitle.setText(tr(label))
             self._animate()
 
     @Slot(str)
@@ -439,7 +483,7 @@ class MainWindow(QMainWindow):
         self.loading=False
         self.ready=True
         self._timer.stop()
-        self._set_status('Pronto')
+        self._set_status(tr('Pronto'))
         if name.lower().startswith('hermes3.6-35b'):
             name='Hermes 3.6 · 35B A3B'+(name[name.index(' · Vision'):] if ' · Vision' in name else '')
         self.subtitle.setText(name)
@@ -448,25 +492,25 @@ class MainWindow(QMainWindow):
     def send_or_stop(self):
         if self.busy:
             self._stop.set()
-            self._phase='Interruzione'
+            self._phase=tr('Interruzione')
         else:
             self.send()
 
     def send(self):
         if self.demo:
-            self._notice('Anteprima grafica: avvia la GUI senza --demo e seleziona un GGUF per chattare.')
+            self._notice(tr('Anteprima grafica: avvia la GUI senza --demo e seleziona un GGUF per chattare.'))
             return
         text=self.input.toPlainText().strip()
         if not (text or self._pending_images) or not self.ready or self.busy or self.loading or self._closing:
             return
         if self.state.settings['engine']!='vision' and (self._pending_images or any(m.get('images') for m in self.current['messages'])):
-            self._notice('Questa chat contiene immagini: seleziona Vision locale o apri una nuova chat di testo.')
+            self._notice(tr('Questa chat contiene immagini: seleziona Vision locale o apri una nuova chat di testo.'))
             return
         web_search=self.web_search_button.isChecked()
         if web_search and self.state.settings['engine']!='optimized':
-            self._notice('La ricerca web è disponibile solo con il modello di testo locale.')
+            self._notice(tr('La ricerca web è disponibile solo con il modello di testo locale.'))
             return
-        text=text or 'Descrivi questa immagine.'
+        text=text or tr('Descrivi questa immagine.')
         self.input.clear()
         chat=self.current
         if not chat['messages']:
@@ -485,7 +529,7 @@ class MainWindow(QMainWindow):
             return
         messages=self.current['messages']
         if self.state.settings['engine']!='vision' and any(m.get('images') for m in messages):
-            self._notice('Seleziona Vision locale per rigenerare questa risposta con immagini.')
+            self._notice(tr('Seleziona Vision locale per rigenerare questa risposta con immagini.'))
             return
         if messages and messages[-1]['role']=='assistant':
             web_search=bool(len(messages)>1 and messages[-2].get('web_search',False))
@@ -501,7 +545,7 @@ class MainWindow(QMainWindow):
         self.stats_label.clear()
         self.busy=True
         self._stop.clear()
-        self._phase='Ricerca web' if web_search else 'Elaborazione del prompt'
+        self._phase=tr('Ricerca web') if web_search else tr('Elaborazione del prompt')
         self._timer.start()
         self._animate()
         self._notice('')
@@ -524,7 +568,7 @@ class MainWindow(QMainWindow):
             message['content']+=text
             if first:self._active_reply.update_text(message['content'],pending=True)
             elif not self._render_timer.isActive():self._render_timer.start()
-            self._phase='Generazione'
+            self._phase=tr('Generazione')
 
     @Slot()
     def _flush_reply(self):
@@ -548,7 +592,7 @@ class MainWindow(QMainWindow):
         first=stats.get('first_token')
         text=response_summary(stats)
         if first is not None:
-            text+=f' · {number(first,0)} s al primo token'
+            text+=tr(' · {seconds} s al primo token',seconds=number(first,0))
         self.stats_label.setText(text)
 
     @Slot(str)
@@ -565,10 +609,10 @@ class MainWindow(QMainWindow):
         self._active_reply=None
         self._save()
         if not self._closing:
-            self._set_status('Pronto' if self.ready else 'Non caricato','ready' if self.ready else 'idle')
+            self._set_status(tr('Pronto') if self.ready else tr('Non caricato'),'ready' if self.ready else 'idle')
             self._buttons()
             if status=='stopped':
-                self._notice('Generazione interrotta.')
+                self._notice(tr('Generazione interrotta.'))
             self.input.setFocus()
 
     @Slot(str)
@@ -579,8 +623,8 @@ class MainWindow(QMainWindow):
             self.loading=False
             self.ready=False
             self._timer.stop()
-            self.subtitle.setText('Seleziona un modello GGUF nelle impostazioni')
-            self._set_status('Non caricato','error')
+            self.subtitle.setText(tr('Seleziona un modello GGUF nelle impostazioni'))
+            self._set_status(tr('Non caricato'),'error')
         self._notice(error)
         self._buttons()
 
@@ -589,8 +633,8 @@ class MainWindow(QMainWindow):
         self._set_status(self._phase+'.'*self._dot,'busy')
 
     def attach_text(self):
-        path,_=QFileDialog.getOpenFileName(self,'Allega file locale',str(Path.home()),
-            'Testo e immagini (*.txt *.md *.png *.jpg *.jpeg *.webp)')
+        path,_=QFileDialog.getOpenFileName(self,tr('Allega file locale'),str(Path.home()),
+            tr('Testo e immagini (*.txt *.md *.png *.jpg *.jpeg *.webp)'))
         if not path:
             return
         try:
@@ -599,7 +643,7 @@ class MainWindow(QMainWindow):
                 self.add_image(filename)
                 return
             if filename.stat().st_size>1024**2:
-                raise ValueError('Il file supera 1 MiB; seleziona un estratto piu\' breve.')
+                raise ValueError(tr('Il file supera 1 MiB; seleziona un estratto piu\' breve.'))
             text=filename.read_text(encoding='utf-8-sig')
             self.input.insertPlainText(f'\n[{filename.name}]\n{text}\n')
         except (OSError,UnicodeError,ValueError) as error:
@@ -608,11 +652,11 @@ class MainWindow(QMainWindow):
     def add_image(self,path):
         if self.busy or self.loading or self._closing:return
         if self.state.settings['engine']!='vision':
-            self._notice('Per le immagini seleziona Vision locale nelle impostazioni e indica llama-server e mmproj.')
+            self._notice(tr('Per le immagini seleziona Vision locale nelle impostazioni e indica llama-server e mmproj.'))
             return
         try:
             if self.state.read_only:raise ValueError(self.state.warning)
-            if len(self._pending_images)>=MAX_IMAGES:raise ValueError('Massimo quattro immagini per messaggio')
+            if len(self._pending_images)>=MAX_IMAGES:raise ValueError(tr('Massimo quattro immagini per messaggio'))
             self._pending_images.append(import_image(path,self.state.directory))
             self.attachment_names.setText(' · '.join(item['name'] for item in self._pending_images))
             self.attachments.show()
@@ -667,42 +711,42 @@ class MainWindow(QMainWindow):
         if job['cancel'].is_set():
             return
         if task.error:
-            QMessageBox.warning(self,'Motore vision' if task.action=='runtime' else 'Aggiornamenti',task.error)
+            QMessageBox.warning(self,tr('Motore vision') if task.action=='runtime' else tr('Aggiornamenti'),task.error)
             return
         if task.action=='runtime':
             path=str(task.result)
             values=dict(self.state.settings,vision_executable=path)
             try:self.state.save_settings(values)
             except (OSError,ValueError) as error:
-                self._notice('Motore installato, ma configurazione non salvata: '+str(error))
+                self._notice(tr('Motore installato, ma configurazione non salvata: ')+str(error))
                 return
             draft=dict(self._vision_install_draft or values,vision_executable=path)
             self._vision_install_draft=None
-            QMessageBox.information(self,'Motore vision pronto',
-                'Il motore vision è installato e configurato. Seleziona il modello GGUF e il suo mmproj, poi salva.')
+            QMessageBox.information(self,tr('Motore vision pronto'),
+                tr('Il motore vision è installato e configurato. Seleziona il modello GGUF e il suo mmproj, poi salva.'))
             self.settings(draft=draft)
         elif task.action=='check':
             release=task.result
             if release is None:
-                QMessageBox.information(self,'Aggiornamenti','Nessun aggiornamento disponibile (incluse le anteprime).')
+                QMessageBox.information(self,tr('Aggiornamenti'),tr('Nessun aggiornamento disponibile (incluse le anteprime).'))
             else:
                 box=QMessageBox(self)
-                box.setWindowTitle('Aggiornamento disponibile')
+                box.setWindowTitle(tr('Aggiornamento disponibile'))
                 box.setTextFormat(Qt.TextFormat.PlainText)
-                channel=' · anteprima' if release.prerelease else ''
-                box.setText(f'LLocalMind {release.version}{channel} è disponibile.')
+                channel=tr(' · anteprima') if release.prerelease else ''
+                box.setText(tr('LLocalMind {version}{channel} è disponibile.',version=release.version,channel=channel))
                 box.setDetailedText(release.notes)
-                download=box.addButton('Scarica aggiornamento',QMessageBox.ButtonRole.AcceptRole)
-                box.addButton('Non ora',QMessageBox.ButtonRole.RejectRole)
+                download=box.addButton(tr('Scarica aggiornamento'),QMessageBox.ButtonRole.AcceptRole)
+                box.addButton(tr('Non ora'),QMessageBox.ButtonRole.RejectRole)
                 box.exec()
                 if box.clickedButton() is download:
                     self._start_update('download',release)
         elif not getattr(sys,'frozen',False):
-            QMessageBox.information(self,'Download completato',
-                f'Installer verificato:\n{task.result.path}\n\nDai sorgenti continua a usare git pull.')
+            QMessageBox.information(self,tr('Download completato'),
+                tr('Installer verificato:\n{path}\n\nDai sorgenti continua a usare git pull.',path=task.result.path))
         else:
-            choice=QMessageBox.question(self,'Installa aggiornamento',
-                'Salvare la conversazione e chiudere il modello per installare l\'aggiornamento?')
+            choice=QMessageBox.question(self,tr('Installa aggiornamento'),
+                tr('Salvare la conversazione e chiudere il modello per installare l\'aggiornamento?'))
             if choice==QMessageBox.StandardButton.Yes:
                 self._pending_update=task.result
                 self.close()
@@ -716,7 +760,7 @@ class MainWindow(QMainWindow):
             self._closing=True
             self._stop.set()
             self._timer.stop()
-            self._set_status('Chiusura del modello…','busy')
+            self._set_status(tr('Chiusura del modello…'),'busy')
             self._buttons()
             self._save()
             for job in self._update_jobs:
@@ -736,31 +780,32 @@ class MainWindow(QMainWindow):
                 try:
                     UpdateManager().launch_installer(self._pending_update)
                 except Exception as error:
-                    QMessageBox.warning(self,'Installazione aggiornamento',str(error))
+                    QMessageBox.warning(self,tr('Installazione aggiornamento'),str(error))
                 self._pending_update=None
             self._allow_close=True
             self.close()
 
     def _seed_demo(self):
         chat=new_chat()
-        chat['title']='Una giornata di studio'
+        chat['title']=tr('Una giornata di studio')
         chat['messages']=[
-            dict(role='user',content='Aiutami a organizzare una giornata di studio.'),
-            dict(role='assistant',content='Ecco un programma semplice, con il giusto spazio per le pause.\n\n'
-                 '09:00 — Ripasso\n10:30 — Pausa\n11:00 — Esercizi')]
+            dict(role='user',content=tr('Aiutami a organizzare una giornata di studio.')),
+            dict(role='assistant',content=tr('Ecco un programma semplice, con il giusto spazio per le pause.\n\n'
+                 '09:00 — Ripasso\n10:30 — Pausa\n11:00 — Esercizi'))]
         others=[new_chat(),new_chat()]
-        others[0]['title']='Idee per un progetto'
-        others[1]['title']='Spiegare un concetto'
+        others[0]['title']=tr('Idee per un progetto')
+        others[1]['title']=tr('Spiegare un concetto')
         self.state.chats=[chat,*others]
         self.current_id=chat['id']
         self.subtitle.setText('Hermes 3.6 · 35B A3B')
-        self._set_status('Anteprima','ready')
-        QTimer.singleShot(0,lambda:self.stats_label.setText('Anteprima · statistiche non misurate'))
+        self._set_status(tr('Anteprima'),'ready')
+        QTimer.singleShot(0,lambda:self.stats_label.setText(tr('Anteprima · statistiche non misurate')))
 
 
 def main(argv=None):
-    parser=argparse.ArgumentParser(description='LLocalMind · chat locale')
-    parser.add_argument('--demo',action='store_true',help='Anteprima della GUI senza caricare il modello')
+    parser=argparse.ArgumentParser(description=tr('LLocalMind · chat locale'))
+    parser.add_argument('--language',choices=('it','en'),help='Italiano / English')
+    parser.add_argument('--demo',action='store_true',help=tr('Anteprima della GUI senza caricare il modello'))
     parser.add_argument('--smoke-test',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--smoke-report',help=argparse.SUPPRESS)
     parser.add_argument('--smoke-screenshot',help=argparse.SUPPRESS)
@@ -774,6 +819,9 @@ def main(argv=None):
     preview=args.demo or args.smoke_test
     temporary=tempfile.TemporaryDirectory(prefix='llocalmind-preview-') if preview else None
     state=LocalState(temporary.name) if temporary else LocalState()
+    if args.language:
+        if state.read_only:state.settings['language']=args.language
+        else:state.save_settings(dict(state.settings,language=args.language))
     window=MainWindow(state=state,demo=preview)
     window.show()
     smoke_result=[]
@@ -782,6 +830,9 @@ def main(argv=None):
             from .smoke import probe,write_report
             try:
                 details=probe()
+                expected='New chat' if state.settings['language']=='en' else 'Nuova chat'
+                if window.new_button.text()!=expected:raise RuntimeError('GUI language smoke check failed')
+                details['language']=state.settings['language']
                 if args.smoke_screenshot:
                     path=Path(args.smoke_screenshot)
                     path.parent.mkdir(parents=True,exist_ok=True)

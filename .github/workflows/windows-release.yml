@@ -70,7 +70,7 @@ jobs:
         run: |
           & .\dist\LLocalMind\LLocalMind-Diagnostics.exe --benchmark-vision --help
           if ($LASTEXITCODE -ne 0) { throw "Packaged vision benchmark unavailable" }
-          .\tools\smoke_windows.ps1 -Executable .\dist\LLocalMind\LLocalMind-Diagnostics.exe -Report .\build\diagnostic-smoke.json -Screenshot .\build\diagnostic-gui.png
+          .\tools\smoke_windows.ps1 -Executable .\dist\LLocalMind\LLocalMind-Diagnostics.exe -Report .\build\diagnostic-smoke.json -Screenshot .\build\diagnostic-gui.png -Language en
           .\tools\smoke_windows.ps1 -Executable .\dist\LLocalMind\LLocalMind.exe -Report .\build\portable-smoke.json -Screenshot .\build\portable-gui.png
       - name: Install current Inno Setup
         shell: pwsh
@@ -152,7 +152,11 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<'NOTES'
-          Windows preview of LLocalMind.
+          LLocalMind 0.2.1 - International.
+
+          - Italian/English interface, a separate Language sidebar button and the same selector in Settings. The choice persists without reloading the model.
+          - English mode guides new text/vision answers in English unless another language is explicitly requested; saved conversations are not translated. CLI: --language en.
+          - Web research remains experimental and may fail or return incomplete results. Text prefill is generally negligible in recent local use; image prefill is still being measured for more precise figures.
 
           - Installer: download `LLocalMind-Setup-*-windows-x64.exe`.
           - Portable: extract the whole portable ZIP, then open `LLocalMind/LLocalMind.exe`.
@@ -175,6 +179,6 @@ jobs:
           - Updates use the current vin10122/LLocalMind repository; older previews can be upgraded by running this installer without uninstalling first.
           - Choose your compatible GGUF in Settings. Intel GPU/NPU support requires appropriate drivers.
           - CI checks the GUI, CPU OpenVINO, native kernels and installer without a GGUF. Full-model quality/performance on the target PC still needs manual validation.
-          - SHA-256 sidecars are included. This preview is not code-signed. Updaters since v0.1.5 include public previews; older stable-only apps require manual installation.
+          - SHA-256 sidecars are included. This build is not code-signed. Updaters since v0.1.5 include public previews as well as stable releases.
           NOTES
-          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Windows preview" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - International" --notes-file release-notes.md

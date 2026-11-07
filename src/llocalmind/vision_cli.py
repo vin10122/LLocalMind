@@ -25,7 +25,7 @@ def run(args,model_path):
             engine.start(progress=lambda _,label:print(label,flush=True))
             def ask(prompt):
                 print('  ',end='',flush=True)
-                stats=engine.generate(chat_messages([dict(role='user',content=prompt,images=images)],directory),
+                stats=engine.generate(chat_messages([dict(role='user',content=prompt,images=images)],directory,language=args.language),
                     max_tokens=args.max_tokens,temperature=args.temp,seed=args.seed,
                     on_text=lambda text:print(text,end='',flush=True))
                 print('\n'+(response_summary(stats) or 'Conteggio token non disponibile')+'\n',flush=True)

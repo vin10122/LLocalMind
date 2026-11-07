@@ -1,13 +1,14 @@
 param(
     [Parameter(Mandatory=$true)][string]$Executable,
     [Parameter(Mandatory=$true)][string]$Report,
-    [Parameter(Mandatory=$true)][string]$Screenshot
+    [Parameter(Mandatory=$true)][string]$Screenshot,
+    [ValidateSet("it","en")][string]$Language="it"
 )
 $ErrorActionPreference = "Stop"
 $Executable = (Resolve-Path $Executable).Path
 $Report = [System.IO.Path]::GetFullPath($Report)
 $Screenshot = [System.IO.Path]::GetFullPath($Screenshot)
-$arguments = @("--smoke-test", "--smoke-report", "`"$Report`"", "--smoke-screenshot", "`"$Screenshot`"")
+$arguments = @("--language", $Language, "--smoke-test", "--smoke-report", "`"$Report`"", "--smoke-screenshot", "`"$Screenshot`"")
 $stdout = $Report + '.stdout.log'
 $stderr = $Report + '.stderr.log'
 New-Item -ItemType Directory -Path (Split-Path -Parent $Report) -Force | Out-Null

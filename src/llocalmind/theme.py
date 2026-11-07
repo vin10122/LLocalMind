@@ -13,8 +13,8 @@ QPushButton:hover { background: #dfeaf1; }
 QPushButton:disabled { color: #8193a0; }
 QPushButton#newChat { background: #f5f2eb; border: none; border-radius: 17px; font-family: 'Sora'; font-weight: 600; font-size: 17px; padding: 16px; }
 QPushButton#newChat:hover { background: #e0eaf0; }
-QPushButton#sidebarAction { color: #f5f2eb; background: transparent; border: none; text-align: left; padding: 14px 8px; }
-QPushButton#sidebarAction:hover { background: #29465c; }
+QPushButton#sidebarAction, QPushButton#languageButton { color: #f5f2eb; background: transparent; border: none; text-align: left; padding: 14px 8px; }
+QPushButton#sidebarAction:hover, QPushButton#languageButton:hover { background: #29465c; }
 QPushButton#webSearch { padding: 10px 12px; }
 QPushButton#webSearch:checked { background: #d3e6f2; border-color: #6d9bb6; }
 QListWidget#chatList { background: transparent; border: none; outline: none; }

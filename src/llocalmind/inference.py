@@ -1,4 +1,5 @@
 """Serial model operations on a Qt worker; no inference imports at GUI startup."""
+from .i18n import tr
 import threading
 import time
 import os
@@ -78,7 +79,7 @@ class ModelWorker(QObject):
                 self.loaded.emit(path.stem+' · Vision · encoder '+self.vision.encoder_device+' · modello CPU')
                 return
             os.environ['FLASH_MOE_GGUF'] = str(path)
-            self.progress.emit(0, 'Preparazione del modello')
+            self.progress.emit(0, tr('Preparazione del modello'))
             from flash_moe.model import Qwen3MoEModel
             from flash_moe.tokenizer import GGUFTokenizer
             from run_q4k_f16_openvino import dequant_to_f16
@@ -96,11 +97,11 @@ class ModelWorker(QObject):
             if self.stop.is_set():
                 self._close_model()
                 return
-            self.progress.emit(99, 'Preparazione del tokenizer')
+            self.progress.emit(99, tr('Preparazione del tokenizer'))
             self.tokenizer = GGUFTokenizer(self.model.reader)
             from .performance import record
             record('load','optimized',dict(seconds=time.perf_counter()-started))
-            self.progress.emit(100, 'Modello pronto')
+            self.progress.emit(100, tr('Modello pronto'))
             self.loaded.emit(path.stem)
         except Exception as error:
             try:
@@ -119,7 +120,7 @@ class ModelWorker(QObject):
                 from .images import chat_messages
                 try:
                     prepared=time.perf_counter()
-                    request=chat_messages(messages,options['_attachment_directory'],cache=self.image_cache)
+                    request=chat_messages(messages,options['_attachment_directory'],cache=self.image_cache,language=options.get('language','it'))
                     prepare_seconds=time.perf_counter()-prepared
                     stats=dict(self.vision.generate(request,
                         max_tokens=options['max_tokens'],temperature=options['temperature'],
@@ -133,7 +134,7 @@ class ModelWorker(QObject):
                 except VisionCancelled:status='stopped'
                 return
             if self.model is None or self.tokenizer is None:
-                raise RuntimeError('Carica prima un modello')
+                raise RuntimeError(tr('Carica prima un modello'))
             from flash_moe.tokenizer import StreamingDetokenizer
             web_research = None
             if options.get('_web_search'):
@@ -147,12 +148,12 @@ class ModelWorker(QObject):
                     status = 'stopped'
                     return
                 web_research = format_research(results)
-                self.search_status.emit('Analisi locale')
+                self.search_status.emit(tr('Analisi locale'))
             ids = self.tokenizer.encode(
-                format_conversation(messages, web_research=web_research), add_bos=False)
+                format_conversation(messages, web_research=web_research,language=options.get('language','it')), add_bos=False)
             if len(ids) + options['max_tokens'] - 1 > self.model.max_seq_len:
-                raise ValueError('La conversazione supera il contesto disponibile. '
-                                 'Apri una nuova chat o aumenta il contesto nelle impostazioni.')
+                raise ValueError(tr('La conversazione supera il contesto disponibile. '
+                                 'Apri una nuova chat o aumenta il contesto nelle impostazioni.'))
             decoder = StreamingDetokenizer(self.tokenizer)
             started = time.perf_counter()
             first = None

@@ -46,7 +46,9 @@ jobs:
           GH_REPO: ${{ github.repository }}
           PYTHONPATH: src
         run: |
-          gh release edit "$RELEASE_TAG" --prerelease=false --latest --title "LLocalMind $RELEASE_TAG" --notes-file stable-notes.md
+          title="LLocalMind $RELEASE_TAG"
+          if [ "$RELEASE_TAG" = "v0.2.1" ]; then title="$title - International"; fi
+          gh release edit "$RELEASE_TAG" --prerelease=false --latest --title "$title" --notes-file stable-notes.md
           python - <<'PY'
           import os
           import json, subprocess

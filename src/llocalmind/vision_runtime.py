@@ -1,4 +1,5 @@
 """Pinned official Windows runtimes, installed outside the application tree."""
+from .i18n import tr
 from dataclasses import dataclass
 import hashlib
 import json
@@ -48,12 +49,12 @@ def supported_platform():
 
 class HTTPSOnly(HTTPRedirectHandler):
     def redirect_request(self,req,fp,code,msg,headers,newurl):
-        if urlparse(newurl).scheme!='https':raise RuntimeInstallError('Redirect del download senza HTTPS')
+        if urlparse(newurl).scheme!='https':raise RuntimeInstallError(tr('Redirect del download senza HTTPS'))
         return super().redirect_request(req,fp,code,msg,headers,newurl)
 
 
 def _cancel(event):
-    if event.is_set():raise RuntimeInstallCancelled('Installazione annullata')
+    if event.is_set():raise RuntimeInstallCancelled(tr('Installazione annullata'))
 
 
 def _relative(name):
@@ -62,7 +63,7 @@ def _relative(name):
             or not path.parts or any(re.search(r'[<>:"|?*\x00-\x1f]',p)
             or p.endswith(('.', ' ')) or re.fullmatch(r'(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\..*)?',p,re.I)
             for p in path.parts)):
-        raise RuntimeInstallError('Percorso ZIP non valido')
+        raise RuntimeInstallError(tr('Percorso ZIP non valido'))
     return path
 
 
@@ -98,10 +99,10 @@ def probe_runtime(executable,cancel):
                 try:
                     output,_=process.communicate(timeout=.2)
                     if process.returncode:
-                        raise RuntimeInstallError('Il motore scaricato non si avvia: '+output.decode('utf-8',errors='replace')[-1000:])
+                        raise RuntimeInstallError(tr('Il motore scaricato non si avvia: ')+output.decode('utf-8',errors='replace')[-1000:])
                     return
                 except subprocess.TimeoutExpired:pass
-            raise RuntimeInstallError('Verifica del motore vision scaduta')
+            raise RuntimeInstallError(tr('Verifica del motore vision scaduta'))
         finally:
             if process.poll() is None:
                 process.kill()
@@ -117,7 +118,7 @@ class RuntimeInstaller:
         if (not re.fullmatch(r'b[0-9]+',package.tag) or package.url!=expected
                 or not re.fullmatch(r'[0-9a-f]{64}',package.sha256)
                 or not 0<package.size<512*1024**2):
-            raise RuntimeInstallError('Manifest del motore non valido')
+            raise RuntimeInstallError(tr('Manifest del motore non valido'))
         self.open=opener or build_opener(HTTPSOnly()).open
         self.probe=probe
 
@@ -146,7 +147,7 @@ class RuntimeInstaller:
     def install(self,*,cancel=None,progress=lambda _:None):
         cancel=cancel or threading.Event()
         _cancel(cancel)
-        if not supported_platform():raise RuntimeInstallError('Installazione automatica disponibile su Windows x64')
+        if not supported_platform():raise RuntimeInstallError(tr('Installazione automatica disponibile su Windows x64'))
         existing=self._existing(cancel)
         if existing is not None:
             self.probe(existing,cancel)
@@ -165,20 +166,20 @@ class RuntimeInstaller:
                     while block:=source.read(256*1024):
                         _cancel(cancel)
                         received+=len(block)
-                        if received>self.package.size:raise RuntimeInstallError('Dimensione del download non valida')
+                        if received>self.package.size:raise RuntimeInstallError(tr('Dimensione del download non valida'))
                         target.write(block)
                         digest.update(block)
                         progress(int(received*75/self.package.size))
                 _cancel(cancel)
                 if received!=self.package.size or digest.hexdigest()!=self.package.sha256:
-                    raise RuntimeInstallError('Verifica SHA-256 del motore fallita: download incompleto o modificato')
+                    raise RuntimeInstallError(tr('Verifica SHA-256 del motore fallita: download incompleto o modificato'))
                 payload=root/'payload'
                 payload.mkdir()
                 files={}
                 with zipfile.ZipFile(archive) as bundle:
                     entries=bundle.infolist()
                     if len(entries)>512 or sum(e.file_size for e in entries)>MAX_UNPACKED:
-                        raise RuntimeInstallError('Archivio del motore troppo grande')
+                        raise RuntimeInstallError(tr('Archivio del motore troppo grande'))
                     seen=set()
                     for index,entry in enumerate(entries):
                         _cancel(cancel)
@@ -186,7 +187,7 @@ class RuntimeInstaller:
                         # normalization (including Windows backslashes/NULs).
                         name=_relative(entry.orig_filename).as_posix()
                         if name.casefold() in seen or stat.S_ISLNK(entry.external_attr>>16):
-                            raise RuntimeInstallError('Archivio ZIP ambiguo o con collegamenti')
+                            raise RuntimeInstallError(tr('Archivio ZIP ambiguo o con collegamenti'))
                         seen.add(name.casefold())
                         target=payload/name
                         if entry.is_dir():target.mkdir(parents=True,exist_ok=True)
@@ -202,9 +203,9 @@ class RuntimeInstaller:
                         progress(75+int((index+1)*20/max(1,len(entries))))
                 servers=[name for name in files if PurePosixPath(name).name=='llama-server.exe']
                 if len(servers)!=1 or not any(name.lower().endswith('.dll') for name in files):
-                    raise RuntimeInstallError('llama-server.exe o DLL mancanti nell’archivio')
+                    raise RuntimeInstallError(tr('llama-server.exe o DLL mancanti nell’archivio'))
                 server=payload/servers[0]
-                if not _windows_exe(server):raise RuntimeInstallError('Eseguibile Windows x64 non valido')
+                if not _windows_exe(server):raise RuntimeInstallError(tr('Eseguibile Windows x64 non valido'))
                 self.probe(server,cancel)
                 _cancel(cancel)
                 (payload/'runtime.json').write_text(json.dumps(dict(sha256=self.package.sha256,
@@ -214,4 +215,4 @@ class RuntimeInstaller:
                 progress(100)
                 return destination/servers[0]
         except (OSError,zipfile.BadZipFile) as error:
-            raise RuntimeInstallError('Installazione motore vision non riuscita: '+str(error)) from error
+            raise RuntimeInstallError(tr('Installazione motore vision non riuscita: ')+str(error)) from error

@@ -50,7 +50,7 @@ def main(argv=None):
             report['startup_seconds']=engine.startup_seconds
             for index in range(args.runs):
                 started=time.perf_counter()
-                messages=chat_messages(history,directory,cache=cache)
+                messages=chat_messages(history,directory,cache=cache,language=values['language'])
                 prepare=time.perf_counter()-started
                 stats=dict(engine.generate(messages,max_tokens=args.max_tokens))
                 stats['input_seconds']=prepare

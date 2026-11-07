@@ -167,10 +167,10 @@ class LiveProfiler:
 
 
 def encode_user_turn(tok: GGUFTokenizer, prompt: str,
-                     web_research: str | None = None) -> list[int]:
+                     web_research: str | None = None, language: str = "it") -> list[int]:
     """Codifica una domanda con le istruzioni di risposta."""
     formatted = format_conversation([{"role": "user", "content": prompt}],
-                                    web_research=web_research)
+                                    web_research=web_research,language=language)
     return tok.encode(formatted, add_bos=False)
 
 
@@ -180,6 +180,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Client a riga di comando per flash-moe.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    parser.add_argument("--language",choices=("it","en"),default="it",help="Italiano / English response mode")
     parser.add_argument("prompt", nargs="*",
                         help="domanda da porre. Vuota: conversazione. "
                              "Usa 'default' come primo argomento per la "
@@ -290,7 +291,7 @@ def ask(model: Qwen3MoEModel, tok: GGUFTokenizer, prompt: str,
         for result in results:
             print(f'  Fonte: {result.title} — {result.url}')
         web_research = format_research(results)
-    ids = encode_user_turn(tok, prompt, web_research)
+    ids = encode_user_turn(tok, prompt, web_research,args.language)
     if len(ids) + args.max_tokens - 1 > args.max_seq:
         raise ValueError(
             f"Prompt ({len(ids)} token) + output richiesto superano "
@@ -378,6 +379,8 @@ def ask(model: Qwen3MoEModel, tok: GGUFTokenizer, prompt: str,
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    from llocalmind.i18n import set_language
+    set_language(args.language)
     if args.prompt and args.prompt[0].casefold() == "default":
         args.prompt = args.prompt[1:]
         # Parser defaults are the measured preset. Explicit flags win.

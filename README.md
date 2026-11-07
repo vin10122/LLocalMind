@@ -18,11 +18,11 @@ high-memory discrete graphics card.
 
 ## Install on Windows
 
-The latest stable Windows release is [v0.1.10](https://github.com/vin10122/LLocalMind/releases/tag/v0.1.10):
+The latest stable Windows release is [v0.2.1 – International](https://github.com/vin10122/LLocalMind/releases/tag/v0.2.1):
 
 ### Recommended: Windows installer
 
-1. Download **[LLocalMind-Setup-0.1.10-windows-x64.exe](https://github.com/vin10122/LLocalMind/releases/download/v0.1.10/LLocalMind-Setup-0.1.10-windows-x64.exe)**.
+1. Download **[LLocalMind-Setup-0.2.1-windows-x64.exe](https://github.com/vin10122/LLocalMind/releases/download/v0.2.1/LLocalMind-Setup-0.2.1-windows-x64.exe)**.
 2. Run the installer, then open **LLocalMind** from the Start menu.
 3. Open **Impostazioni → Sfoglia**, select your compatible local **GGUF** file,
    and save. Wait for the model status to become **Pronto**, then send a message.
@@ -38,7 +38,7 @@ select CPU for DeltaNet and Full attention under advanced settings.
 
 ### Portable version
 
-1. Download **[LLocalMind-0.1.10-windows-x64-portable.zip](https://github.com/vin10122/LLocalMind/releases/download/v0.1.10/LLocalMind-0.1.10-windows-x64-portable.zip)**.
+1. Download **[LLocalMind-0.2.1-windows-x64-portable.zip](https://github.com/vin10122/LLocalMind/releases/download/v0.2.1/LLocalMind-0.2.1-windows-x64-portable.zip)**.
 2. Extract the **whole ZIP**, then open `LLocalMind\LLocalMind.exe`.
 3. Select the GGUF in settings as described above.
 
@@ -60,7 +60,7 @@ choose the download, then confirm installation. LLocalMind verifies the
 installer's SHA-256, saves the conversation, closes the model and exits. The
 installer updates the same application and reopens it when complete.
 
-**v0.1.10 is the current stable release.** Since v0.1.5,
+**v0.2.1 – International is the current stable release.** Since v0.1.5,
 the updater includes public prereleases and selects the highest newer numeric
 `MAJOR.MINOR.PATCH` version among the most recent 100 releases. Drafts, equal
 versions and downgrades are excluded. Preview updates are labelled **anteprima**.
@@ -163,8 +163,11 @@ Warm-up, OS file cache, expert routing, available RAM, drivers, power mode and
 temperature affect the result. They do not isolate the effect of any single optimization. Keep AC power and performance settings consistent when
 comparing runs, and report cold-cache and warm-cache results separately.
 
-**Generation speed excludes prefill and the wait for the first token.** Image
-encoding and prompt processing can still take much longer than generation.
+**Generation speed excludes prefill and the wait for the first token.** In
+recent local use, text-only prefill has been negligible relative to the overall
+interaction. This is an observation, not a guarantee for arbitrary long inputs.
+Image prefill is still being measured to obtain more precise figures; image
+encoding and prompt processing can take much longer than generation.
 Use the per-response metrics and local performance reports to measure these
 phases separately; a one-token response does not measure decode throughput.
 The native Intel/OpenVINO text engine and the llama.cpp vision engine are
@@ -221,9 +224,34 @@ conversations, multi-turn context, streaming answers, Copy, Regenerate, Stop,
 local text-file attachment and model/settings selection. User data is stored
 outside the program directory. The existing PowerShell chat remains available.
 
+### Italian and English mode (0.2.1 – International)
+
+Use the separate **Lingua / Language** button in the sidebar to choose
+**Italiano** or **English**. The same choice is available in **Impostazioni /
+Settings → Interface language**. It is saved for the next launch and takes
+effect without reloading the model. While loading or generating, finish or stop
+the operation before changing language.
+
+English mode translates navigation, settings, dialogs, status messages and
+response metrics, and guides new text/vision answers in English unless you
+explicitly request another language. Existing messages, chat titles, attachments
+and model files keep their original content. Switching languages can invalidate
+the next prompt's cached prefix because the system instructions change.
+
+From source, launch the English GUI with `py -3.14 gui.py --language en`, or use
+English response mode in the CLI:
+
+```powershell
+py -3.14 chat.py default --language en "Explain how this works."
+```
+
 ### Optional web research (v0.2.0)
 
-The **Ricerca web** control is off by default. When enabled for a text-model
+**Web research is still experimental and may cause problems:** requests can
+fail, providers may block or throttle access, and results may be incomplete or
+unreliable. Check important claims against the linked sources.
+
+The **Ricerca web / Web search** control is off by default. When enabled for a text-model
 turn, LLocalMind sends that question to DuckDuckGo, reads up to the first three
 usable public HTTPS results, and gives bounded text excerpts and their URLs to
 the local model. The answer is generated locally; the search query and page

@@ -1,5 +1,6 @@
 """Bounded DuckDuckGo search and HTTPS page extraction."""
 from __future__ import annotations
+from .i18n import tr
 
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -100,21 +101,21 @@ class _PageParser(HTMLParser):
 
 def _validate_https_url(url: str) -> str:
     if not isinstance(url, str) or len(url) > 2048:
-        raise ValueError('URL non valido')
+        raise ValueError(tr('URL non valido'))
     parsed = urlsplit(url)
     if (parsed.scheme.lower() != 'https' or not parsed.hostname
             or parsed.username is not None or parsed.password is not None):
         raise ValueError('Sono consentiti solo URL HTTPS pubblici')
     hostname = parsed.hostname.rstrip('.').lower()
     if hostname == 'localhost' or hostname.endswith(('.localhost', '.local')):
-        raise ValueError('Host locale non consentito')
+        raise ValueError(tr('Host locale non consentito'))
     try:
         addresses = {item[4][0] for item in socket.getaddrinfo(
             hostname, parsed.port or 443, type=socket.SOCK_STREAM)}
     except OSError as error:
-        raise ValueError('Host non raggiungibile') from error
+        raise ValueError(tr('Host non raggiungibile')) from error
     if not addresses or any(not ipaddress.ip_address(address).is_global for address in addresses):
-        raise ValueError('Host non pubblico non consentito')
+        raise ValueError(tr('Host non pubblico non consentito'))
     return url
 
 
@@ -134,10 +135,10 @@ def _open(url: str, *, max_bytes: int):
     with build_opener(_SafeRedirectHandler()).open(request, timeout=REQUEST_TIMEOUT) as response:
         content_type = response.headers.get('Content-Type', '').split(';', 1)[0].strip().lower()
         if content_type not in ('text/html', 'application/xhtml+xml', 'text/plain'):
-            raise WebSearchError('Il risultato non è una pagina HTML o testo')
+            raise WebSearchError(tr('Il risultato non è una pagina HTML o testo'))
         body = response.read(max_bytes + 1)
         if len(body) > max_bytes:
-            raise WebSearchError('La pagina supera il limite di download')
+            raise WebSearchError(tr('La pagina supera il limite di download'))
         charset = response.headers.get_content_charset() or 'utf-8'
         return body.decode(charset, errors='replace')
 
@@ -157,7 +158,7 @@ def _search(query: str) -> list[WebResult]:
     try:
         document = _open(url, max_bytes=MAX_SEARCH_BYTES)
     except (OSError, URLError, TimeoutError, ValueError, WebSearchError) as error:
-        raise WebSearchError(f'Ricerca DuckDuckGo non riuscita: {type(error).__name__}') from error
+        raise WebSearchError(tr('Ricerca DuckDuckGo non riuscita: {error}',error=type(error).__name__)) from error
     parser = _SearchParser()
     parser.feed(document)
     results = []
@@ -172,7 +173,7 @@ def _search(query: str) -> list[WebResult]:
         if len(results) == MAX_RESULTS:
             break
     if not results:
-        raise WebSearchError('DuckDuckGo non ha restituito risultati HTTPS pubblici utilizzabili')
+        raise WebSearchError(tr('DuckDuckGo non ha restituito risultati HTTPS pubblici utilizzabili'))
     return results
 
 
@@ -183,7 +184,7 @@ def _fetch(result: WebResult) -> WebResult:
         parser.feed(document)
         content = ' '.join(' '.join(parser.parts).split())[:MAX_EXCERPT_CHARS]
         if not content:
-            raise WebSearchError('La pagina non contiene testo leggibile')
+            raise WebSearchError(tr('La pagina non contiene testo leggibile'))
         return WebResult(result.title, result.url, result.snippet, content)
     except (OSError, URLError, TimeoutError, ValueError, WebSearchError) as error:
         return WebResult(result.title, result.url, result.snippet, '',
@@ -194,16 +195,16 @@ def search_and_fetch(query: str, *, stop: threading.Event | None = None,
                      on_status=None) -> list[WebResult]:
     """Search DuckDuckGo and read at most three public HTTPS pages."""
     if not isinstance(query, str) or not query.strip() or len(query) > 500:
-        raise ValueError('La domanda per la ricerca web deve contenere da 1 a 500 caratteri')
+        raise ValueError(tr('La domanda per la ricerca web deve contenere da 1 a 500 caratteri'))
     if stop is not None and stop.is_set():
         raise WebSearchCancelled()
     if on_status:
-        on_status('Ricerca DuckDuckGo')
+        on_status(tr('Ricerca DuckDuckGo'))
     results = _search(query.strip())
     if stop is not None and stop.is_set():
         raise WebSearchCancelled()
     if on_status:
-        on_status(f'Lettura di {len(results)} risultati web')
+        on_status(tr('Lettura di {count} risultati web',count=len(results)))
     with ThreadPoolExecutor(max_workers=MAX_RESULTS) as executor:
         fetched = list(executor.map(_fetch, results))
     if stop is not None and stop.is_set():
@@ -214,15 +215,15 @@ def search_and_fetch(query: str, *, stop: threading.Event | None = None,
 def format_research(results: list[WebResult]) -> str:
     """Format retrieved evidence and provenance for the local model."""
     if not results:
-        raise ValueError('La ricerca web non contiene risultati')
+        raise ValueError(tr('La ricerca web non contiene risultati'))
     sections = []
     for index, result in enumerate(results, 1):
         text = result.content
         if not text:
-            text = result.snippet or f'Pagina non disponibile ({result.fetch_error}).'
-            source_kind = 'snippet DuckDuckGo; pagina non letta'
+            text = result.snippet or tr('Pagina non disponibile ({error}).',error=result.fetch_error)
+            source_kind = tr('snippet DuckDuckGo; pagina non letta')
         else:
-            source_kind = 'estratto della pagina'
+            source_kind = tr('estratto della pagina')
         sections.append(
             f'{index}. {result.title}\nURL: {result.url}\n'
             f'{source_kind}:\n[INIZIO CONTENUTO WEB NON ATTENDIBILE]\n'

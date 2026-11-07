@@ -4,6 +4,7 @@ Native OpenVINO vision is not implemented. An explicitly selected llama.cpp
 server executes the trained vision tower, projector and multimodal prefill.
 """
 from __future__ import annotations
+from llocalmind.i18n import tr
 import http.client
 import json
 import os
@@ -36,15 +37,15 @@ class LocalVisionModel:
         found=shutil.which(str(executable)) if executable else shutil.which('llama-server')
         self.executable=Path(found or executable or '').expanduser().resolve()
         for label,path in (('modello',self.model),('mmproj',self.projector),('llama-server',self.executable)):
-            if not path.is_file():raise ValueError(f'File {label} non trovato: {path}')
+            if not path.is_file():raise ValueError(tr('File {label} non trovato: {path}',label=label,path=path))
         if any(p.suffix.lower()!='.gguf' for p in (self.model,self.projector)):
-            raise ValueError('Modello e mmproj devono essere file GGUF compatibili')
+            raise ValueError(tr('Modello e mmproj devono essere file GGUF compatibili'))
         self.max_seq=max_seq
         self.threads=threads
         self.prefill_threads=prefill_threads
         if (not 64<=image_max_tokens<=8192 or not 32<=ubatch_tokens<=batch_tokens<=2048
                 or not 0<=cache_mib<=1024 or type(warmup) is not bool):
-            raise ValueError('Profilo prestazioni vision non valido')
+            raise ValueError(tr('Profilo prestazioni vision non valido'))
         self.image_max_tokens=image_max_tokens
         self.batch_tokens=batch_tokens
         self.ubatch_tokens=ubatch_tokens
@@ -92,13 +93,12 @@ class LocalVisionModel:
                 env=child_environment(),
                 stdin=subprocess.DEVNULL,stdout=self.log,stderr=subprocess.STDOUT,
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
-            progress(0,'Caricamento vision · encoder e modello CPU')
+            progress(0,tr('Caricamento vision · encoder e modello CPU'))
             deadline=time.monotonic()+600
             while time.monotonic()<deadline:
                 if stop.is_set():raise VisionCancelled()
                 if self.process.poll() is not None:
-                    raise RuntimeError('Avvio vision fallito: verifica versione di llama.cpp e '
-                        f'compatibilità modello/mmproj. Log: {self.log_path}')
+                    raise RuntimeError(tr('Avvio vision fallito: verifica versione di llama.cpp e compatibilità modello/mmproj. Log: {path}',path=self.log_path))
                 conn=self._connection(timeout=1)
                 try:
                     conn.request('GET','/v1/models',headers=self._headers())
@@ -107,12 +107,12 @@ class LocalVisionModel:
                         data=json.loads(response.read(65536))
                         if any(m.get('id')==self.alias for m in data.get('data',[])):
                             self.startup_seconds=time.perf_counter()-started
-                            progress(100,'Vision pronta · encoder CPU')
+                            progress(100,tr('Vision pronta · encoder CPU'))
                             return
                 except (OSError,http.client.HTTPException):pass
                 finally:conn.close()
                 stop.wait(.25)
-            raise RuntimeError(f'Tempo di caricamento vision superato. Log: {self.log_path}')
+            raise RuntimeError(tr('Tempo di caricamento vision superato. Log: {path}',path=self.log_path))
         except BaseException:
             self.close()
             raise
@@ -122,7 +122,7 @@ class LocalVisionModel:
         stop=stop or threading.Event()
         if stop.is_set():raise VisionCancelled()
         if self.process is None or self.process.poll() is not None:
-            raise RuntimeError('Motore vision chiuso: ricarica il modello')
+            raise RuntimeError(tr('Motore vision chiuso: ricarica il modello'))
         payload=dict(messages=messages,stream=True,stream_options=dict(include_usage=True),
             max_tokens=max_tokens,temperature=temperature,seed=seed,
             cache_prompt=True,id_slot=0,chat_template_kwargs=dict(enable_thinking=False))
@@ -158,10 +158,8 @@ class LocalVisionModel:
                 try:problem=json.loads(detail).get('error',{})
                 except (ValueError,AttributeError):problem={}
                 if isinstance(problem,dict) and problem.get('type')=='exceed_context_size_error':
-                    raise ValueError(f"Contesto insufficiente: richiesta {problem.get('n_prompt_tokens','?')} token, "
-                        f"limite {problem.get('n_ctx',self.max_seq)}. Riduci i token visivi o la cronologia, "
-                        'oppure aumenta il contesto nelle impostazioni se la RAM lo consente.')
-                raise ValueError('Vision: richiesta rifiutata; verifica contesto e mmproj. '+detail)
+                    raise ValueError(tr('Contesto insufficiente: richiesta {count} token, limite {limit}. Riduci i token visivi o la cronologia, oppure aumenta il contesto nelle impostazioni se la RAM lo consente.',count=problem.get('n_prompt_tokens','?'),limit=problem.get('n_ctx',self.max_seq)))
+                raise ValueError(tr('Vision: richiesta rifiutata; verifica contesto e mmproj. ')+detail)
             while not stop.is_set():
                 line=response.readline(2*1024**2)
                 if not line:break
@@ -180,7 +178,7 @@ class LocalVisionModel:
                         if first is None:first=time.perf_counter()-started
                         on_text(text)
             if stop.is_set():raise VisionCancelled()
-            if not completed:raise RuntimeError('Risposta vision interrotta prima della fine')
+            if not completed:raise RuntimeError(tr('Risposta vision interrotta prima della fine'))
             tokens=usage.get('completion_tokens',timings.get('predicted_n',0))
             if type(tokens) is not int or tokens<0:tokens=0
             ms=timings.get('predicted_ms')
@@ -194,7 +192,7 @@ class LocalVisionModel:
                 rate=tokens/seconds if seconds and tokens>1 else None)
         except (OSError,http.client.HTTPException) as error:
             if stop.is_set():raise VisionCancelled() from error
-            raise RuntimeError('Connessione vision interrotta') from error
+            raise RuntimeError(tr('Connessione vision interrotta')) from error
         finally:
             done.set()
             watcher.join(timeout=1)

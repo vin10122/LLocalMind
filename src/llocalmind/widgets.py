@@ -1,4 +1,5 @@
 """Reusable Qt widgets matching the approved LLocalMind design."""
+from .i18n import tr
 from pathlib import Path
 import re
 from PySide6.QtCore import Qt, QSize, QUrl, Signal
@@ -12,6 +13,7 @@ from .images import image_path
 ASSETS = Path(__file__).with_name('assets')
 NAVY = '#122c40'
 PATHS = {
+    'globe':'<circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/>',
     'plus':'<path d="M12 5v14M5 12h14"/>',
     'chat':'<path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V6a2 2 0 0 1 3-2Z"/>',
     'send':'<path d="m5 11 7-7 7 7M12 4v16"/>',
@@ -139,7 +141,7 @@ class Message(QFrame):
                 preview=QLabel()
                 preview.setTextFormat(Qt.TextFormat.PlainText)
                 pixmap=QPixmap(str(image_path(directory,item)))
-                if pixmap.isNull():preview.setText('Immagine non disponibile: '+item['name'])
+                if pixmap.isNull():preview.setText(tr('Immagine non disponibile: ')+item['name'])
                 else:preview.setPixmap(pixmap.scaled(200,140,Qt.AspectRatioMode.KeepAspectRatio,
                                                   Qt.TransformationMode.SmoothTransformation))
                 preview.setToolTip(item['name'])
@@ -167,8 +169,8 @@ class Message(QFrame):
             column.addWidget(self.cards)
             row=QHBoxLayout()
             row.setSpacing(14)
-            self.copy_button=action('Copia','copy')
-            self.regenerate_button=action('Rigenera','reload')
+            self.copy_button=action(tr('Copia'),'copy')
+            self.regenerate_button=action(tr('Rigenera'),'reload')
             self.copy_button.clicked.connect(lambda:self.copy_requested.emit(self.text))
             self.regenerate_button.clicked.connect(self.regenerate_requested)
             row.addWidget(self.copy_button)
@@ -182,7 +184,7 @@ class Message(QFrame):
             layout.addWidget(content)
         self.update_text(text,pending=pending)
         if role=='user' and web_search:
-            self.bubble.setText('Ricerca web · DuckDuckGo\n\n'+text)
+            self.bubble.setText(tr('Ricerca web · DuckDuckGo\n\n')+text)
         self.set_stats(stats)
 
     def set_stats(self,value):
@@ -192,19 +194,19 @@ class Message(QFrame):
         text=response_summary(stats)
         self.metrics_label.setText(text)
         self.metrics_label.setVisible(bool(text))
-        tooltip='Media della generazione dopo il primo token; elaborazione del prompt esclusa.'
+        tooltip=tr('Media della generazione dopo il primo token; elaborazione del prompt esclusa.')
         if stats and stats['rate'] is None:
-            tooltip='Servono almeno due token e un tempo di generazione valido per misurare i tok/s.'
+            tooltip=tr('Servono almeno due token e un tempo di generazione valido per misurare i tok/s.')
         if stats and stats['interrupted']:
-            tooltip+=' Generazione interrotta.'
+            tooltip+=tr(' Generazione interrotta.')
         if stats and stats.get('prefill') is not None:
-            tooltip+=f"\nElaborazione prompt: {stats['prefill']:.2f} s."
+            tooltip+=tr('\nElaborazione prompt: {seconds:.2f} s.',seconds=stats['prefill'])
         if stats and stats.get('prompt_tokens') is not None:
-            tooltip+=f"\nPrompt: {stats['prompt_tokens']} token; cache: {stats.get('cached_tokens','n/d')}."
+            tooltip+=tr('\nPrompt: {count} token; cache: {cached}.',count=stats['prompt_tokens'],cached=stats.get('cached_tokens','n/a'))
         if stats and stats.get('encoder_device'):
-            tooltip+='\nEncoder immagini: '+stats['encoder_device']+'; modello linguistico: CPU.'
+            tooltip+=tr('\nEncoder immagini: ')+stats['encoder_device']+tr('; modello linguistico: CPU.')
         if stats and stats.get('image_max_tokens') is not None:
-            tooltip+=f"\nLimite per immagine: {stats['image_max_tokens']} token visivi."
+            tooltip+=tr('\nLimite per immagine: {count} token visivi.',count=stats['image_max_tokens'])
         self.metrics_label.setToolTip(tooltip)
 
     def update_text(self,text,pending=False):
@@ -246,7 +248,7 @@ class Message(QFrame):
         else:
             self.body.setVisible(True)
             # Model text is markdown; disable raw HTML and file URLs in Qt.
-            self.body.setMarkdown(text or ('Elaborazione del prompt…' if pending else 'Risposta non completata.'))
+            self.body.setMarkdown(text or (tr('Elaborazione del prompt…') if pending else tr('Risposta non completata.')))
         self.body.fit()
 
 
@@ -255,7 +257,7 @@ class Composer(QPlainTextEdit):
 
     def __init__(self):
         super().__init__()
-        self.setPlaceholderText('Da dove iniziamo?')
+        self.setPlaceholderText(tr('Da dove iniziamo?'))
         self.setObjectName('composerInput')
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setFixedHeight(54)

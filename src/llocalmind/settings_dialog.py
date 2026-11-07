@@ -1,3 +1,4 @@
+from .i18n import tr
 from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
@@ -13,49 +14,59 @@ class SettingsDialog(QDialog):
 
     def __init__(self,values,check_updates,busy=False,parent=None,*,can_install_vision=True):
         super().__init__(parent)
-        self.setWindowTitle('Impostazioni · LLocalMind')
+        self.setWindowTitle(tr('Impostazioni · LLocalMind'))
         self.setMinimumWidth(560)
         self.values=values.copy()
         self.controls={}
         layout=QVBoxLayout(self)
         layout.setContentsMargins(24,24,24,24)
         layout.setSpacing(18)
-        title=QLabel('Il tuo modello, sul tuo PC')
+        title=QLabel(tr('Il tuo modello, sul tuo PC'))
         title.setObjectName('dialogTitle')
         layout.addWidget(title)
         model_row=QHBoxLayout()
         self.path=QLineEdit(values['model_path'])
-        self.path.setPlaceholderText('Seleziona il file GGUF…')
+        self.path.setPlaceholderText(tr('Seleziona il file GGUF…'))
         self.path.setEnabled(not busy)
-        browse=QPushButton('Sfoglia…')
+        browse=QPushButton(tr('Sfoglia…'))
         browse.setEnabled(not busy)
         browse.clicked.connect(self.browse)
         model_row.addWidget(self.path,1)
         model_row.addWidget(browse)
         layout.addLayout(model_row)
-        hint=QLabel('Il modello resta nella posizione scelta e non viene incluso negli aggiornamenti.')
+        hint=QLabel(tr('Il modello resta nella posizione scelta e non viene incluso negli aggiornamenti.'))
         hint.setWordWrap(True)
         hint.setObjectName('muted')
         layout.addWidget(hint)
         vision_form=QFormLayout()
         self.engine=QComboBox()
-        self.engine.addItem('Testo · Intel ottimizzato','optimized')
-        self.engine.addItem('Testo e immagini · llama.cpp locale','vision')
+        self.engine.addItem(tr('Testo · Intel ottimizzato'),'optimized')
+        self.engine.addItem(tr('Testo e immagini · llama.cpp locale'),'vision')
         self.engine.setCurrentIndex(self.engine.findData(values['engine']))
         self.engine.setEnabled(not busy)
-        vision_form.addRow('Motore',self.engine)
+        vision_form.addRow(tr('Motore'),self.engine)
+        self.language=QComboBox()
+        self.language.addItem('Italiano','it')
+        self.language.addItem('English','en')
+        self.language.setCurrentIndex(self.language.findData(values['language']))
+        self.language.setEnabled(not busy)
+        vision_form.addRow(tr('Lingua dell’interfaccia'),self.language)
+        language_note=QLabel(tr('La modalità inglese usa l’interfaccia e le nuove risposte in inglese. Le conversazioni salvate restano invariate.'))
+        language_note.setWordWrap(True)
+        vision_form.addRow(language_note)
+
         self.vision_fields=QWidget()
         fields=QFormLayout(self.vision_fields)
         fields.setContentsMargins(0,0,0,0)
         self.vision_paths={}
         for key,label,file_filter in (
-            ('vision_executable','llama-server','Eseguibile (llama-server.exe llama-server)'),
-            ('vision_projector','mmproj compatibile','GGUF (*.gguf)')):
+            ('vision_executable','llama-server',tr('Eseguibile (llama-server.exe llama-server)')),
+            ('vision_projector',tr('mmproj compatibile'),'GGUF (*.gguf)')):
             row=QHBoxLayout()
             edit=QLineEdit(values[key])
             edit.setEnabled(not busy)
             self.vision_paths[key]=edit
-            button=QPushButton('Sfoglia…')
+            button=QPushButton(tr('Sfoglia…'))
             button.setEnabled(not busy)
             def choose(_=False,control=edit,title=label,filter_=file_filter):
                 filename,_=QFileDialog.getOpenFileName(self,title,str(Path.home()),filter_)
@@ -64,36 +75,36 @@ class SettingsDialog(QDialog):
             row.addWidget(edit,1)
             row.addWidget(button)
             fields.addRow(label,row)
-        self.install_vision=QPushButton('Installa / aggiorna motore vision CPU')
+        self.install_vision=QPushButton(tr('Installa / aggiorna motore vision CPU'))
         self.install_vision.setEnabled(not busy and can_install_vision)
         self.install_vision.clicked.connect(self.request_vision_install)
         fields.addRow(self.install_vision)
-        note=QLabel('Serve una versione di llama.cpp che supporti il modello e il suo mmproj. '
+        note=QLabel(tr('Serve una versione di llama.cpp che supporti il modello e il suo mmproj. '
                    'L’encoder immagini e il modello usano la CPU. '
-                   'Il pulsante scarica e configura il motore; modello e mmproj restano da selezionare.')
+                   'Il pulsante scarica e configura il motore; modello e mmproj restano da selezionare.'))
         note.setWordWrap(True)
         fields.addRow(note)
         vision_form.addRow(self.vision_fields)
         self.vision_fields.setVisible(self.engine.currentData()=='vision')
         self.engine.currentIndexChanged.connect(lambda:self.vision_fields.setVisible(self.engine.currentData()=='vision'))
         layout.addLayout(vision_form)
-        advanced=QGroupBox('Parametri avanzati · configurazione consigliata preimpostata')
+        advanced=QGroupBox(tr('Parametri avanzati · configurazione consigliata preimpostata'))
         advanced.setCheckable(True)
         advanced.setChecked(False)
         inner=QWidget()
         form=QFormLayout(inner)
         for name,title,low,high in (
-            ('max_tokens','Token massimi di risposta',1,4096),
-            ('max_seq','Contesto massimo',256,16384),
-            ('cache','Cache esperti',1,2048),
-            ('weight_cache','Cache pesi convertiti',1,2048),
-            ('expert_workers','Worker esperti CPU',1,16),
-            ('prefill_threads','Thread prefill CPU',1,16),
-            ('vision_image_tokens','Token visivi massimi',64,8192),
-            ('vision_threads','Thread Vision CPU',1,16),
-            ('vision_batch','Batch vision',32,2048),
-            ('vision_ubatch','Microbatch vision',32,2048),
-            ('vision_cache_mib','Cache prompt vision (MiB)',0,1024),
+            ('max_tokens',tr('Token massimi di risposta'),1,4096),
+            ('max_seq',tr('Contesto massimo'),256,16384),
+            ('cache',tr('Cache esperti'),1,2048),
+            ('weight_cache',tr('Cache pesi convertiti'),1,2048),
+            ('expert_workers',tr('Worker esperti CPU'),1,16),
+            ('prefill_threads',tr('Thread prefill CPU'),1,16),
+            ('vision_image_tokens',tr('Token visivi massimi'),64,8192),
+            ('vision_threads',tr('Thread Vision CPU'),1,16),
+            ('vision_batch',tr('Batch vision'),32,2048),
+            ('vision_ubatch',tr('Microbatch vision'),32,2048),
+            ('vision_cache_mib',tr('Cache prompt vision (MiB)'),0,1024),
         ):
             control=QSpinBox()
             control.setRange(low,high)
@@ -101,13 +112,13 @@ class SettingsDialog(QDialog):
             control.setEnabled(not busy)
             self.controls[name]=control
             form.addRow(title,control)
-        warmup=QCheckBox('Prepara il motore prima di «Pronto»')
+        warmup=QCheckBox(tr('Prepara il motore prima di «Pronto»'))
         warmup.setChecked(values['vision_warmup'])
         warmup.setEnabled(not busy)
         self.controls['vision_warmup']=warmup
         form.addRow('Vision',warmup)
-        detail=QLabel('Meno token visivi riducono il lavoro ma possono perdere dettagli e scritte piccole. '
-            'Disattivare la preparazione iniziale accelera l’avvio ma può rallentare la prima risposta.')
+        detail=QLabel(tr('Meno token visivi riducono il lavoro ma possono perdere dettagli e scritte piccole. '
+            'Disattivare la preparazione iniziale accelera l’avvio ma può rallentare la prima risposta.'))
         detail.setWordWrap(True)
         form.addRow(detail)
         for name,title in (('ssm_device','DeltaNet'),('attention_device','Full attention')):
@@ -123,7 +134,7 @@ class SettingsDialog(QDialog):
         temperature.setValue(values['temperature'])
         temperature.setEnabled(not busy)
         self.controls['temperature']=temperature
-        form.addRow('Temperatura',temperature)
+        form.addRow(tr('Temperatura'),temperature)
         group_layout=QVBoxLayout(advanced)
         scroll=QScrollArea()
         scroll.setWidgetResizable(True)
@@ -136,7 +147,7 @@ class SettingsDialog(QDialog):
         about=QHBoxLayout()
         about.addWidget(QLabel(f'LLocalMind {__version__}'))
         about.addStretch()
-        updates=QPushButton('Controlla aggiornamenti')
+        updates=QPushButton(tr('Controlla aggiornamenti'))
         def check_clicked():
             self.reject()
             check_updates()
@@ -144,18 +155,18 @@ class SettingsDialog(QDialog):
         about.addWidget(updates)
         layout.addLayout(about)
         if busy:
-            note=QLabel('Interrompi la risposta prima di cambiare modello o configurazione.')
+            note=QLabel(tr('Interrompi la risposta prima di cambiare modello o configurazione.'))
             note.setWordWrap(True)
             layout.addWidget(note)
         buttons=QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
-        buttons.button(QDialogButtonBox.StandardButton.Save).setText('Salva')
-        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText('Annulla')
+        buttons.button(QDialogButtonBox.StandardButton.Save).setText(tr('Salva'))
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(tr('Annulla'))
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
     def browse(self):
-        filename,_=QFileDialog.getOpenFileName(self,'Seleziona modello GGUF',str(Path.home()),'Modelli GGUF (*.gguf)')
+        filename,_=QFileDialog.getOpenFileName(self,tr('Seleziona modello GGUF'),str(Path.home()),tr('Modelli GGUF (*.gguf)'))
         if filename:
             self.path.setText(filename)
 
@@ -163,6 +174,7 @@ class SettingsDialog(QDialog):
         values=self.values.copy()
         values['model_path']=self.path.text().strip()
         values['engine']=self.engine.currentData()
+        values['language']=self.language.currentData()
         for key,edit in self.vision_paths.items():values[key]=edit.text().strip()
         for name,control in self.controls.items():
             values[name]=(control.currentText() if isinstance(control,QComboBox) else
@@ -172,7 +184,7 @@ class SettingsDialog(QDialog):
     def request_vision_install(self):
         try:self.values=self.collected_values()
         except ValueError as error:
-            QMessageBox.warning(self,'Impostazioni',str(error))
+            QMessageBox.warning(self,tr('Impostazioni'),str(error))
             return
         self.done(self.InstallVision)
 
@@ -180,15 +192,15 @@ class SettingsDialog(QDialog):
         try:
             values=self.collected_values()
             if values['model_path'] and not Path(values['model_path']).is_file():
-                raise ValueError('Il file del modello selezionato non esiste')
+                raise ValueError(tr('Il file del modello selezionato non esiste'))
             if values['engine']=='vision':
                 for key in ('vision_executable','vision_projector'):
                     if not values[key] or not Path(values[key]).is_file():
-                        raise ValueError('Seleziona llama-server e il mmproj compatibile')
+                        raise ValueError(tr('Seleziona llama-server e il mmproj compatibile'))
                 if Path(values['vision_projector']).suffix.lower()!='.gguf':
-                    raise ValueError('Il mmproj deve essere un file GGUF')
+                    raise ValueError(tr('Il mmproj deve essere un file GGUF'))
         except ValueError as error:
-            QMessageBox.warning(self,'Impostazioni',str(error))
+            QMessageBox.warning(self,tr('Impostazioni'),str(error))
             return
         self.values=values
         super().accept()
