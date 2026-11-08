@@ -3,7 +3,7 @@ name: Promote stable release
 on:
   push:
     branches: [master]
-    paths: ['.github/stable-release.json']
+    paths: ['.github/stable-release.json', '.github/workflows/promote-stable.yml']
   workflow_dispatch:
 
 permissions:
@@ -25,11 +25,21 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           python - <<'PY'
-          import json, os, re, subprocess
+          import json, os, re, subprocess, time
           from pathlib import Path
           tag = json.loads(Path('.github/stable-release.json').read_text())['tag']
           assert re.fullmatch(r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', tag), 'Stable semver required'
-          release = json.loads(subprocess.check_output(['gh', 'release', 'view', tag, '--json', 'isDraft,tagName,assets,body']))
+          # A requested tag may still be packaging/uploading its verified build.
+          # Wait briefly for all four assets; never promote an incomplete release.
+          for attempt in range(30):
+              response = subprocess.run(['gh', 'release', 'view', tag, '--json', 'isDraft,tagName,assets,body'],capture_output=True,text=True)
+              release = json.loads(response.stdout) if response.returncode == 0 else None
+              version = tag[1:]
+              expected = {f'LLocalMind-Setup-{version}-windows-x64.exe', f'LLocalMind-{version}-windows-x64-portable.zip'}
+              expected |= {name+'.sha256' for name in list(expected)}
+              if release and not release['isDraft'] and expected <= {a['name'] for a in release['assets'] if a['size']>0}:break
+              if attempt==29:raise RuntimeError(f'Verified release assets are not ready for {tag}')
+              time.sleep(10)
           assert not release['isDraft'] and release['tagName'] == tag
           version = tag[1:]
           names = {a['name'] for a in release['assets'] if a['size'] > 0}
