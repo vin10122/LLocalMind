@@ -102,6 +102,8 @@ class LocalState:
                         raise ValueError(tr('Messaggio non valido'))
                     if 'web_search' in message and type(message['web_search']) is not bool:
                         raise ValueError(tr('Impostazione ricerca web non valida'))
+                    if 'web_provider' in message and message['web_provider'] not in ('tavily','duckduckgo'):
+                        message.pop('web_provider')
                     if 'error' in message and (not isinstance(message['error'],str) or len(message['error'])>2000):
                         message.pop('error')
                     validate_images(message.get('images',[]))

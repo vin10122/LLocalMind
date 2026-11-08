@@ -281,18 +281,26 @@ class DesktopTests(unittest.TestCase):
         window.load_model()
         self.wait(lambda:window.ready)
         self.assertFalse(window.web_search_button.isChecked())
-        self.assertIn('DuckDuckGo',window.web_search_button.toolTip())
+        self.assertIn('Tavily',window.web_search_button.toolTip())
         window.web_search_button.setChecked(True)
         window.input.setPlainText('Domanda recente')
         window.send()
         self.wait(lambda:not window.busy)
         self.assertTrue(window._worker.options['_web_search'])
         self.assertTrue(window.current['messages'][0]['web_search'])
-        self.assertIn('Ricerca web · DuckDuckGo',window._message_widgets[0].bubble.text())
+        self.assertEqual(window.current['messages'][0]['web_provider'],'tavily')
+        self.assertIn('Ricerca web · Tavily',window._message_widgets[0].bubble.text())
         self.assertTrue(LocalState(self.temp.name).chats[0]['messages'][0]['web_search'])
+        # Existing conversations keep their original provider attribution until
+        # the user requests another search with the new transport.
+        window.current['messages'][0].pop('web_provider')
+        window._render()
+        self.assertIn('DuckDuckGo',window._message_widgets[0].bubble.text())
         window.regenerate()
         self.wait(lambda:not window.busy)
         self.assertTrue(window._worker.options['_web_search'])
+        self.assertEqual(window.current['messages'][0]['web_provider'],'tavily')
+        self.assertIn('Tavily',window._message_widgets[0].bubble.text())
 
     def test_close_during_generation_drains_thread(self):
         window=self.window()

@@ -263,8 +263,8 @@ class MainWindow(QMainWindow):
         self.web_search_button.setObjectName('webSearch')
         self.web_search_button.setCheckable(True)
         self.web_search_button.setToolTip(
-            tr('Facoltativa e disattivata di default. Invia la domanda a DuckDuckGo '
-            'e legge fino a tre pagine HTTPS pubbliche.'))
+            tr('Facoltativa e disattivata di default. Invia solo la domanda a Tavily, '
+               'tramite API gratuita senza chiave. Ha limiti d’uso; la risposta viene generata sul PC.'))
         compose.addWidget(self.web_search_button)
         self.input=Composer()
         self.input.submitted.connect(self.send)
@@ -393,7 +393,8 @@ class MainWindow(QMainWindow):
             self.messages.takeAt(0).widget().deleteLater()
         for message in self.current['messages']:
             self._add_message(message['role'],message['content'] or message.get('error',''),stats=message.get('stats'),
-                              images=message.get('images'),web_search=message.get('web_search',False))
+                              images=message.get('images'),web_search=message.get('web_search',False),
+                              web_provider=message.get('web_provider','duckduckgo'))
         if not self.current['messages']:
             welcome=QLabel(tr('Uno spazio tranquillo per le tue idee.\nScrivi una domanda per iniziare.'))
             welcome.setObjectName('muted')
@@ -405,9 +406,9 @@ class MainWindow(QMainWindow):
             self._show_footer(self.current['messages'][-1].get('stats'))
         self._buttons()
 
-    def _add_message(self,role,text,pending=False,stats=None,images=None,web_search=False):
+    def _add_message(self,role,text,pending=False,stats=None,images=None,web_search=False,web_provider='duckduckgo'):
         widget=Message(role,text,pending,stats,images=images,directory=self.state.directory,
-                       web_search=web_search,italian_interface=self.state.settings['italian_interface'])
+                       web_search=web_search,web_provider=web_provider,italian_interface=self.state.settings['italian_interface'])
         widget.copy_requested.connect(lambda text:QApplication.clipboard().setText(text))
         widget.regenerate_requested.connect(self.regenerate)
         self._message_widgets.append(widget)
@@ -594,7 +595,7 @@ class MainWindow(QMainWindow):
             chat['title']=' '.join(text.split())[:45]
         message=dict(role='user',content=text)
         if self._pending_images:message['images']=copy.deepcopy(self._pending_images)
-        if web_search:message['web_search']=True
+        if web_search:message.update(web_search=True,web_provider='tavily')
         chat['messages'].append(message)
         self._clear_images()
         self._render()
@@ -610,6 +611,7 @@ class MainWindow(QMainWindow):
             return
         if messages and messages[-1]['role']=='assistant':
             web_search=bool(len(messages)>1 and messages[-2].get('web_search',False))
+            if web_search:messages[-2]['web_provider']='tavily'
             messages.pop()
             self._render()
             self._start_reply(web_search=web_search)

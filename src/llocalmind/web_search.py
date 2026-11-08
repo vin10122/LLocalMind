@@ -1,4 +1,4 @@
-"""Bounded DuckDuckGo search and HTTPS page extraction."""
+"""Free keyless Tavily search, with an explicit legacy DuckDuckGo provider."""
 from __future__ import annotations
 from .i18n import tr
 
@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from html.parser import HTMLParser
 import ipaddress
+import json
 import socket
 import threading
 from urllib.error import HTTPError, URLError
@@ -36,6 +37,64 @@ class WebResult:
     snippet: str
     content: str
     fetch_error: str = ''
+    provider: str = 'duckduckgo'
+
+
+class _NoAPIRedirect(HTTPRedirectHandler):
+    def redirect_request(self,*args,**kwargs):
+        # Never resend the question to another endpoint after a redirect.
+        return None
+
+
+def _tavily_search(query: str) -> list[WebResult]:
+    """Use Tavily's documented keyless protocol. Never load keys from the env."""
+    request=Request('https://api.tavily.com/search',data=json.dumps(dict(
+        query=query,search_depth='basic',max_results=MAX_RESULTS,
+        include_answer=False,include_raw_content=False,include_images=False,
+        auto_parameters=False)).encode('utf-8'),headers={
+        'Content-Type':'application/json','Accept':'application/json',
+        'User-Agent':USER_AGENT,'X-Tavily-Access-Mode':'keyless',
+        'X-Client-Source':'llocalmind-keyless'})
+    status=200
+    try:
+        try:
+            response=build_opener(_NoAPIRedirect()).open(request,timeout=15)
+        except HTTPError as error:
+            response=error
+            status=error.code
+        with response:
+            body=response.read(MAX_SEARCH_BYTES+1)
+        if len(body)>MAX_SEARCH_BYTES:raise ValueError('Oversized API response')
+        if status==429:
+            raise WebSearchError(tr('Limite gratuito di Tavily raggiunto. Riprova più tardi; nessun servizio a pagamento viene attivato.'))
+        if status in (401,403):
+            raise WebSearchError(tr('La ricerca gratuita di Tavily non è disponibile. Nessuna chiave o piano a pagamento viene utilizzato.'))
+        if status!=200:
+            raise WebSearchError(tr('Ricerca Tavily non riuscita (HTTP {code}).',code=status))
+        data=json.loads(body)
+        if not isinstance(data,dict):raise ValueError('Invalid API response')
+        if isinstance(data.get('error'),dict):
+            raise WebSearchError(tr('Limite o indisponibilità della ricerca gratuita Tavily. Riprova più tardi; nessun addebito automatico.'))
+        if not isinstance(data.get('results'),list):raise ValueError('Invalid API results')
+        results=[]
+        seen=set()
+        for item in data['results'][:20]:
+            if not isinstance(item,dict):continue
+            try:url=_validate_https_url(item.get('url',''))
+            except ValueError:continue
+            text=item.get('content')
+            if url in seen or not isinstance(text,str) or not text.strip():continue
+            seen.add(url)
+            title=item.get('title')
+            title=' '.join(title.split())[:300] if isinstance(title,str) else url
+            text=' '.join(text.split())[:MAX_EXCERPT_CHARS]
+            results.append(WebResult(title or url,url,text,text,provider='tavily'))
+            if len(results)==MAX_RESULTS:break
+        if not results:raise WebSearchError(tr('Tavily non ha restituito fonti HTTPS pubbliche utilizzabili.'))
+        return results
+    except WebSearchError:raise
+    except (OSError,URLError,TimeoutError,ValueError) as error:
+        raise WebSearchError(tr('Ricerca Tavily non riuscita: {error}',error=type(error).__name__)) from error
 
 
 class _SearchParser(HTMLParser):
@@ -214,12 +273,18 @@ def _fetch(result: WebResult) -> WebResult:
 
 
 def search_and_fetch(query: str, *, stop: threading.Event | None = None,
-                     on_status=None) -> list[WebResult]:
-    """Search DuckDuckGo and read at most three public HTTPS pages."""
+                     on_status=None,provider='tavily') -> list[WebResult]:
+    """Fetch up to three sources; keyless mode cannot access a billed account."""
     if not isinstance(query, str) or not query.strip() or len(query) > 500:
         raise ValueError(tr('La domanda per la ricerca web deve contenere da 1 a 500 caratteri'))
     if stop is not None and stop.is_set():
         raise WebSearchCancelled()
+    if provider not in ('tavily','duckduckgo'):raise ValueError('Invalid search provider')
+    if provider=='tavily':
+        if on_status:on_status(tr('Ricerca Tavily · API gratuita'))
+        results=_tavily_search(query.strip())
+        if stop is not None and stop.is_set():raise WebSearchCancelled()
+        return results
     if on_status:
         on_status(tr('Ricerca DuckDuckGo'))
     results = _search(query.strip(),stop=stop)
@@ -244,6 +309,8 @@ def format_research(results: list[WebResult]) -> str:
         if not text:
             text = result.snippet or tr('Pagina non disponibile ({error}).',error=result.fetch_error)
             source_kind = tr('snippet DuckDuckGo; pagina non letta')
+        elif result.provider=='tavily':
+            source_kind=tr('estratto restituito da Tavily; pagina non letta direttamente')
         else:
             source_kind = tr('estratto della pagina')
         sections.append(

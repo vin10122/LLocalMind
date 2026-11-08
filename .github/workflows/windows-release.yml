@@ -176,15 +176,40 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<'NOTES'
-          LLocalMind 0.2.6 - Web search fixes.
+          LLocalMind 0.2.7 - Free keyless web search.
 
-          - Read both DuckDuckGo HTML and Lite result layouts, including relative HTTPS links and encoded result redirects. Duplicate results are removed.
-          - Try the Lite interface when HTML returns no usable results. Explicit anti-bot/access/rate-limit blocks stop the search and show a specific error.
-          - Failed requests now keep a clear error and Regenerate action in the conversation, including after reopening. Error metadata is not sent to the model as an answer.
-          - A failed search does not silently fall back to an unverified model answer about current events.
-          - Web availability remains dependent on DuckDuckGo and the network; offline regression tests do not prove availability on the user's PC.
-          - Detailed / Fast image modes from 0.2.5 are retained.
+          - New searches use Tavily's documented keyless API rather than scraping DuckDuckGo result pages. No account, API key, remote answer generation or paid fallback is used.
+          - Only the current question is sent; up to three public HTTPS sources and bounded API excerpts are provided to the local model as untrusted evidence. Source pages are not fetched directly.
+          - Free anonymous usage has limits and may be unavailable. Limits stop the request; the app never reads TAVILY_API_KEY or activates a paid account.
+          - Existing chats retain their DuckDuckGo label. Regenerating a web answer uses Tavily and updates the attribution.
+          - Local contract tests cover keyless headers, no secret use, no paid fallback, malformed/limited responses, cancellation and source validation. Live availability still depends on the service and network and must be tested on the target PC.
+          - Detailed / Fast images and local inference are retained. Web search stays opt-in.
 
-          Download the Setup EXE, or extract the entire portable ZIP. Models are external. Updates preserve existing chats and settings. This build is unsigned.
+          Download the Setup EXE, or extract the entire portable ZIP. Models are external. Updates preserve chats and settings. This build is unsigned.
           NOTES
-          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Web search fixes" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Free keyless web search" --notes-file release-notes.md
+      - name: Record published Windows package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import base64, json, os, subprocess
+          repo, tag = os.environ['GH_REPO'], os.environ['RELEASE_TAG']
+          data = json.loads(subprocess.check_output(['gh','release','view',tag,'--json','tagName,isDraft,isPrerelease,assets,url']))
+          assert data['tagName'] == tag and not data['isDraft']
+          version = tag[1:]
+          expected = {f'LLocalMind-Setup-{version}-windows-x64.exe', f'LLocalMind-{version}-windows-x64-portable.zip'}
+          expected |= {name+'.sha256' for name in list(expected)}
+          assert expected <= {a['name'] for a in data['assets'] if a['size'] > 0}
+          data.update(source_commit=os.environ['GITHUB_SHA'], build_run=os.environ['GITHUB_RUN_ID'])
+          path = '.github/windows-release-result.json'
+          previous = subprocess.run(['gh','api',f'repos/{repo}/contents/{path}?ref=master'],capture_output=True,text=True)
+          request = dict(message=f'Record verified Windows package {tag}',branch='master',
+              content=base64.b64encode((json.dumps(data,indent=2)+'\n').encode()).decode())
+          if previous.returncode == 0:request['sha'] = json.loads(previous.stdout)['sha']
+          subprocess.run(['gh','api','--method','PUT',f'repos/{repo}/contents/{path}','--input','-'],
+              input=json.dumps(request).encode(),stdout=subprocess.DEVNULL,check=True)
+          print(f'Verified release and all four package assets: {tag}')
+          PY

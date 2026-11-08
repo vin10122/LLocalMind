@@ -57,9 +57,12 @@ provide reliable performance figures.
   **Dottore, parti 🍕** and **Fratello, fermati 🍝**. This saved appearance
   preference does not change language or inference.
 - **Web research:** optional and off by default, available in text mode.
-  It sends your question to DuckDuckGo and reads up to three public HTTPS
-  pages. **It is experimental and may fail or return incomplete/unreliable
-  results.** Queries and page requests leave the PC; model generation stays local.
+  It sends only the current question to **Tavily's free keyless API** and uses
+  up to three returned HTTPS sources; model generation stays local. No account,
+  API key or paid fallback is used. **Free usage is limited**: when unavailable
+  or capped, search stops with an error. It remains experimental; check sources
+  and dates. Older chats retain their original DuckDuckGo label; regenerating
+  a web answer uses Tavily.
 
 ![Italian Interface preview](docs/llocalmind-italian-interface.png)
 

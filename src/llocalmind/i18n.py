@@ -139,6 +139,16 @@ EN.update({
 
 EN.update({
     'Immagini':'Images',
+    'Ricerca web · Tavily\n\n':'Web search · Tavily\n\n',
+    'Ricerca Tavily · API gratuita':'Searching Tavily · free API',
+    'Facoltativa e disattivata di default. Invia solo la domanda a Tavily, tramite API gratuita senza chiave. Ha limiti d’uso; la risposta viene generata sul PC.':'Optional and off by default. Sends only your question to Tavily through its free keyless API. Usage limits apply; the answer is generated on your PC.',
+    'Limite gratuito di Tavily raggiunto. Riprova più tardi; nessun servizio a pagamento viene attivato.':'Tavily free usage limit reached. Try again later; no paid service is activated.',
+    'La ricerca gratuita di Tavily non è disponibile. Nessuna chiave o piano a pagamento viene utilizzato.':'Tavily free search is unavailable. No API key or paid plan is used.',
+    'Ricerca Tavily non riuscita (HTTP {code}).':'Tavily search failed (HTTP {code}).',
+    'Limite o indisponibilità della ricerca gratuita Tavily. Riprova più tardi; nessun addebito automatico.':'Tavily free search is limited or unavailable. Try again later; no automatic charges.',
+    'Tavily non ha restituito fonti HTTPS pubbliche utilizzabili.':'Tavily returned no usable public HTTPS sources.',
+    'Ricerca Tavily non riuscita: {error}':'Tavily search failed: {error}',
+    'estratto restituito da Tavily; pagina non letta direttamente':'Excerpt returned by Tavily; page not read directly',
     'DuckDuckGo ha bloccato la ricerca automatica. Riprova più tardi.':'DuckDuckGo blocked automated search. Try again later.',
     'DuckDuckGo richiede una verifica anti-bot. La ricerca automatica non può proseguire; riprova più tardi.':'DuckDuckGo requires an anti-bot check. Automated search cannot continue; try again later.',
     'Operazione non riuscita: {error}\n\nPuoi riprovare con Rigenera.':'Operation failed: {error}\n\nYou can retry with Regenerate.',

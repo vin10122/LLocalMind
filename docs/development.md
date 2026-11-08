@@ -65,3 +65,20 @@ updater requirements. `.github/workflows/windows-release.yml` runs regression,
 real-runtime and packaged/installed EXE checks on Windows. A matching version
 tag publishes a preview; stable promotion uses `.github/stable-release.json`.
 Changing only documentation or test locations does not require a new app version.
+
+## Web search transport
+
+The GUI uses the documented [Tavily keyless protocol](https://github.com/tavily-ai/tavily-python/blob/46505f119e6ac0f30d63a4dce0ed9f923705ad97/tavily/tavily.py):
+POST `https://api.tavily.com/search`, `X-Tavily-Access-Mode: keyless`, basic
+search, at most three results, no generated remote answer. The adapter never
+reads `TAVILY_API_KEY`, sends Authorization, switches to a paid plan, or retries
+when a free limit is reached. Anonymous limits differ from account credit quotas
+and may change. A keyless API still depends on service/network availability.
+
+The response is bounded and validated; only public HTTPS source URLs and
+bounded excerpts are passed to the local model as untrusted evidence. Source
+pages are not fetched directly on this path. Legacy DuckDuckGo parsing remains
+explicitly available in the Python helper and is covered by regression tests.
+Use `test/test_web_search.py` for offline contract and failure tests; these do
+not establish live provider availability. A real keyless test requires outbound
+access to `api.tavily.com` and sends its test query to that provider.
