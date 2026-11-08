@@ -51,6 +51,13 @@ class SettingsDialog(QDialog):
         self.language.setCurrentIndex(self.language.findData(values['language']))
         self.language.setEnabled(not busy)
         vision_form.addRow(tr('Lingua dell’interfaccia'),self.language)
+        self.web_profile=QComboBox()
+        self.web_profile.addItem(tr('Rapida · 2 fonti, estratti brevi'),'fast')
+        self.web_profile.addItem(tr('Completa · 3 fonti, più dettagli'),'detail')
+        self.web_profile.setCurrentIndex(self.web_profile.findData(values['web_profile']))
+        self.web_profile.setEnabled(not busy)
+        self.web_profile.setToolTip(tr('Rapida riduce il testo da elaborare ma può omettere dettagli. Completa mantiene gli estratti più lunghi.'))
+        vision_form.addRow(tr('Ricerca web'),self.web_profile)
         language_note=QLabel(tr('La modalità inglese usa l’interfaccia e le nuove risposte in inglese. Le conversazioni salvate restano invariate.'))
         language_note.setWordWrap(True)
         vision_form.addRow(language_note)
@@ -174,6 +181,7 @@ class SettingsDialog(QDialog):
         values['model_path']=self.path.text().strip()
         values['engine']=self.engine.currentData()
         values['language']=self.language.currentData()
+        values['web_profile']=self.web_profile.currentData()
         for key,edit in self.vision_paths.items():values[key]=edit.text().strip()
         for name,control in self.controls.items():
             values[name]=(control.currentText() if isinstance(control,QComboBox) else

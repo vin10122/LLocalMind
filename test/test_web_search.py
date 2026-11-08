@@ -18,6 +18,7 @@ from llocalmind.web_search import (
     WebResult, WebSearchError, WebSearchCancelled, format_research, search_and_fetch,
     _validate_https_url, _result_url,
     _tavily_key,
+    _reference_url,
 )
 
 
@@ -33,6 +34,29 @@ def search_page(count=4):
 
 
 class WebSearchTests(unittest.TestCase):
+    def test_fast_and_full_profiles_keep_one_basic_call_and_bounded_evidence(self):
+        items=[dict(title='Source',url=f'https://example.com/{i}',content='a'*1200) for i in range(4)]
+        for profile,count,characters in (('fast',2,450),('detail',3,900)):
+            with self.subTest(profile=profile):
+                context,opener=self.api_request(dict(results=items))
+                with context,patch('llocalmind.web_search.socket.getaddrinfo') as dns:
+                    results=search_and_fetch('question',profile=profile)
+                dns.assert_not_called();opener.open.assert_called_once()
+                self.assertEqual(len(results),count)
+                self.assertTrue(all(len(result.content)==characters for result in results))
+                payload=json.loads(opener.open.call_args.args[0].data)
+                self.assertEqual(payload['search_depth'],'basic')
+                self.assertFalse(payload['include_answer'])
+                self.assertEqual(payload['max_results'],count)
+
+    def test_reference_validation_skips_dns_but_fetch_validation_still_blocks_private_hosts(self):
+        with patch('llocalmind.web_search.socket.getaddrinfo',return_value=[(2,1,6,'',('127.0.0.1',443))]) as dns:
+            self.assertEqual(_reference_url('https://example.com/page'),'https://example.com/page')
+            dns.assert_not_called()
+            with self.assertRaises(ValueError):_validate_https_url('https://example.com/page')
+        for url in ('https://127.0.0.1','http://example.com','https://user@example.com','https://localhost','https://example.com:bad'):
+            with self.assertRaises(ValueError):_reference_url(url)
+
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory()
         self.root=Path(self.temp.name)
@@ -99,9 +123,9 @@ class WebSearchTests(unittest.TestCase):
         self.assertFalse(payload['include_answer'])
         self.assertFalse(payload['auto_parameters'])
         self.assertEqual(payload['search_depth'],'basic')
-        self.assertEqual(payload['max_results'],3)
+        self.assertEqual(payload['max_results'],2)
         self.assertEqual(results[0].provider,'tavily')
-        self.assertLessEqual(len(results[0].content),900)
+        self.assertLessEqual(len(results[0].content),450)
         evidence=format_research(results)
         self.assertIn('Tavily',evidence)
         self.assertNotIn('snippet DuckDuckGo',evidence)
@@ -132,8 +156,9 @@ class WebSearchTests(unittest.TestCase):
         context,_=self.api_request(dict(results=items))
         def addresses(host,*args,**kwargs):
             return [(2,1,6,'',(host if host=='127.0.0.1' else '93.184.216.34',443))]
-        with context,patch('llocalmind.web_search.socket.getaddrinfo',side_effect=addresses):
+        with context,patch('llocalmind.web_search.socket.getaddrinfo',side_effect=addresses) as dns:
             results=search_and_fetch('schedule')
+        dns.assert_not_called()
         self.assertEqual([r.title for r in results],['Valid'])
 
     def test_tavily_cancel_after_api_response(self):

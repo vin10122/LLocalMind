@@ -15,7 +15,7 @@ from .images import validate_images,validate_image_profile
 DEFAULTS = dict(model_path='', max_tokens=512, max_seq=2048, cache=320,
                 weight_cache=1, expert_workers=4, prefill_threads=4,
                 ssm_device='GPU', attention_device='GPU', temperature=0.0,
-                engine='vision',engine_default_migrated=True,vision_executable='',vision_projector='',
+                engine='vision',engine_default_migrated=True,web_profile='fast',vision_executable='',vision_projector='',
                 vision_image_tokens=768,vision_batch=2048,vision_ubatch=1024,
                 vision_threads=8,vision_cache_mib=128,vision_warmup=True,language='it',italian_interface=False,vision_image_profile='detail')
 
@@ -33,6 +33,7 @@ def validate_settings(values):
         if result['vision_ubatch'] == 256:
             result['vision_ubatch'] = 1024
     validate_image_profile(result['vision_image_profile'])
+    if result['web_profile'] not in ('fast','detail'):raise ValueError('Invalid web search profile')
     if type(result['engine_default_migrated']) is not bool:raise ValueError('Invalid engine migration state')
     if type(result['italian_interface']) is not bool:raise ValueError('Invalid interface theme')
     if result['language'] not in ('it','en'):raise ValueError('Unsupported language')

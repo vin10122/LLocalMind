@@ -92,6 +92,31 @@ class DesktopTests(unittest.TestCase):
         QTest.qWait(30)
         return window
 
+    def test_web_timing_includes_search_in_first_token_and_persists_phase_metrics(self):
+        from unittest.mock import Mock
+        from llocalmind.web_search import WebResult
+        worker=ModelWorker();worker.vision=Mock();worker.vision.projector=None
+        worker.vision.generate.return_value=dict(tokens=2,rate=2,first_token=.5,prefill=.2)
+        clock=[10.0];stats=[];errors=[]
+        worker.stats.connect(stats.append);worker.error.connect(errors.append)
+        def search(*args,**kwargs):
+            clock[0]+=2
+            return [WebResult('Source','https://example.com','','Evidence',provider='tavily')]
+        options=dict(self.state.settings,engine='vision',_web_search=True,web_profile='detail',
+                     _attachment_directory=str(self.state.directory))
+        with patch('llocalmind.web_search.search_and_fetch',side_effect=search) as api, \
+                patch('llocalmind.inference.time.perf_counter',side_effect=lambda:clock[0]), \
+                patch('llocalmind.performance.record'),patch('llocalmind.performance.memory_snapshot',return_value={}):
+            worker.generate([dict(role='user',content='Question')],options)
+        self.assertFalse(errors,errors)
+        self.assertEqual(api.call_args.kwargs['profile'],'detail')
+        cleaned=clean_stats(stats[0])
+        self.assertEqual(cleaned['web_seconds'],2)
+        self.assertEqual(cleaned['first_token'],2.5)
+        self.assertEqual(cleaned['prefill'],.2)
+        self.assertEqual(cleaned['web_sources'],1)
+        self.assertEqual(cleaned['web_profile'],'detail')
+
     def test_llama_default_and_one_time_migration_preserve_explicit_legacy_choice(self):
         root=Path(self.temp.name)/'migration'
         root.mkdir()
@@ -110,11 +135,13 @@ class DesktopTests(unittest.TestCase):
         values=dict(self.state.settings,engine='vision',model_path=str(model),
                     vision_executable=sys.executable,vision_projector='')
         dialog=SettingsDialog(values,lambda:None)
+        dialog.web_profile.setCurrentIndex(dialog.web_profile.findData('detail'))
         with patch('llocalmind.settings_dialog.QMessageBox.warning') as warning:
             dialog.accept()
         warning.assert_not_called()
         self.assertEqual(dialog.result(),QDialog.DialogCode.Accepted)
         self.assertEqual(dialog.values['vision_projector'],'')
+        self.assertEqual(dialog.values['web_profile'],'detail')
         self.assertEqual(dialog.engine.itemData(0),'vision')
 
     def test_llama_web_research_preserves_pixels_and_keeps_images_off_search_api(self):

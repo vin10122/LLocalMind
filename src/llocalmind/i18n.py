@@ -139,6 +139,10 @@ EN.update({
 
 EN.update({
     'Immagini':'Images',
+    'Rapida · 2 fonti, estratti brevi':'Fast · 2 sources, short excerpts',
+    'Completa · 3 fonti, più dettagli':'Full · 3 sources, more detail',
+    'Rapida riduce il testo da elaborare ma può omettere dettagli. Completa mantiene gli estratti più lunghi.':'Fast reduces the text to process but can omit details. Full keeps longer excerpts.',
+    '\nRicerca web: {seconds:.2f} s; fonti: {count}.':'\nWeb search: {seconds:.2f} s; sources: {count}.',
     'Motore llama.cpp':'llama.cpp runtime',
     'Motore llama.cpp pronto':'llama.cpp runtime ready',
     'Il motore llama.cpp è pronto. Seleziona il GGUF; aggiungi il mmproj solo se vuoi usare immagini.':'The llama.cpp runtime is ready. Select the GGUF; add an mmproj only if you want image input.',

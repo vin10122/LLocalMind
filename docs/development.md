@@ -112,3 +112,23 @@ read the allowed public feed; no installer is executed by an update check.
 Cancellation interrupts retry backoff; in-flight requests finish or time out.
 Transient installer/checksum connection failures retry, but corrupt or truncated
 installer content is still rejected and the partial file is removed.
+
+## Web latency and input budget
+
+The Tavily path performs one basic API call and consumes returned excerpts;
+it does not open source pages. Fast uses up to two excerpts of 450 characters;
+Full keeps the prior three excerpts of 900 characters. Both keep URLs/titles,
+use basic search with remote answer generation disabled, and make no automatic
+retries. There is no new query cache or hidden reuse of live-event results.
+
+Citation references undergo static HTTPS, credential, local-host and literal-IP
+checks without DNS requests. They are not automatic connection targets. The
+legacy page-fetch/redirect paths retain DNS resolution and public-address checks.
+
+`web_seconds`, `web_sources` and `web_profile` are stored with response metrics
+and the local request report, without queries or keys. First-token latency now
+includes web lookup and input preparation; model prefill and decode speed keep
+their own definitions. Older saved metrics are left unchanged. The Full/Fast
+setting does not reload the inference engine. Actual latency gains and evidence
+quality still need a target-PC comparison; smaller excerpts are not a measured
+whole-model speedup.

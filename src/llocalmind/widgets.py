@@ -265,6 +265,8 @@ class Message(QFrame):
             tooltip+=tr(' Generazione interrotta.')
         if stats and stats.get('prefill') is not None:
             tooltip+=tr('\nElaborazione prompt: {seconds:.2f} s.',seconds=stats['prefill'])
+        if stats and stats.get('web_seconds') is not None:
+            tooltip+=tr('\nRicerca web: {seconds:.2f} s; fonti: {count}.',seconds=stats['web_seconds'],count=stats.get('web_sources',0))
         if stats and stats.get('prompt_tokens') is not None:
             tooltip+=tr('\nPrompt: {count} token; cache: {cached}.',count=stats['prompt_tokens'],cached=stats.get('cached_tokens','n/a'))
         if stats and stats.get('encoder_device'):

@@ -44,6 +44,9 @@ class PerformancePolicyTests(unittest.TestCase):
 
     def test_only_relevant_settings_change_engine_identity(self):
         native=dict(DEFAULTS,engine='optimized')
+        for engine in ('optimized','vision'):
+            values=dict(DEFAULTS,engine=engine)
+            self.assertEqual(engine_signature(values),engine_signature(dict(values,web_profile='detail')))
         self.assertEqual(engine_signature(native),engine_signature(dict(native,vision_image_tokens=256)))
         vision=dict(DEFAULTS,engine='vision')
         self.assertEqual(engine_signature(vision),engine_signature(dict(vision,cache=1000,

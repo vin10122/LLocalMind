@@ -27,9 +27,11 @@ def clean_stats(value):
     result['interrupted']=value.get('interrupted') is True
     if isinstance(value.get('encoder_device'),str) and len(value['encoder_device'])<=32:
         result['encoder_device']=value['encoder_device']
-    for key in ('input_seconds','startup_seconds'):
+    for key in ('input_seconds','startup_seconds','web_seconds'):
         if key in value:result[key]=_number(value[key])
     if value.get('image_profile') in ('detail','fast'):result['image_profile']=value['image_profile']
+    if value.get('web_profile') in ('detail','fast'):result['web_profile']=value['web_profile']
+    if type(value.get('web_sources')) is int and 0<=value['web_sources']<=3:result['web_sources']=value['web_sources']
     for key in ('prompt_tokens','image_max_tokens','evaluated_prompt_tokens','cached_tokens','input_images'):
         if type(value.get(key)) is int and value[key]>=0:result[key]=value[key]
     return result

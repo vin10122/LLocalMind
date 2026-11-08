@@ -20,6 +20,7 @@ MAX_RESULTS = 3
 MAX_SEARCH_BYTES = 1_000_000
 MAX_PAGE_BYTES = 1_000_000
 MAX_EXCERPT_CHARS = 900
+WEB_PROFILES = {'fast': (2,450), 'detail': (3,900)}
 REQUEST_TIMEOUT = 8
 USER_AGENT = 'LLocalMind/0.2 (web research)'
 
@@ -78,11 +79,12 @@ def _tavily_key() -> str:
         raise WebSearchError(tr('Chiave Tavily mancante o non valida nel file {path}.',path=path)) from None
 
 
-def _tavily_search(query: str) -> list[WebResult]:
+def _tavily_search(query: str, *, profile='fast') -> list[WebResult]:
     """One basic request using the configured account. Billing stays provider-owned."""
     key=_tavily_key()
+    count,excerpt_chars=WEB_PROFILES[profile]
     request=Request('https://api.tavily.com/search',data=json.dumps(dict(
-        query=query,search_depth='basic',max_results=MAX_RESULTS,
+        query=query,search_depth='basic',max_results=count,
         include_answer=False,include_raw_content=False,include_images=False,
         auto_parameters=False)).encode('utf-8'),headers={
         'Content-Type':'application/json','Accept':'application/json',
@@ -115,16 +117,18 @@ def _tavily_search(query: str) -> list[WebResult]:
         seen=set()
         for item in data['results'][:20]:
             if not isinstance(item,dict):continue
-            try:url=_validate_https_url(item.get('url',''))
+            # These are citation references, not automatic page-fetch targets.
+            # Avoid serial DNS lookups; actual HTTP fetches keep DNS validation.
+            try:url=_reference_url(item.get('url',''))
             except ValueError:continue
             text=item.get('content')
             if url in seen or not isinstance(text,str) or not text.strip():continue
             seen.add(url)
             title=item.get('title')
             title=' '.join(title.split())[:300] if isinstance(title,str) else url
-            text=' '.join(text.split())[:MAX_EXCERPT_CHARS]
+            text=' '.join(text.split())[:excerpt_chars]
             results.append(WebResult(title or url,url,text,text,provider='tavily'))
-            if len(results)==MAX_RESULTS:break
+            if len(results)==count:break
         if not results:raise WebSearchError(tr('Tavily non ha restituito fonti HTTPS pubbliche utilizzabili.'))
         return results
     except WebSearchError:raise
@@ -196,7 +200,7 @@ class _PageParser(HTMLParser):
                 self.parts.append(text)
 
 
-def _validate_https_url(url: str) -> str:
+def _reference_url(url: str) -> str:
     if not isinstance(url, str) or len(url) > 2048:
         raise ValueError(tr('URL non valido'))
     parsed = urlsplit(url)
@@ -206,6 +210,18 @@ def _validate_https_url(url: str) -> str:
     hostname = parsed.hostname.rstrip('.').lower()
     if hostname == 'localhost' or hostname.endswith(('.localhost', '.local')):
         raise ValueError(tr('Host locale non consentito'))
+    parsed.port  # Reject malformed ports even when no connection will be made.
+    try:literal=ipaddress.ip_address(hostname)
+    except ValueError:literal=None
+    if literal is not None and not literal.is_global:
+        raise ValueError(tr('Host non pubblico non consentito'))
+    return url
+
+
+def _validate_https_url(url: str) -> str:
+    _reference_url(url)
+    parsed=urlsplit(url)
+    hostname=parsed.hostname.rstrip('.').lower()
     try:
         addresses = {item[4][0] for item in socket.getaddrinfo(
             hostname, parsed.port or 443, type=socket.SOCK_STREAM)}
@@ -308,16 +324,17 @@ def _fetch(result: WebResult) -> WebResult:
 
 
 def search_and_fetch(query: str, *, stop: threading.Event | None = None,
-                     on_status=None,provider='tavily') -> list[WebResult]:
+                     on_status=None,provider='tavily',profile='fast') -> list[WebResult]:
     """Fetch up to three sources, without retries or an anonymous/paid fallback."""
     if not isinstance(query, str) or not query.strip() or len(query) > 500:
         raise ValueError(tr('La domanda per la ricerca web deve contenere da 1 a 500 caratteri'))
     if stop is not None and stop.is_set():
         raise WebSearchCancelled()
     if provider not in ('tavily','duckduckgo'):raise ValueError('Invalid search provider')
+    if not isinstance(profile,str) or profile not in WEB_PROFILES:raise ValueError('Invalid web search profile')
     if provider=='tavily':
         if on_status:on_status(tr('Ricerca Tavily'))
-        results=_tavily_search(query.strip())
+        results=_tavily_search(query.strip(),profile=profile)
         if stop is not None and stop.is_set():raise WebSearchCancelled()
         return results
     if on_status:

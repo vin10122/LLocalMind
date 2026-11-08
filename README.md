@@ -65,7 +65,11 @@ are still insufficient to confirm broad compatibility or reliable speeds.
   When images are attached, only the question text goes to Tavily; images stay local.
   It sends only the current question to Tavily and uses up to three returned
   HTTPS sources; answers are generated locally. Set your personal API key as
-  described below. Search remains experimental: check sources and dates.
+  described below. **Settings → Web research** offers **Fast** (default: up
+  to two 450-character excerpts) or **Full** (up to three 900-character excerpts).
+  Fast reduces model input but can omit details; switch to Full when needed.
+  Response timing details separate web lookup and model prefill. Search remains
+  experimental: check sources and dates.
 
 ![Italian Interface preview](docs/llocalmind-italian-interface.png)
 

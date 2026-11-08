@@ -112,6 +112,7 @@ class ModelWorker(QObject):
 
     @Slot(list, dict)
     def generate(self, messages, options):
+        request_started=time.perf_counter()
         status = 'complete'
         stream = None
         try:
@@ -120,17 +121,21 @@ class ModelWorker(QObject):
             if self.vision is not None and self.vision.projector is None and any(message.get('images') for message in messages):
                 raise ValueError(tr('Per usare immagini seleziona un mmproj compatibile nelle impostazioni.'))
             web_research = None
+            web_stats={}
             if options.get('_web_search'):
                 from .web_search import WebSearchCancelled, format_research, search_and_fetch
                 try:
+                    web_started=time.perf_counter()
                     query = next(message['content'] for message in reversed(messages)
                                  if message['role'] == 'user')
                     results = search_and_fetch(query, stop=self.stop,
-                                               on_status=self.search_status.emit)
+                                               on_status=self.search_status.emit,profile=options.get('web_profile','fast'))
                 except WebSearchCancelled:
                     status = 'stopped'
                     return
                 web_research = format_research(results)
+                web_stats=dict(web_seconds=time.perf_counter()-web_started,
+                               web_sources=len(results),web_profile=options.get('web_profile','fast'))
                 self.search_status.emit(tr('Analisi locale'))
             if self.vision is not None:
                 from flash_moe.multimodal import VisionCancelled
@@ -140,13 +145,15 @@ class ModelWorker(QObject):
                     request=chat_messages(messages,options['_attachment_directory'],cache=self.image_cache,language=options.get('language','it'),
                         image_profile=options.get('vision_image_profile','detail'),web_research=web_research)
                     prepare_seconds=time.perf_counter()-prepared
+                    generate_started=time.perf_counter()
                     stats=dict(self.vision.generate(request,
                         max_tokens=options['max_tokens'],temperature=options['temperature'],
                         stop=self.stop,on_text=self.token.emit))
                     stats['input_seconds']=prepare_seconds
                     stats['image_profile']=options.get('vision_image_profile','detail')
                     stats['input_images']=sum(len(message.get('images',[])) for message in messages)
-                    if stats.get('first_token') is not None:stats['first_token']+=prepare_seconds
+                    stats.update(web_stats)
+                    if stats.get('first_token') is not None:stats['first_token']+=generate_started-request_started
                     from .performance import record,memory_snapshot
                     from .metrics import clean_stats
                     record('request','vision',dict(clean_stats(stats) or {},memory=memory_snapshot(self.vision.process.pid)))
@@ -160,7 +167,6 @@ class ModelWorker(QObject):
                 raise ValueError(tr('La conversazione supera il contesto disponibile. '
                                  'Apri una nuova chat o aumenta il contesto nelle impostazioni.'))
             decoder = StreamingDetokenizer(self.tokenizer)
-            started = time.perf_counter()
             first = None
             first_generation = None
             last_generation = 0.0
@@ -176,7 +182,7 @@ class ModelWorker(QObject):
                 produced = count
                 last_generation=float(self.model.last_stream_timings['generation_seconds'])
                 if first is None:
-                    first = time.perf_counter() - started
+                    first = time.perf_counter() - request_started
                     first_generation = last_generation
                 text = decoder.push(token)
                 if text:
@@ -195,6 +201,7 @@ class ModelWorker(QObject):
                                  prefill=float(timings['prefill_seconds']),
                                  decode_seconds=seconds,
                                  rate=(produced-1)/seconds if produced > 1 and seconds > 0 else None)
+            stats.update(web_stats)
             from .performance import record
             record('request','optimized',stats)
             self.stats.emit(stats)

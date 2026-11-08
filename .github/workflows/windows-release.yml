@@ -178,18 +178,18 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<'NOTES'
-          LLocalMind 0.3.0 - llama.cpp by default.
+          LLocalMind 0.3.1 - Faster web preparation.
 
-          - The desktop recommends and defaults to llama.cpp CPU for text and images. The original Intel native/OpenVINO engine remains an experimental option.
-          - Text-only use needs a GGUF and llama-server; mmproj is optional and is only required for image input. Text-only startup does not load the image projector/encoder.
-          - Web research works with both engines, including llama.cpp image conversations. Only question text is sent to Tavily; images stay local. Retrieved evidence uses the same untrusted-data and citation rules.
-          - Existing native configurations with a configured llama-server migrate once. Explicit experimental choices remain saved; setups without the runtime are retained until it is installed/selected. Models and chats are not deleted or moved.
-          - Component tests cover text-only transport, image rejection without mmproj, source/image preparation, search privacy, migration and settings. No new full-model speed or quality result is claimed.
-          - Tavily .env support, language/theme choices, image profiles and the resilient updater are retained.
+          - New Fast web profile (default): at most two 450-character excerpts. Full preserves three 900-character excerpts and remains selectable in Settings without a model reload. Shorter excerpts can omit details.
+          - Tavily still receives one basic API call per search, without remote answer generation or source-page downloads. No new query cache or paid/advanced fallback is used.
+          - Citation metadata no longer triggers serial DNS resolution. Static URL checks remain; actual HTTP fetch/redirect paths retain DNS and public-address validation.
+          - Response metrics now separate web lookup time and model prefill, and record source count/profile. First-token time includes web lookup and input preparation; decode tok/s remains model-only. Old saved metrics are unchanged.
+          - Component tests cover excerpt budgets, one basic request, DNS policy, settings identity and timing accounting. No unmeasured target-PC speedup is claimed.
+          - llama.cpp default, optional mmproj, experimental native engine, Tavily .env, languages/themes and resilient updates are retained.
 
           Download the Setup EXE, or extract the entire portable ZIP. Models remain external. Existing chats, settings and .env survive updates. This build is unsigned.
           NOTES
-          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - llama.cpp by default" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Faster web preparation" --notes-file release-notes.md
       - name: Publish official updater fallback feed
         env:
           GH_TOKEN: ${{ github.token }}
