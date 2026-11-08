@@ -1,37 +1,37 @@
 {
-  "tag": "v0.2.9",
+  "tag": "v0.3.0",
   "promotion": "success",
-  "run_id": "42479307013",
+  "run_id": "42479654459",
   "release": {
-    "url": "https://github.com/vin10122/LLocalMind/releases/tag/v0.2.9",
+    "url": "https://github.com/vin10122/LLocalMind/releases/tag/v0.3.0",
     "draft": false,
     "prerelease": false,
     "assets": [
       {
-        "name": "LLocalMind-0.2.9-windows-x64-portable.zip",
-        "size": 168789065
+        "name": "LLocalMind-0.3.0-windows-x64-portable.zip",
+        "size": 168792918
       },
       {
-        "name": "LLocalMind-0.2.9-windows-x64-portable.zip.sha256",
+        "name": "LLocalMind-0.3.0-windows-x64-portable.zip.sha256",
         "size": 109
       },
       {
-        "name": "LLocalMind-Setup-0.2.9-windows-x64.exe",
-        "size": 106015700
+        "name": "LLocalMind-Setup-0.3.0-windows-x64.exe",
+        "size": 106020520
       },
       {
-        "name": "LLocalMind-Setup-0.2.9-windows-x64.exe.sha256",
+        "name": "LLocalMind-Setup-0.3.0-windows-x64.exe.sha256",
         "size": 106
       }
     ]
   },
   "builds": [
     {
-      "id": 42475928269,
-      "head_sha": "9efc6862e4615b0cbe314da19f3754a7e45d2936",
+      "id": 42479308793,
+      "head_sha": "7c0ec820ea840f76fc29654e70d5d5957585a7ee",
       "status": "completed",
       "conclusion": "success",
-      "html_url": "https://github.com/vin10122/LLocalMind/actions/runs/42475928269",
+      "html_url": "https://github.com/vin10122/LLocalMind/actions/runs/42479308793",
       "jobs": [
         {
           "name": "build",
@@ -46,11 +46,11 @@
       ]
     },
     {
-      "id": 42475927307,
-      "head_sha": "9efc6862e4615b0cbe314da19f3754a7e45d2936",
+      "id": 42479306993,
+      "head_sha": "7c0ec820ea840f76fc29654e70d5d5957585a7ee",
       "status": "completed",
       "conclusion": "success",
-      "html_url": "https://github.com/vin10122/LLocalMind/actions/runs/42475927307",
+      "html_url": "https://github.com/vin10122/LLocalMind/actions/runs/42479306993",
       "jobs": [
         {
           "name": "build",
