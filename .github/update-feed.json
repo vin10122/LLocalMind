@@ -2,6 +2,27 @@
   "schema": 1,
   "releases": [
     {
+      "tag_name": "v0.2.9",
+      "draft": false,
+      "prerelease": true,
+      "name": "LLocalMind v0.2.9 - Resilient updater",
+      "body": "LLocalMind 0.2.9 - Resilient updater.\n\n- Update checks retry temporary GitHub failures with bounded waits and shorter metadata timeouts.\n- If the releases API remains unavailable or rate-limited, the updater uses an official repository-hosted manifest. Both sources enforce the same version, asset URL, size and SHA-256 validation.\n- If neither source is reachable, the app shows a clear retry message and an Open GitHub Releases button instead of reporting no updates.\n- Cancellation stops retry backoff. Transient installer/checksum connection errors retry without weakening integrity checks or keeping partial installers.\n- The official fallback manifest is generated after complete release uploads and refreshed at stable promotion. It excludes drafts and incomplete packages; public previews remain supported.\n- Tavily .env support and local inference from 0.2.8 are retained. Existing chats, settings, models and the external .env are preserved.\n\nIf your current updater fails, download this Setup EXE directly and run it over the installed version. No uninstall is needed. This build is unsigned.\n",
+      "assets": [
+        {
+          "name": "LLocalMind-Setup-0.2.9-windows-x64.exe",
+          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.9/LLocalMind-Setup-0.2.9-windows-x64.exe",
+          "size": 106015700,
+          "digest": "sha256:580dc14c4e6cecca387bb1b3f2650bbc37eb13e69c83922307620824d748aa02"
+        },
+        {
+          "name": "LLocalMind-Setup-0.2.9-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.9/LLocalMind-Setup-0.2.9-windows-x64.exe.sha256",
+          "size": 106,
+          "digest": "sha256:e842cb0a9cd0d4cddb9a2f0a08a341c9fce328e9bc0f95a426149b49889dc481"
+        }
+      ]
+    },
+    {
       "tag_name": "v0.2.8",
       "draft": false,
       "prerelease": false,
