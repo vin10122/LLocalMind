@@ -68,7 +68,18 @@ jobs:
           path: ${{ runner.temp }}/LLocalMind-test-vision-runtime
           key: windows-x64-vision-${{ hashFiles('src/llocalmind/vision_runtime.py') }}
       - name: Verify actual Windows vision runtime
-        run: python test/probe_vision_runtime.py
+        shell: pwsh
+        run: |
+          if ('${{ steps.vision-runtime-cache.outputs.cache-hit }}' -ne 'true') {
+            $url = python -c "import sys;sys.path.insert(0,'src');from llocalmind.vision_runtime import PACKAGE;print(PACKAGE.url)"
+            if ($LASTEXITCODE -ne 0) { throw "Cannot read pinned runtime URL" }
+            $archive = Join-Path $env:RUNNER_TEMP 'vision-runtime.zip'
+            & curl.exe --fail --location --proto '=https' --proto-redir '=https' --retry 3 --retry-delay 5 --max-time 120 --output $archive $url
+            if ($LASTEXITCODE -ne 0) { Write-Output '::error title=Vision runtime download::Official pinned archive download failed'; throw "Runtime download failed" }
+            $env:LLOCALMIND_TEST_RUNTIME_ARCHIVE = $archive
+          }
+          python test/probe_vision_runtime.py
+          if ($LASTEXITCODE -ne 0) { throw "Vision runtime verification failed" }
       - name: Cache verified vision runtime
         if: steps.vision-runtime-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
