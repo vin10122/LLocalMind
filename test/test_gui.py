@@ -48,6 +48,17 @@ class FakeWorker(ModelWorker):
         self.reply_finished.emit('stopped' if self.stop.is_set() else 'complete')
 
 
+class SearchFailureWorker(FakeWorker):
+    fail=True
+
+    @Slot(list,dict)
+    def generate(self,messages,options):
+        if self.fail:
+            self.error.emit('DuckDuckGo richiede una verifica anti-bot.')
+            self.reply_finished.emit('error')
+        else:super().generate(messages,options)
+
+
 class DesktopTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -239,6 +250,31 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual(window._worker.history,previous[:-1])
         window._message_widgets[-1].copy_button.click()
         self.assertEqual(QApplication.clipboard().text(),window.current['messages'][-1]['content'])
+
+    def test_failed_web_search_is_visible_persisted_and_retryable(self):
+        window=MainWindow(state=self.state,worker_factory=SearchFailureWorker)
+        self.windows.append(window)
+        window.show()
+        window.load_model()
+        self.wait(lambda:window.ready)
+        window.web_search_button.setChecked(True)
+        window.input.setPlainText('Quando gioca la squadra?')
+        window.send()
+        self.wait(lambda:not window.busy)
+        message=window.current['messages'][-1]
+        self.assertEqual(message['content'],'')
+        self.assertIn('anti-bot',message['error'])
+        self.assertIn('Rigenera',window._message_widgets[-1].body.toPlainText())
+        self.assertNotIn('Risposta non completata',window._message_widgets[-1].body.toPlainText())
+        self.assertEqual(LocalState(self.temp.name).chats[0]['messages'][-1]['error'],message['error'])
+        window._render()
+        self.assertIn('anti-bot',window._message_widgets[-1].body.toPlainText())
+        window._worker.fail=False
+        window.regenerate()
+        self.wait(lambda:not window.busy)
+        self.assertNotIn('error',window.current['messages'][-1])
+        self.assertTrue(window.current['messages'][-1]['content'])
+        self.assertTrue(window._worker.options['_web_search'])
 
     def test_web_search_is_opt_in_persisted_and_used_again_on_regenerate(self):
         window=self.window()
@@ -551,6 +587,14 @@ class DesktopTests(unittest.TestCase):
         self.assertIn('https://example.com',worker.tokenizer.last_text)
         self.assertIn('fonti esterne non attendibili',worker.tokenizer.last_text)
         self.assertEqual(done[-1],'complete')
+        from llocalmind.web_search import WebSearchError
+        before=(len(output),len(stats),worker.tokenizer.last_text)
+        worker.model.drained=False
+        with patch('llocalmind.web_search.search_and_fetch',side_effect=WebSearchError('Search blocked')):
+            worker.generate([dict(role='user',content='Domanda recente',web_search=True)],options)
+        self.assertEqual(done[-1],'error')
+        self.assertEqual((len(output),len(stats),worker.tokenizer.last_text),before)
+        self.assertFalse(worker.model.drained)
         options['_web_search']=False
         worker.model.max_seq_len=2
         worker.generate([dict(role='user',content='Domanda')],options)

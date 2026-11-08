@@ -8,8 +8,8 @@ from html.parser import HTMLParser
 import ipaddress
 import socket
 import threading
-from urllib.error import URLError
-from urllib.parse import parse_qs, quote_plus, urlsplit
+from urllib.error import HTTPError, URLError
+from urllib.parse import parse_qs, quote_plus, urljoin, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
@@ -42,17 +42,20 @@ class _SearchParser(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.results = []
+        self.challenge = False
         self._active = None
         self._capture = None
 
     def handle_starttag(self, tag, attrs):
         attributes = dict(attrs)
         classes = set(attributes.get('class', '').split())
-        if tag == 'a' and 'result__a' in classes and len(self.results) < 10:
+        if attributes.get('id') in ('challenge-form','anomaly-form') or classes.intersection({'anomaly-modal','g-recaptcha'}):
+            self.challenge = True
+        if tag == 'a' and classes.intersection({'result__a','result-link'}) and len(self.results) < 10:
             self._active = {'url': attributes.get('href', ''), 'title': ''}
             self.results.append(self._active)
             self._capture = 'title'
-        elif 'result__snippet' in classes and self.results:
+        elif classes.intersection({'result__snippet','result-snippet'}) and self.results:
             self._capture = 'snippet'
             self.results[-1].setdefault('snippet', '')
 
@@ -144,37 +147,56 @@ def _open(url: str, *, max_bytes: int):
 
 
 def _result_url(url: str) -> str:
+    if not url.strip():raise ValueError('Missing result URL')
+    url = urljoin('https://duckduckgo.com/', url)
     parsed = urlsplit(url)
     if parsed.hostname and (parsed.hostname.lower() == 'duckduckgo.com'
                             or parsed.hostname.lower().endswith('.duckduckgo.com')):
         destination = parse_qs(parsed.query).get('uddg', [])
         if destination:
             return destination[0]
+        raise ValueError('DuckDuckGo navigation is not a result')
     return url
 
 
-def _search(query: str) -> list[WebResult]:
-    url = 'https://html.duckduckgo.com/html/?q=' + quote_plus(query)
-    try:
-        document = _open(url, max_bytes=MAX_SEARCH_BYTES)
-    except (OSError, URLError, TimeoutError, ValueError, WebSearchError) as error:
-        raise WebSearchError(tr('Ricerca DuckDuckGo non riuscita: {error}',error=type(error).__name__)) from error
+def _parse_results(document: str) -> list[WebResult]:
     parser = _SearchParser()
     parser.feed(document)
+    if parser.challenge:
+        raise WebSearchError(tr('DuckDuckGo richiede una verifica anti-bot. La ricerca automatica non può proseguire; riprova più tardi.'))
     results = []
+    seen=set()
     for item in parser.results:
         try:
             result_url = _validate_https_url(_result_url(item.get('url', '')))
         except ValueError:
             continue
+        if result_url in seen:continue
+        seen.add(result_url)
         title = ' '.join(item.get('title', '').split()) or result_url
         snippet = ' '.join(item.get('snippet', '').split())
         results.append(WebResult(title, result_url, snippet, ''))
         if len(results) == MAX_RESULTS:
             break
-    if not results:
-        raise WebSearchError(tr('DuckDuckGo non ha restituito risultati HTTPS pubblici utilizzabili'))
     return results
+
+
+def _search(query: str, *, stop=None) -> list[WebResult]:
+    # Both are public DuckDuckGo text interfaces. Do not try another endpoint
+    # after a CAPTCHA/rate-limit/access block, and never solve challenges.
+    for endpoint in ('https://html.duckduckgo.com/html/', 'https://lite.duckduckgo.com/lite/'):
+        if stop is not None and stop.is_set():raise WebSearchCancelled()
+        try:
+            document = _open(endpoint+'?q='+quote_plus(query),max_bytes=MAX_SEARCH_BYTES)
+        except HTTPError as error:
+            if error.code in (202,403,429):
+                raise WebSearchError(tr('DuckDuckGo ha bloccato la ricerca automatica. Riprova più tardi.')) from error
+            raise WebSearchError(tr('Ricerca DuckDuckGo non riuscita: {error}',error=f'HTTP {error.code}')) from error
+        except (OSError, URLError, TimeoutError, ValueError, WebSearchError) as error:
+            raise WebSearchError(tr('Ricerca DuckDuckGo non riuscita: {error}',error=type(error).__name__)) from error
+        results=_parse_results(document)
+        if results:return results
+    raise WebSearchError(tr('DuckDuckGo non ha restituito risultati HTTPS pubblici utilizzabili'))
 
 
 def _fetch(result: WebResult) -> WebResult:
@@ -200,7 +222,7 @@ def search_and_fetch(query: str, *, stop: threading.Event | None = None,
         raise WebSearchCancelled()
     if on_status:
         on_status(tr('Ricerca DuckDuckGo'))
-    results = _search(query.strip())
+    results = _search(query.strip(),stop=stop)
     if stop is not None and stop.is_set():
         raise WebSearchCancelled()
     if on_status:

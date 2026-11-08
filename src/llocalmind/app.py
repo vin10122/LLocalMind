@@ -392,7 +392,7 @@ class MainWindow(QMainWindow):
         while self.messages.count():
             self.messages.takeAt(0).widget().deleteLater()
         for message in self.current['messages']:
-            self._add_message(message['role'],message['content'],stats=message.get('stats'),
+            self._add_message(message['role'],message['content'] or message.get('error',''),stats=message.get('stats'),
                               images=message.get('images'),web_search=message.get('web_search',False))
         if not self.current['messages']:
             welcome=QLabel(tr('Uno spazio tranquillo per le tue idee.\nScrivi una domanda per iniziare.'))
@@ -679,7 +679,7 @@ class MainWindow(QMainWindow):
         self._timer.stop()
         if self._active_reply is not None:
             message=self.current['messages'][-1]
-            self._active_reply.update_text(message['content'])
+            self._active_reply.update_text(message['content'] or message.get('error',''))
             if 'stats' in message:
                 message['stats']['interrupted']=status=='stopped'
                 self._active_reply.set_stats(message['stats'])
@@ -696,6 +696,9 @@ class MainWindow(QMainWindow):
     def _error(self,error):
         if self._closing:
             return
+        if self.busy and self._active_reply is not None:
+            self.current['messages'][-1]['error']=tr(
+                'Operazione non riuscita: {error}\n\nPuoi riprovare con Rigenera.',error=str(error)[:1500])
         if self.loading:
             self.loading=False
             self.ready=False

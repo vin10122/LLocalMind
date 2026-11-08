@@ -50,6 +50,7 @@ jobs:
           if [ "$RELEASE_TAG" = "v0.2.1" ]; then title="$title - International"; fi
           if [ "$RELEASE_TAG" = "v0.2.3" ]; then title="$title - Italian Interface"; fi
           if [ "$RELEASE_TAG" = "v0.2.5" ]; then title="$title - Vision image modes"; fi
+          if [ "$RELEASE_TAG" = "v0.2.6" ]; then title="$title - Web search fixes"; fi
           gh release edit "$RELEASE_TAG" --prerelease=false --latest --title "$title" --notes-file stable-notes.md
           python - <<'PY'
           import os

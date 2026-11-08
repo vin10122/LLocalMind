@@ -2,6 +2,7 @@
 import threading
 import unittest
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 from pathlib import Path
 import sys
@@ -10,8 +11,8 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'src'))
 from llocalmind.prompts import format_conversation
 from llocalmind.web_search import (
-    WebResult, WebSearchCancelled, format_research, search_and_fetch,
-    _validate_https_url,
+    WebResult, WebSearchError, WebSearchCancelled, format_research, search_and_fetch,
+    _validate_https_url, _result_url,
 )
 
 
@@ -27,6 +28,53 @@ def search_page(count=4):
 
 
 class WebSearchTests(unittest.TestCase):
+    def test_relative_redirects_lite_links_and_deduplication(self):
+        html='''<a class="result-link" href="//example.com/game">Game <b>schedule</b></a>
+        <td class="result-snippet">Sunday at 20:45</td>
+        <a class="result-link" href="/l/?uddg=https%3A%2F%2Fexample.com%2Fgame">Duplicate</a>
+        <a class="result-link" href="https://other.example/game">Other</a>'''
+        def validate(url):
+            self.assertTrue(url.startswith('https://'))
+            return url
+        with patch('llocalmind.web_search._open',return_value=html), \
+                patch('llocalmind.web_search._validate_https_url',side_effect=validate):
+            results=search_and_fetch('schedule')
+        self.assertEqual([r.url for r in results],['https://example.com/game','https://other.example/game'])
+        self.assertEqual(results[0].title,'Game schedule')
+        self.assertEqual(results[0].snippet,'Sunday at 20:45')
+        for value in ('','/settings','https://duckduckgo.com/about'):
+            with self.assertRaises(ValueError):_result_url(value)
+
+    def test_lite_fallback_for_empty_html_layout(self):
+        requests=[]
+        def open_(url,**kwargs):
+            requests.append(url)
+            if '/html/' in url:return '<html>No recognized result layout</html>'
+            if '/lite/' in url:return '<a class="result-link" href="https://example.com/news">News</a>'
+            return '<p>News article</p>'
+        with patch('llocalmind.web_search._open',side_effect=open_), \
+                patch('llocalmind.web_search._validate_https_url',side_effect=lambda url:url):
+            results=search_and_fetch('question')
+        self.assertEqual(len(results),1)
+        self.assertIn('lite.duckduckgo.com/lite/',requests[1])
+        self.assertEqual(results[0].content,'News article')
+
+    def test_challenge_and_rate_limit_do_not_trigger_more_requests(self):
+        with patch('llocalmind.web_search._open',return_value='<form id="challenge-form"></form>') as open_:
+            with self.assertRaisesRegex(WebSearchError,'anti-bot'):search_and_fetch('question')
+            self.assertEqual(open_.call_count,1)
+        for code in (403,429):
+            with patch('llocalmind.web_search._open',side_effect=HTTPError('https://html.duckduckgo.com',code,'blocked',{},None)) as open_:
+                with self.assertRaisesRegex(WebSearchError,'bloccato'):search_and_fetch('question')
+                self.assertEqual(open_.call_count,1)
+
+    def test_cancel_between_html_and_lite_prevents_fallback(self):
+        stop=threading.Event()
+        def open_(*args,**kwargs):stop.set();return '<html></html>'
+        with patch('llocalmind.web_search._open',side_effect=open_) as request:
+            with self.assertRaises(WebSearchCancelled):search_and_fetch('question',stop=stop)
+            self.assertEqual(request.call_count,1)
+
     def test_reads_only_three_results_and_removes_active_html(self):
         search_html=search_page()
         fetched=[]

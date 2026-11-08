@@ -139,6 +139,9 @@ EN.update({
 
 EN.update({
     'Immagini':'Images',
+    'DuckDuckGo ha bloccato la ricerca automatica. Riprova più tardi.':'DuckDuckGo blocked automated search. Try again later.',
+    'DuckDuckGo richiede una verifica anti-bot. La ricerca automatica non può proseguire; riprova più tardi.':'DuckDuckGo requires an anti-bot check. Automated search cannot continue; try again later.',
+    'Operazione non riuscita: {error}\n\nPuoi riprovare con Rigenera.':'Operation failed: {error}\n\nYou can retry with Regenerate.',
     'Dettagliata · testo piccolo':'Detailed · small text',
     'Rapida · panoramica':'Fast · overview',
     'Modalità immagini: ':'Image mode: ',

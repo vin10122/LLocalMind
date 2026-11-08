@@ -176,40 +176,15 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<'NOTES'
-          LLocalMind 0.2.5 - Vision image modes.
+          LLocalMind 0.2.6 - Web search fixes.
 
-          - New: Detailed/Fast image selector in Vision mode, saved without reloading the model. Detailed keeps existing behavior; Fast limits image area while preserving the entire scene and original files.
-          - Fast can lose small text and fine details. Its actual benefit depends on the encoder/model; no target-PC speedup is claimed before measurement.
-          - New: --compare-image-profiles in the diagnostics benchmark alternates profiles with prompt reuse disabled, and records first-token/prefill timings plus actual cache counters. --show-answers optionally prints answers for quality checks without storing them in the report.
+          - Read both DuckDuckGo HTML and Lite result layouts, including relative HTTPS links and encoded result redirects. Duplicate results are removed.
+          - Try the Lite interface when HTML returns no usable results. Explicit anti-bot/access/rate-limit blocks stop the search and show a specific error.
+          - Failed requests now keep a clear error and Regenerate action in the conversation, including after reopening. Error metadata is not sent to the model as an answer.
+          - A failed search does not silently fall back to an unverified model answer about current events.
+          - Web availability remains dependent on DuckDuckGo and the network; offline regression tests do not prove availability on the user's PC.
+          - Detailed / Fast image modes from 0.2.5 are retained.
 
-          - Optional Italian Interface sidebar switch: azure theme, thin tricolour top bar and thick tricolour user-bubble borders with solid light-blue interiors.
-          - Large Dottore, parti 🍕 / Fratello, fermati 🍝 controls retain normal send/stop behavior. Appearance is saved separately and never changes language, prompts or the loaded model.
-
-          - Italian/English interface, a separate Language sidebar button and the same selector in Settings. The choice persists without reloading the model.
-          - English mode guides new text/vision answers in English unless another language is explicitly requested; saved conversations are not translated. CLI: --language en.
-          - Web research remains experimental and may fail or return incomplete results. Text prefill is generally negligible in recent local use; image prefill is still being measured for more precise figures.
-
-          - Installer: download `LLocalMind-Setup-*-windows-x64.exe`.
-          - Portable: extract the whole portable ZIP, then open `LLocalMind/LLocalMind.exe`.
-          - No Python installation is required. GGUF models are external and are not included.
-          - Each generated answer shows its token count and measured decode speed; these metrics are saved with conversations.
-          - Stable v0.1.10 gives more complete answers by default and raises the maximum response length from 128 to 512 tokens.
-          - v0.2.0 adds opt-in DuckDuckGo research: up to three public HTTPS pages are excerpted for the local text model. The query and page requests leave the PC; web text is treated as untrusted input.
-          - The v0.1.9 CPU-only vision path is retained; both the vision encoder and language model run on CPU.
-          - The packaged vision runtime is pinned to the official Windows CPU build. Advanced visual-token settings are unchanged; real-model image quality and CPU performance still require target-PC validation.
-          - New: bounded visual-token/batch/cache defaults, image/prefix reuse, lazy vision imports and engine-specific reloads. Advanced settings expose the speed/detail tradeoff.
-          - New: native long-prompt shared-expert batching, reusable KV storage and coalesced GUI streaming.
-          - New: local load/request reports and `LLocalMind-Diagnostics.exe --benchmark-vision --image PATH` (close the GUI first). No target-PC vision speed is claimed.
-          - Settings → Installa / aggiorna motore vision CPU downloads, verifies and configures the official Windows CPU llama.cpp runtime automatically, without administrator rights.
-          - The updater now includes public preview releases, selects the highest newer numeric version, and continues to exclude drafts and verify installer SHA-256. Older stable-only apps need this preview installer run manually once.
-          - The runtime is pinned to b12110 with a verified SHA-256; cancellation cleans temporary files and existing installations are preserved.
-          - New: local image attachments in the GUI and CLI, with persistent image history and a local llama.cpp vision engine.
-          - Vision requires a language-model GGUF and matching mmproj GGUF. The app can install llama-server on demand; runtime and model files are not bundled. The optimized OpenVINO engine remains text-only.
-          - Fixed Windows Python launcher arguments and batch quoting; removed the invalid RGB-average projector.
-          - Vision transport, cancellation, installer syntax and GUI behavior are tested automatically. CI also installs the real pinned runtime and probes it from source, the packaged EXE and the installed app. Actual Hermes/mmproj compatibility, image-answer quality and vision performance still need validation on the target PC.
-          - Updates use the current vin10122/LLocalMind repository; older previews can be upgraded by running this installer without uninstalling first.
-          - Choose your compatible GGUF in Settings. Intel GPU/NPU support requires appropriate drivers.
-          - CI checks the GUI, CPU OpenVINO, native kernels and installer without a GGUF. Full-model quality/performance on the target PC still needs manual validation.
-          - SHA-256 sidecars are included. This build is not code-signed. Updaters since v0.1.5 include public previews as well as stable releases.
+          Download the Setup EXE, or extract the entire portable ZIP. Models are external. Updates preserve existing chats and settings. This build is unsigned.
           NOTES
-          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Vision image modes" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Web search fixes" --notes-file release-notes.md
