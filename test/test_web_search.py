@@ -3,6 +3,7 @@ import threading
 import io
 import json
 import os
+import tempfile
 import unittest
 from unittest.mock import Mock,patch
 from urllib.error import HTTPError
@@ -16,6 +17,7 @@ from llocalmind.prompts import format_conversation
 from llocalmind.web_search import (
     WebResult, WebSearchError, WebSearchCancelled, format_research, search_and_fetch,
     _validate_https_url, _result_url,
+    _tavily_key,
 )
 
 
@@ -31,6 +33,43 @@ def search_page(count=4):
 
 
 class WebSearchTests(unittest.TestCase):
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory()
+        self.root=Path(self.temp.name)
+        self.key='tvly-test-account-12345678'
+        (self.root/'.env').write_text('TAVILY_API_KEY='+self.key,encoding='utf-8')
+        self.root_patch=patch('llocalmind.web_search.data_root',return_value=self.root)
+        self.root_patch.start()
+
+    def tearDown(self):
+        self.root_patch.stop()
+        self.temp.cleanup()
+
+    def test_dotenv_supports_bom_crlf_quotes_and_export_without_global_changes(self):
+        for value in (self.key, '"'+self.key+'"', "'"+self.key+"' # local key"):
+            (self.root/'.env').write_bytes(('\ufeff# config\r\nexport TAVILY_API_KEY = '+value+'\r\n').encode())
+            with patch.dict(os.environ,{'TAVILY_API_KEY':'unrelated-global-value'}):
+                self.assertEqual(_tavily_key(),self.key)
+                self.assertEqual(os.environ['TAVILY_API_KEY'],'unrelated-global-value')
+
+    def test_missing_invalid_and_duplicate_dotenv_never_send_requests_or_echo_secrets(self):
+        for text in (None,'OTHER_KEY='+self.key,'TAVILY_API_KEY='+self.key+' bad',
+            'TAVILY_API_KEY='+self.key+'\nTAVILY_API_KEY='+self.key,
+            'TAVILY_API_KEY="'+self.key,'x'*16385):
+            path=self.root/'.env'
+            if text is None:path.unlink(missing_ok=True)
+            else:path.write_text(text)
+            with patch('llocalmind.web_search.build_opener') as network:
+                with self.assertRaises(WebSearchError) as error:search_and_fetch('question')
+                network.assert_not_called()
+            self.assertNotIn(self.key,str(error.exception))
+
+    def test_key_is_reread_on_next_search(self):
+        self.assertEqual(_tavily_key(),self.key)
+        replacement='tvly-another-account-12345678'
+        (self.root/'.env').write_text('TAVILY_API_KEY='+replacement)
+        self.assertEqual(_tavily_key(),replacement)
+
     def api_request(self,body,*,http_status=200,stop=None):
         raw=body if isinstance(body,bytes) else json.dumps(body).encode()
         def open_(request,timeout):
@@ -40,7 +79,7 @@ class WebSearchTests(unittest.TestCase):
         opener=Mock();opener.open.side_effect=open_
         return patch('llocalmind.web_search.build_opener',return_value=opener),opener
 
-    def test_tavily_is_keyless_even_with_paid_key_in_environment(self):
+    def test_tavily_authenticates_only_with_explicit_dotenv_key_and_basic_search(self):
         body=dict(answer='Do not use this remote AI answer',results=[dict(
             title='Calendar',url='https://example.com/calendar',content='Source excerpt '+('x'*1200))])
         request,opener=self.api_request(body)
@@ -53,8 +92,8 @@ class WebSearchTests(unittest.TestCase):
         sent=opener.open.call_args.args[0]
         self.assertEqual(sent.full_url,'https://api.tavily.com/search')
         headers={k.lower():v for k,v in sent.header_items()}
-        self.assertEqual(headers['x-tavily-access-mode'],'keyless')
-        self.assertNotIn('authorization',headers)
+        self.assertNotIn('x-tavily-access-mode',headers)
+        self.assertEqual(headers['authorization'],'Bearer '+self.key)
         payload=json.loads(sent.data)
         self.assertNotIn('api_key',payload)
         self.assertFalse(payload['include_answer'])
@@ -68,13 +107,14 @@ class WebSearchTests(unittest.TestCase):
         self.assertNotIn('snippet DuckDuckGo',evidence)
         self.assertNotIn(body['answer'],evidence)
 
-    def test_tavily_limit_never_retries_or_switches_to_paid_auth(self):
-        for status in (200,429,401,403):
+    def test_tavily_errors_never_retry_change_plan_or_leak_key(self):
+        for status in (200,429,401,403,432,433):
             with self.subTest(status=status):
                 context,opener=self.api_request(dict(error=dict(code='rate_limit',message='Upgrade to a paid plan')),http_status=status)
                 with context,patch('llocalmind.web_search._search') as ddg:
                     with self.assertRaises(WebSearchError) as error:search_and_fetch('schedule')
                 self.assertNotIn('Upgrade',str(error.exception))
+                self.assertNotIn(self.key,str(error.exception))
                 self.assertEqual(opener.open.call_count,1)
                 ddg.assert_not_called()
 

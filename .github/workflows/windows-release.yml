@@ -176,18 +176,19 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<'NOTES'
-          LLocalMind 0.2.7 - Free keyless web search.
+          LLocalMind 0.2.8 - Tavily API key from .env.
 
-          - New searches use Tavily's documented keyless API rather than scraping DuckDuckGo result pages. No account, API key, remote answer generation or paid fallback is used.
-          - Only the current question is sent; up to three public HTTPS sources and bounded API excerpts are provided to the local model as untrusted evidence. Source pages are not fetched directly.
-          - Free anonymous usage has limits and may be unavailable. Limits stop the request; the app never reads TAVILY_API_KEY or activates a paid account.
-          - Existing chats retain their DuckDuckGo label. Regenerating a web answer uses Tavily and updates the attribution.
-          - Local contract tests cover keyless headers, no secret use, no paid fallback, malformed/limited responses, cancellation and source validation. Live availability still depends on the service and network and must be tested on the target PC.
-          - Detailed / Fast images and local inference are retained. Web search stays opt-in.
+          - Web research now uses your personal Tavily API key from `%LOCALAPPDATA%\LLocalMind\.env`: `TAVILY_API_KEY=tvly-YOUR-KEY`. It replaces anonymous/keyless mode.
+          - The file is read on each search; no model restart is needed. UTF-8/BOM, quoted values, comments and an optional export prefix are supported. Keys are not stored in chats/settings or exported to local engines.
+          - Missing/invalid keys stop before network access. Authentication and quota errors are explicit, without leaking the key. Requests refuse redirects.
+          - One basic request per search, up to three sources, no remote AI answer, no automatic retries, no anonymous or advanced fallback.
+          - Choose Tavily Free and keep pay-as-you-go/automatic top-ups disabled. Billing is controlled by Tavily; the app cannot verify or disable paid account settings. Free quotas can change.
+          - README includes the PowerShell commands and setup instructions. Query text leaves the PC only when web research is selected; model answers stay local.
+          - Windows tests cover file parsing, authentication, error handling, source validation and GUI behavior. Real account/service availability still requires a user-key test.
 
-          Download the Setup EXE, or extract the entire portable ZIP. Models are external. Updates preserve chats and settings. This build is unsigned.
+          Download the Setup EXE, or extract the entire portable ZIP. Models are external. Updates preserve chats, settings and the external .env. This build is unsigned.
           NOTES
-          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Free keyless web search" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Tavily API key" --notes-file release-notes.md
       - name: Record published Windows package
         env:
           GH_TOKEN: ${{ github.token }}

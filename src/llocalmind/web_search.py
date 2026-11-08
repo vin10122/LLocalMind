@@ -1,4 +1,4 @@
-"""Free keyless Tavily search, with an explicit legacy DuckDuckGo provider."""
+"""Tavily search using a user-owned .env key; legacy DuckDuckGo is explicit."""
 from __future__ import annotations
 from .i18n import tr
 
@@ -7,11 +7,13 @@ from dataclasses import dataclass
 from html.parser import HTMLParser
 import ipaddress
 import json
+import re
 import socket
 import threading
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, quote_plus, urljoin, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
+from .app_paths import data_root
 
 
 MAX_RESULTS = 3
@@ -46,15 +48,46 @@ class _NoAPIRedirect(HTTPRedirectHandler):
         return None
 
 
+def _tavily_key() -> str:
+    """Read only the known per-user file; never export its key to child engines."""
+    path=data_root()/'.env'
+    try:
+        with path.open('rb') as source:raw=source.read(16_385)
+    except OSError:
+        raise WebSearchError(tr('Configura la chiave Tavily nel file {path}: TAVILY_API_KEY=tvly-…',path=path)) from None
+    try:
+        if len(raw)>16_384:raise ValueError()
+        found=None
+        for line in raw.decode('utf-8-sig').splitlines():
+            line=line.strip()
+            if line.startswith('export '):line=line[7:].lstrip()
+            name,separator,value=line.partition('=')
+            if not separator or name.strip()!='TAVILY_API_KEY':continue
+            if found is not None:raise ValueError()
+            value=value.strip()
+            if value.startswith(('"',"'")):
+                quoted=re.fullmatch(r'''(['"])(.*?)\1\s*(?:#.*)?''',value)
+                if quoted is None:raise ValueError()
+                value=quoted[2]
+            else:value=value.split('#',1)[0].strip()
+            if not re.fullmatch(r'tvly-[A-Za-z0-9_-]{8,256}',value):raise ValueError()
+            found=value
+        if found is None:raise ValueError()
+        return found
+    except (ValueError,UnicodeError):
+        raise WebSearchError(tr('Chiave Tavily mancante o non valida nel file {path}.',path=path)) from None
+
+
 def _tavily_search(query: str) -> list[WebResult]:
-    """Use Tavily's documented keyless protocol. Never load keys from the env."""
+    """One basic request using the configured account. Billing stays provider-owned."""
+    key=_tavily_key()
     request=Request('https://api.tavily.com/search',data=json.dumps(dict(
         query=query,search_depth='basic',max_results=MAX_RESULTS,
         include_answer=False,include_raw_content=False,include_images=False,
         auto_parameters=False)).encode('utf-8'),headers={
         'Content-Type':'application/json','Accept':'application/json',
-        'User-Agent':USER_AGENT,'X-Tavily-Access-Mode':'keyless',
-        'X-Client-Source':'llocalmind-keyless'})
+        'User-Agent':USER_AGENT,'Authorization':'Bearer '+key,
+        'X-Client-Source':'llocalmind'})
     status=200
     try:
         try:
@@ -65,16 +98,18 @@ def _tavily_search(query: str) -> list[WebResult]:
         with response:
             body=response.read(MAX_SEARCH_BYTES+1)
         if len(body)>MAX_SEARCH_BYTES:raise ValueError('Oversized API response')
-        if status==429:
-            raise WebSearchError(tr('Limite gratuito di Tavily raggiunto. Riprova più tardi; nessun servizio a pagamento viene attivato.'))
-        if status in (401,403):
-            raise WebSearchError(tr('La ricerca gratuita di Tavily non è disponibile. Nessuna chiave o piano a pagamento viene utilizzato.'))
+        if status in (429,432,433):
+            raise WebSearchError(tr('Quota o limite Tavily raggiunto. Controlla i crediti del piano Free; la ricerca è stata interrotta.'))
+        if status==401:
+            raise WebSearchError(tr('Chiave Tavily rifiutata. Correggi TAVILY_API_KEY nel file .env.'))
+        if status==403:
+            raise WebSearchError(tr('Accesso Tavily negato. Verifica chiave e disponibilità del piano nel tuo account.'))
         if status!=200:
             raise WebSearchError(tr('Ricerca Tavily non riuscita (HTTP {code}).',code=status))
         data=json.loads(body)
         if not isinstance(data,dict):raise ValueError('Invalid API response')
         if isinstance(data.get('error'),dict):
-            raise WebSearchError(tr('Limite o indisponibilità della ricerca gratuita Tavily. Riprova più tardi; nessun addebito automatico.'))
+            raise WebSearchError(tr('Ricerca Tavily non disponibile per questo account. Controlla chiave e crediti nel pannello Tavily.'))
         if not isinstance(data.get('results'),list):raise ValueError('Invalid API results')
         results=[]
         seen=set()
@@ -274,14 +309,14 @@ def _fetch(result: WebResult) -> WebResult:
 
 def search_and_fetch(query: str, *, stop: threading.Event | None = None,
                      on_status=None,provider='tavily') -> list[WebResult]:
-    """Fetch up to three sources; keyless mode cannot access a billed account."""
+    """Fetch up to three sources, without retries or an anonymous/paid fallback."""
     if not isinstance(query, str) or not query.strip() or len(query) > 500:
         raise ValueError(tr('La domanda per la ricerca web deve contenere da 1 a 500 caratteri'))
     if stop is not None and stop.is_set():
         raise WebSearchCancelled()
     if provider not in ('tavily','duckduckgo'):raise ValueError('Invalid search provider')
     if provider=='tavily':
-        if on_status:on_status(tr('Ricerca Tavily · API gratuita'))
+        if on_status:on_status(tr('Ricerca Tavily'))
         results=_tavily_search(query.strip())
         if stop is not None and stop.is_set():raise WebSearchCancelled()
         return results

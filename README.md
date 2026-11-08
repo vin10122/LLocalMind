@@ -57,14 +57,40 @@ provide reliable performance figures.
   **Dottore, parti 🍕** and **Fratello, fermati 🍝**. This saved appearance
   preference does not change language or inference.
 - **Web research:** optional and off by default, available in text mode.
-  It sends only the current question to **Tavily's free keyless API** and uses
-  up to three returned HTTPS sources; model generation stays local. No account,
-  API key or paid fallback is used. **Free usage is limited**: when unavailable
-  or capped, search stops with an error. It remains experimental; check sources
-  and dates. Older chats retain their original DuckDuckGo label; regenerating
-  a web answer uses Tavily.
+  It sends only the current question to Tavily and uses up to three returned
+  HTTPS sources; answers are generated locally. Set your personal API key as
+  described below. Search remains experimental: check sources and dates.
 
 ![Italian Interface preview](docs/llocalmind-italian-interface.png)
+
+## Set up web search
+
+1. Create an account at [Tavily](https://app.tavily.com/home), choose **Free**
+   and generate your API key. Keep pay-as-you-go/automatic top-ups disabled.
+   The documented Free allowance is **1,000 credits/month**; plan limits can change.
+2. Run these commands in PowerShell to open the configuration file:
+
+```powershell
+New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\LLocalMind" | Out-Null
+if (-not (Test-Path "$env:LOCALAPPDATA\LLocalMind\.env")) { New-Item -ItemType File "$env:LOCALAPPDATA\LLocalMind\.env" | Out-Null }
+notepad "$env:LOCALAPPDATA\LLocalMind\.env"
+```
+
+3. Add this line, replacing the placeholder with your real key, then save:
+
+```dotenv
+TAVILY_API_KEY=tvly-YOUR-PERSONAL-KEY
+```
+
+The name must be **`.env`**, not `.env.txt`. Enable **Web research / Ricerca web**
+and send a question. Changes to the key apply to the next search without a
+model restart. This file stays outside the application and survives updates;
+never share it or commit it to GitHub.
+
+LLocalMind makes one **basic** request per search, with no automatic retries,
+advanced searches or anonymous fallback. Quota/authentication failures stop the
+request. **Billing is controlled by your Tavily account**: the app cannot verify
+or disable a paid plan. Keep the account on Free to avoid charges.
 
 ## Performance and limits
 

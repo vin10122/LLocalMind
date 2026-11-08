@@ -68,17 +68,25 @@ Changing only documentation or test locations does not require a new app version
 
 ## Web search transport
 
-The GUI uses the documented [Tavily keyless protocol](https://github.com/tavily-ai/tavily-python/blob/46505f119e6ac0f30d63a4dce0ed9f923705ad97/tavily/tavily.py):
-POST `https://api.tavily.com/search`, `X-Tavily-Access-Mode: keyless`, basic
-search, at most three results, no generated remote answer. The adapter never
-reads `TAVILY_API_KEY`, sends Authorization, switches to a paid plan, or retries
-when a free limit is reached. Anonymous limits differ from account credit quotas
-and may change. A keyless API still depends on service/network availability.
+The GUI uses Tavily's authenticated search API with the user's `.env` key:
+POST `https://api.tavily.com/search`, `Authorization: Bearer KEY`, basic search,
+at most three results, no remote generated answer. The known configuration
+path is `data_root() / '.env'` (on Windows `%LOCALAPPDATA%\LLocalMind\.env`).
+It is read for each request, supports UTF-8/BOM, quoted values, comments and an
+optional `export` prefix. It does not execute expressions, search the working
+directory, read a global `TAVILY_API_KEY`, or export the file into child engines.
+Missing/malformed/duplicate keys fail locally before any API request.
 
-The response is bounded and validated; only public HTTPS source URLs and
-bounded excerpts are passed to the local model as untrusted evidence. Source
-pages are not fetched directly on this path. Legacy DuckDuckGo parsing remains
-explicitly available in the Python helper and is covered by regression tests.
-Use `test/test_web_search.py` for offline contract and failure tests; these do
-not establish live provider availability. A real keyless test requires outbound
-access to `api.tavily.com` and sends its test query to that provider.
+The client does not retry quota failures, switch accounts, use anonymous access,
+or request upgrades. It cannot enforce server-side billing: users must choose
+Free and disable pay-as-you-go/top-ups in Tavily. Error messages do not contain
+the key or echo remote error bodies. HTTPS redirects are refused so credentials
+and query text are not forwarded to other endpoints.
+
+Only validated public HTTPS source URLs and bounded excerpts are passed to the
+local model as untrusted evidence. Source pages are not fetched directly on
+this path. Explicit legacy DuckDuckGo parsing remains covered by regressions.
+`test/test_web_search.py` checks file parsing, auth headers, quota/error handling,
+no credential leakage, cancellation and source validation. Synthetic tests do
+not prove live account/service availability. Real requests need provider access
+and a user-owned key; never put real keys in CI fixtures, reports or chat.

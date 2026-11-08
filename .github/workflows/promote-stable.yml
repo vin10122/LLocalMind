@@ -62,6 +62,7 @@ jobs:
           if [ "$RELEASE_TAG" = "v0.2.3" ]; then title="$title - Italian Interface"; fi
           if [ "$RELEASE_TAG" = "v0.2.5" ]; then title="$title - Vision image modes"; fi
           if [ "$RELEASE_TAG" = "v0.2.6" ]; then title="$title - Web search fixes"; fi
+          if [ "$RELEASE_TAG" = "v0.2.8" ]; then title="$title - Tavily API key"; fi
           gh release edit "$RELEASE_TAG" --prerelease=false --latest --title "$title" --notes-file stable-notes.md
           python - <<'PY'
           import os

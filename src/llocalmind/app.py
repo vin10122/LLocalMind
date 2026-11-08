@@ -264,7 +264,7 @@ class MainWindow(QMainWindow):
         self.web_search_button.setCheckable(True)
         self.web_search_button.setToolTip(
             tr('Facoltativa e disattivata di default. Invia solo la domanda a Tavily, '
-               'tramite API gratuita senza chiave. Ha limiti d’uso; la risposta viene generata sul PC.'))
+               'usando la chiave nel tuo file .env. La ricerca usa crediti Tavily; la risposta viene generata sul PC.'))
         compose.addWidget(self.web_search_button)
         self.input=Composer()
         self.input.submitted.connect(self.send)
