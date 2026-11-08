@@ -4,7 +4,7 @@
     {
       "tag_name": "v0.2.9",
       "draft": false,
-      "prerelease": true,
+      "prerelease": false,
       "name": "LLocalMind v0.2.9 - Resilient updater",
       "body": "LLocalMind 0.2.9 - Resilient updater.\n\n- Update checks retry temporary GitHub failures with bounded waits and shorter metadata timeouts.\n- If the releases API remains unavailable or rate-limited, the updater uses an official repository-hosted manifest. Both sources enforce the same version, asset URL, size and SHA-256 validation.\n- If neither source is reachable, the app shows a clear retry message and an Open GitHub Releases button instead of reporting no updates.\n- Cancellation stops retry backoff. Transient installer/checksum connection errors retry without weakening integrity checks or keeping partial installers.\n- The official fallback manifest is generated after complete release uploads and refreshed at stable promotion. It excludes drafts and incomplete packages; public previews remain supported.\n- Tavily .env support and local inference from 0.2.8 are retained. Existing chats, settings, models and the external .env are preserved.\n\nIf your current updater fails, download this Setup EXE directly and run it over the installed version. No uninstall is needed. This build is unsigned.\n",
       "assets": [
