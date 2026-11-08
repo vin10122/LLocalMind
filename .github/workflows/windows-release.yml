@@ -61,8 +61,20 @@ jobs:
       - name: Run source tests
         shell: pwsh
         run: .\test\run_source_tests.ps1
+      - name: Restore pinned vision runtime
+        id: vision-runtime-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/LLocalMind-test-vision-runtime
+          key: windows-x64-vision-${{ hashFiles('src/llocalmind/vision_runtime.py') }}
       - name: Verify actual Windows vision runtime
         run: python test/probe_vision_runtime.py
+      - name: Cache verified vision runtime
+        if: steps.vision-runtime-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/LLocalMind-test-vision-runtime
+          key: windows-x64-vision-${{ hashFiles('src/llocalmind/vision_runtime.py') }}
       - name: Build portable application
         shell: pwsh
         run: .\scripts\build_desktop.ps1
@@ -153,7 +165,7 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<'NOTES'
-          LLocalMind 0.2.5 - Vision image modes.
+          LLocalMind 0.2.6 - Vision image modes.
 
           - New: Detailed/Fast image selector in Vision mode, saved without reloading the model. Detailed keeps existing behavior; Fast limits image area while preserving the entire scene and original files.
           - Fast can lose small text and fine details. Its actual benefit depends on the encoder/model; no target-PC speedup is claimed before measurement.
