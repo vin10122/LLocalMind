@@ -2,7 +2,7 @@
 
 # LLocalMind
 
-Local AI chat made in Italy 🇮🇹 for Windows and Intel PCs, with GGUF models,
+Local AI chat made in Italy 🇮🇹 for Windows PCs, with GGUF models,
 image input and optional web research. Models are not included.
 
 **Project goal:** make models larger than those normally recommended for a
@@ -13,8 +13,9 @@ so the whole model does not have to stay in physical memory at once.
 ## Install and update
 
 1. Download the installer from **[GitHub Releases](https://github.com/vin10122/LLocalMind/releases/latest)** and run it.
-2. Open **Settings / Impostazioni**, select your compatible GGUF and save.
-3. Wait for **Ready / Pronto**, then send a message.
+2. Open **Settings / Impostazioni**, select your GGUF and click **Install / update llama.cpp CPU runtime** if the runtime is not configured.
+3. For text, leave **mmproj** empty; for images, select a compatible projector. Save.
+4. Wait for **Ready / Pronto**, then send a message.
 
 The installer includes Python and dependencies. Updates are available under
 **Settings → Check for updates**, including public previews. You can also run
@@ -29,22 +30,24 @@ replace the application folder with the newly extracted version.
 
 Requires **64-bit Windows 10/11**, a compatible model and enough free RAM.
 The tested PC has an **Intel Core Ultra 5 226V, Arc 130V and 15.7 GiB RAM**.
-Use current Intel drivers and AC power for best performance. For text mode,
-select CPU for DeltaNet and attention if the Intel GPU is unavailable.
+Use AC power for best performance. **llama.cpp CPU is now the recommended
+and default desktop engine**, for both text and images. The original Intel
+native/OpenVINO engine remains an **experimental** choice in Settings.
+Existing installations with llama-server already configured migrate once;
+explicit experimental selections are kept. Legacy setups without an installed
+runtime keep working until you install/select llama.cpp.
 
 **AMD Ryzen:** CPU mode should also work on modern Ryzen processors supporting
-AVX2, FMA and F16C. Set **DeltaNet → CPU** and **Full attention → CPU**;
-Intel GPU/NPU acceleration does not apply to AMD hardware. AMD-specific testing
-and benchmark data are still insufficient to confirm broad compatibility or
-provide reliable performance figures.
+AVX2, FMA and F16C. Intel GPU/NPU options belong to the experimental engine;
+select CPU there on non-Intel systems. AMD-specific testing and benchmark data
+are still insufficient to confirm broad compatibility or reliable speeds.
 
 ## Features
 
 - **Text chat:** local inference with saved conversations, streaming, Copy,
   Regenerate, Stop and per-answer token counts/speed.
-- **Images:** select the local Vision engine, click **Install / update CPU
-  vision runtime**, choose a compatible **mmproj** alongside your language
-  GGUF, then attach an image. The encoder and language model run on CPU.
+- **Images:** use the recommended llama.cpp engine and choose a compatible
+  **mmproj** alongside your language GGUF, then attach an image. The encoder and language model run on CPU.
   Image history is kept with the chat. Matching filenames alone do not prove
   model/projector compatibility.
   In Vision mode choose **Fast / Rapida** for overviews or **Detailed /
@@ -58,7 +61,8 @@ provide reliable performance figures.
   tricolour top bar and thick tricolour prompt borders. The large controls read
   **Dottore, parti 🍕** and **Fratello, fermati 🍝**. This saved appearance
   preference does not change language or inference.
-- **Web research:** optional and off by default, available in text mode.
+- **Web research:** optional and off by default, available with either engine.
+  When images are attached, only the question text goes to Tavily; images stay local.
   It sends only the current question to Tavily and uses up to three returned
   HTTPS sources; answers are generated locally. Set your personal API key as
   described below. Search remains experimental: check sources and dates.
@@ -125,7 +129,7 @@ py -3.14 -m pip install -r requirements-gui.txt
 py -3.14 gui.py
 ```
 
-CLI: `py -3.14 chat.py default`; exit with `/exit`.
+Experimental native developer CLI: `py -3.14 chat.py default`; exit with `/exit`.
 Use `--language en` for English response mode.
 For native-kernel setup and builds, see [Development](docs/development.md).
 All development tests, benchmarks and probes are in [test/](test/README.md).

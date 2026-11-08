@@ -54,6 +54,32 @@ class Handler(BaseHTTPRequestHandler):
 
 
 class MultimodalTests(unittest.TestCase):
+    def test_text_only_runtime_omits_projector_and_image_arguments(self):
+        engine=LocalVisionModel(self.model,None,sys.executable,log_path=self.root/'text.log')
+        response=Mock(status=200)
+        response.read.return_value=json.dumps(dict(data=[dict(id=engine.alias)])).encode()
+        conn=Mock();conn.getresponse.return_value=response
+        with patch('flash_moe.multimodal.subprocess.Popen') as popen,patch.object(engine,'_connection',return_value=conn):
+            popen.return_value.poll.return_value=None
+            engine.start()
+            command=popen.call_args.args[0]
+            self.assertNotIn('--mmproj',command)
+            self.assertNotIn('--image-max-tokens',command)
+            self.assertEqual(command[command.index('-ngl')+1],'0')
+            self.assertIsNone(engine.projector)
+            self.assertIsNone(engine.encoder_device)
+            engine.close()
+
+    def test_text_only_engine_accepts_text_and_rejects_images_before_http(self):
+        engine=self.engine()
+        engine.projector=None
+        stats=engine.generate(chat_messages([dict(role='user',content='Ciao')],self.root/'data'))
+        self.assertEqual(stats['tokens'],5)
+        self.server.received.clear()
+        with self.assertRaisesRegex(ValueError,'mmproj'):
+            engine.generate(chat_messages(self.history(),self.root/'data'))
+        self.assertFalse(self.server.received.is_set())
+
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory()
         self.root=Path(self.temp.name)

@@ -43,7 +43,7 @@ class PerformancePolicyTests(unittest.TestCase):
         with self.assertRaises(AttributeError):getattr(flash_moe,'not_an_export')
 
     def test_only_relevant_settings_change_engine_identity(self):
-        native=dict(DEFAULTS)
+        native=dict(DEFAULTS,engine='optimized')
         self.assertEqual(engine_signature(native),engine_signature(dict(native,vision_image_tokens=256)))
         vision=dict(DEFAULTS,engine='vision')
         self.assertEqual(engine_signature(vision),engine_signature(dict(vision,cache=1000,

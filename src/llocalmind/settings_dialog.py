@@ -40,8 +40,8 @@ class SettingsDialog(QDialog):
         layout.addWidget(hint)
         vision_form=QFormLayout()
         self.engine=QComboBox()
-        self.engine.addItem(tr('Testo · Intel ottimizzato'),'optimized')
-        self.engine.addItem(tr('Testo e immagini · llama.cpp locale'),'vision')
+        self.engine.addItem(tr('llama.cpp · consigliato · testo e immagini'),'vision')
+        self.engine.addItem(tr('Motore nativo Intel · sperimentale'),'optimized')
         self.engine.setCurrentIndex(self.engine.findData(values['engine']))
         self.engine.setEnabled(not busy)
         vision_form.addRow(tr('Motore'),self.engine)
@@ -61,7 +61,7 @@ class SettingsDialog(QDialog):
         self.vision_paths={}
         for key,label,file_filter in (
             ('vision_executable','llama-server',tr('Eseguibile (llama-server.exe llama-server)')),
-            ('vision_projector',tr('mmproj compatibile'),'GGUF (*.gguf)')):
+            ('vision_projector',tr('mmproj · facoltativo per il testo'),'GGUF (*.gguf)')):
             row=QHBoxLayout()
             edit=QLineEdit(values[key])
             edit.setEnabled(not busy)
@@ -75,13 +75,12 @@ class SettingsDialog(QDialog):
             row.addWidget(edit,1)
             row.addWidget(button)
             fields.addRow(label,row)
-        self.install_vision=QPushButton(tr('Installa / aggiorna motore vision CPU'))
+        self.install_vision=QPushButton(tr('Installa / aggiorna motore llama.cpp CPU'))
         self.install_vision.setEnabled(not busy and can_install_vision)
         self.install_vision.clicked.connect(self.request_vision_install)
         fields.addRow(self.install_vision)
-        note=QLabel(tr('Serve una versione di llama.cpp che supporti il modello e il suo mmproj. '
-                   'L’encoder immagini e il modello usano la CPU. '
-                   'Il pulsante scarica e configura il motore; modello e mmproj restano da selezionare.'))
+        note=QLabel(tr('Per il testo bastano il GGUF e llama-server. Il mmproj compatibile serve solo per le immagini. '
+                   'Modello ed eventuale encoder immagini usano la CPU.'))
         note.setWordWrap(True)
         fields.addRow(note)
         vision_form.addRow(self.vision_fields)
@@ -194,10 +193,12 @@ class SettingsDialog(QDialog):
             if values['model_path'] and not Path(values['model_path']).is_file():
                 raise ValueError(tr('Il file del modello selezionato non esiste'))
             if values['engine']=='vision':
-                for key in ('vision_executable','vision_projector'):
+                for key in ('vision_executable',):
                     if not values[key] or not Path(values[key]).is_file():
-                        raise ValueError(tr('Seleziona llama-server e il mmproj compatibile'))
-                if Path(values['vision_projector']).suffix.lower()!='.gguf':
+                        raise ValueError(tr('Installa o seleziona llama-server.'))
+                if values['vision_projector'] and not Path(values['vision_projector']).is_file():
+                    raise ValueError(tr('Seleziona un mmproj esistente oppure lascia il campo vuoto per il solo testo.'))
+                if values['vision_projector'] and Path(values['vision_projector']).suffix.lower()!='.gguf':
                     raise ValueError(tr('Il mmproj deve essere un file GGUF'))
         except ValueError as error:
             QMessageBox.warning(self,tr('Impostazioni'),str(error))

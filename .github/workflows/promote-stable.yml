@@ -64,6 +64,7 @@ jobs:
           if [ "$RELEASE_TAG" = "v0.2.6" ]; then title="$title - Web search fixes"; fi
           if [ "$RELEASE_TAG" = "v0.2.8" ]; then title="$title - Tavily API key"; fi
           if [ "$RELEASE_TAG" = "v0.2.9" ]; then title="$title - Resilient updater"; fi
+          if [ "$RELEASE_TAG" = "v0.3.0" ]; then title="$title - llama.cpp by default"; fi
           gh release edit "$RELEASE_TAG" --prerelease=false --latest --title "$title" --notes-file stable-notes.md
           python .github/scripts/publish_update_feed.py
           python - <<'PY'

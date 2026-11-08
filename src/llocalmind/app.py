@@ -35,7 +35,7 @@ class UpdateProgress(QDialog):
     def __init__(self,kind,cancel,parent):
         super().__init__(parent)
         self.cancel=cancel
-        self.setWindowTitle(tr('Motore vision') if kind=='runtime' else tr('Aggiornamenti LLocalMind'))
+        self.setWindowTitle(tr('Motore llama.cpp') if kind=='runtime' else tr('Aggiornamenti LLocalMind'))
         self.setMinimumWidth(380)
         layout=QVBoxLayout(self)
         layout.setContentsMargins(24,24,24,24)
@@ -346,14 +346,13 @@ class MainWindow(QMainWindow):
         blocked=self.busy or self.loading or self._closing
         self.vision_controls.setVisible(self.state.settings['engine']=='vision')
         self.vision_quality.setEnabled(not blocked)
-        self.web_search_button.setVisible(self.state.settings['engine']!='vision')
-        if self.state.settings['engine']=='vision':self.web_search_button.setChecked(False)
+        self.web_search_button.setVisible(True)
         self.language_button.setEnabled(not blocked)
         self.new_button.setEnabled(not blocked)
         self.chat_list.setEnabled(not blocked)
         self.attach.setEnabled(not blocked)
         self.web_search_button.setEnabled(
-            not blocked and not self.demo and self.state.settings['engine']!='vision')
+            not blocked and not self.demo)
         self.attachments.setEnabled(not blocked)
         self.input.setReadOnly(blocked)
         self.send_button.setEnabled(self.demo or self.busy or (self.ready and not blocked))
@@ -585,9 +584,6 @@ class MainWindow(QMainWindow):
             self._notice(tr('Questa chat contiene immagini: seleziona Vision locale o apri una nuova chat di testo.'))
             return
         web_search=self.web_search_button.isChecked()
-        if web_search and self.state.settings['engine']!='optimized':
-            self._notice(tr('La ricerca web è disponibile solo con il modello di testo locale.'))
-            return
         text=text or tr('Descrivi questa immagine.')
         self.input.clear()
         chat=self.current
@@ -801,7 +797,7 @@ class MainWindow(QMainWindow):
                 if box.clickedButton() is manual:
                     QDesktopServices.openUrl(QUrl('https://github.com/vin10122/LLocalMind/releases'))
             else:
-                QMessageBox.warning(self,tr('Motore vision') if task.action=='runtime' else tr('Aggiornamenti'),task.error)
+                QMessageBox.warning(self,tr('Motore llama.cpp') if task.action=='runtime' else tr('Aggiornamenti'),task.error)
             return
         if task.action=='runtime':
             path=str(task.result)
@@ -812,8 +808,8 @@ class MainWindow(QMainWindow):
                 return
             draft=dict(self._vision_install_draft or values,vision_executable=path)
             self._vision_install_draft=None
-            QMessageBox.information(self,tr('Motore vision pronto'),
-                tr('Il motore vision è installato e configurato. Seleziona il modello GGUF e il suo mmproj, poi salva.'))
+            QMessageBox.information(self,tr('Motore llama.cpp pronto'),
+                tr('Il motore llama.cpp è pronto. Seleziona il GGUF; aggiungi il mmproj solo se vuoi usare immagini.'))
             self.settings(draft=draft)
         elif task.action=='check':
             release=task.result

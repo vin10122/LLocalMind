@@ -178,18 +178,18 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<'NOTES'
-          LLocalMind 0.2.9 - Resilient updater.
+          LLocalMind 0.3.0 - llama.cpp by default.
 
-          - Update checks retry temporary GitHub failures with bounded waits and shorter metadata timeouts.
-          - If the releases API remains unavailable or rate-limited, the updater uses an official repository-hosted manifest. Both sources enforce the same version, asset URL, size and SHA-256 validation.
-          - If neither source is reachable, the app shows a clear retry message and an Open GitHub Releases button instead of reporting no updates.
-          - Cancellation stops retry backoff. Transient installer/checksum connection errors retry without weakening integrity checks or keeping partial installers.
-          - The official fallback manifest is generated after complete release uploads and refreshed at stable promotion. It excludes drafts and incomplete packages; public previews remain supported.
-          - Tavily .env support and local inference from 0.2.8 are retained. Existing chats, settings, models and the external .env are preserved.
+          - The desktop recommends and defaults to llama.cpp CPU for text and images. The original Intel native/OpenVINO engine remains an experimental option.
+          - Text-only use needs a GGUF and llama-server; mmproj is optional and is only required for image input. Text-only startup does not load the image projector/encoder.
+          - Web research works with both engines, including llama.cpp image conversations. Only question text is sent to Tavily; images stay local. Retrieved evidence uses the same untrusted-data and citation rules.
+          - Existing native configurations with a configured llama-server migrate once. Explicit experimental choices remain saved; setups without the runtime are retained until it is installed/selected. Models and chats are not deleted or moved.
+          - Component tests cover text-only transport, image rejection without mmproj, source/image preparation, search privacy, migration and settings. No new full-model speed or quality result is claimed.
+          - Tavily .env support, language/theme choices, image profiles and the resilient updater are retained.
 
-          If your current updater fails, download this Setup EXE directly and run it over the installed version. No uninstall is needed. This build is unsigned.
+          Download the Setup EXE, or extract the entire portable ZIP. Models remain external. Existing chats, settings and .env survive updates. This build is unsigned.
           NOTES
-          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Resilient updater" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - llama.cpp by default" --notes-file release-notes.md
       - name: Publish official updater fallback feed
         env:
           GH_TOKEN: ${{ github.token }}

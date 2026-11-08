@@ -76,7 +76,7 @@ class ModelWorker(QObject):
                     image_max_tokens=options['vision_image_tokens'],batch=options['vision_batch'],
                     ubatch=options['vision_ubatch'],cache_mib=options['vision_cache_mib'],warmup=options['vision_warmup'],
                     memory=memory_snapshot(self.vision.process.pid)))
-                self.loaded.emit(path.stem+' · Vision · encoder '+self.vision.encoder_device+' · modello CPU')
+                self.loaded.emit(path.stem+(' · llama.cpp · immagini · CPU' if options['vision_projector'] else ' · llama.cpp · testo · CPU'))
                 return
             os.environ['FLASH_MOE_GGUF'] = str(path)
             self.progress.emit(0, tr('Preparazione del modello'))
@@ -115,13 +115,30 @@ class ModelWorker(QObject):
         status = 'complete'
         stream = None
         try:
+            if self.vision is None and (self.model is None or self.tokenizer is None):
+                raise RuntimeError(tr('Carica prima un modello'))
+            if self.vision is not None and self.vision.projector is None and any(message.get('images') for message in messages):
+                raise ValueError(tr('Per usare immagini seleziona un mmproj compatibile nelle impostazioni.'))
+            web_research = None
+            if options.get('_web_search'):
+                from .web_search import WebSearchCancelled, format_research, search_and_fetch
+                try:
+                    query = next(message['content'] for message in reversed(messages)
+                                 if message['role'] == 'user')
+                    results = search_and_fetch(query, stop=self.stop,
+                                               on_status=self.search_status.emit)
+                except WebSearchCancelled:
+                    status = 'stopped'
+                    return
+                web_research = format_research(results)
+                self.search_status.emit(tr('Analisi locale'))
             if self.vision is not None:
                 from flash_moe.multimodal import VisionCancelled
                 from .images import chat_messages
                 try:
                     prepared=time.perf_counter()
                     request=chat_messages(messages,options['_attachment_directory'],cache=self.image_cache,language=options.get('language','it'),
-                        image_profile=options.get('vision_image_profile','detail'))
+                        image_profile=options.get('vision_image_profile','detail'),web_research=web_research)
                     prepare_seconds=time.perf_counter()-prepared
                     stats=dict(self.vision.generate(request,
                         max_tokens=options['max_tokens'],temperature=options['temperature'],
@@ -136,22 +153,7 @@ class ModelWorker(QObject):
                     self.stats.emit(stats)
                 except VisionCancelled:status='stopped'
                 return
-            if self.model is None or self.tokenizer is None:
-                raise RuntimeError(tr('Carica prima un modello'))
             from flash_moe.tokenizer import StreamingDetokenizer
-            web_research = None
-            if options.get('_web_search'):
-                from .web_search import WebSearchCancelled, format_research, search_and_fetch
-                try:
-                    query = next(message['content'] for message in reversed(messages)
-                                 if message['role'] == 'user')
-                    results = search_and_fetch(query, stop=self.stop,
-                                               on_status=self.search_status.emit)
-                except WebSearchCancelled:
-                    status = 'stopped'
-                    return
-                web_research = format_research(results)
-                self.search_status.emit(tr('Analisi locale'))
             ids = self.tokenizer.encode(
                 format_conversation(messages, web_research=web_research,language=options.get('language','it')), add_bos=False)
             if len(ids) + options['max_tokens'] - 1 > self.model.max_seq_len:

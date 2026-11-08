@@ -29,16 +29,17 @@ class MultiModalProjector:
 
 
 class LocalVisionModel:
-    def __init__(self, model, projector, executable=None, *, max_seq=2048,
+    def __init__(self, model, projector=None, executable=None, *, max_seq=2048,
                  threads=4, prefill_threads=4, log_path=None,image_max_tokens=768,
                  batch_tokens=512,ubatch_tokens=256,cache_mib=128,warmup=True):
         self.model=Path(model).expanduser().resolve()
-        self.projector=Path(projector).expanduser().resolve()
+        self.projector=Path(projector).expanduser().resolve() if projector else None
         found=shutil.which(str(executable)) if executable else shutil.which('llama-server')
         self.executable=Path(found or executable or '').expanduser().resolve()
         for label,path in (('modello',self.model),('mmproj',self.projector),('llama-server',self.executable)):
+            if path is None:continue
             if not path.is_file():raise ValueError(tr('File {label} non trovato: {path}',label=label,path=path))
-        if any(p.suffix.lower()!='.gguf' for p in (self.model,self.projector)):
+        if any(p is not None and p.suffix.lower()!='.gguf' for p in (self.model,self.projector)):
             raise ValueError(tr('Modello e mmproj devono essere file GGUF compatibili'))
         self.max_seq=max_seq
         self.threads=threads
@@ -50,7 +51,7 @@ class LocalVisionModel:
         self.batch_tokens=batch_tokens
         self.ubatch_tokens=ubatch_tokens
         self.cache_mib=cache_mib
-        self.encoder_device='CPU'
+        self.encoder_device='CPU' if self.projector else None
         self.warmup=warmup
         self.startup_seconds=None
         self.log_path=Path(log_path) if log_path else Path.cwd()/'vision.log'
@@ -75,25 +76,26 @@ class LocalVisionModel:
             with socket.socket() as sock:
                 sock.bind(('127.0.0.1',0))
                 self.port=sock.getsockname()[1]
-            progress(0,'Avvio encoder immagini CPU')
+            progress(0,'Avvio encoder immagini CPU' if self.projector else 'Avvio llama.cpp CPU')
             self.log_path.parent.mkdir(parents=True,exist_ok=True)
             self.log=self.log_path.open('w',encoding='utf-8')
             from llocalmind.app_paths import child_environment
-            command=[str(self.executable),'-m',str(self.model),'--mmproj',str(self.projector),
+            command=[str(self.executable),'-m',str(self.model),
                 '--host','127.0.0.1','--port',str(self.port),'--api-key',self.key,
                 '--alias',self.alias,'-c',str(self.max_seq),'-np','1','-ngl','0',
                 '--device','none','--no-webui','--jinja','--no-context-shift',
-                '--image-min-tokens','64','--image-max-tokens',str(self.image_max_tokens),
                 '-b',str(self.batch_tokens),'-ub',str(self.ubatch_tokens),
                 '--cache-ram',str(self.cache_mib),'--no-cache-idle-slots',
-                '-t',str(self.threads),'-tb',str(self.prefill_threads),
-                '--no-mmproj-offload']
+                '-t',str(self.threads),'-tb',str(self.prefill_threads)]
+            if self.projector:
+                command.extend(['--mmproj',str(self.projector),'--no-mmproj-offload',
+                                '--image-min-tokens','64','--image-max-tokens',str(self.image_max_tokens)])
             if not self.warmup:command.append('--no-warmup')
             self.process=subprocess.Popen(command,cwd=self.executable.parent,
                 env=child_environment(),
                 stdin=subprocess.DEVNULL,stdout=self.log,stderr=subprocess.STDOUT,
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
-            progress(0,tr('Caricamento vision · encoder e modello CPU'))
+            progress(0,tr('Caricamento vision · encoder e modello CPU' if self.projector else 'Caricamento modello · llama.cpp CPU'))
             deadline=time.monotonic()+600
             while time.monotonic()<deadline:
                 if stop.is_set():raise VisionCancelled()
@@ -107,7 +109,7 @@ class LocalVisionModel:
                         data=json.loads(response.read(65536))
                         if any(m.get('id')==self.alias for m in data.get('data',[])):
                             self.startup_seconds=time.perf_counter()-started
-                            progress(100,tr('Vision pronta · encoder CPU'))
+                            progress(100,tr('Vision pronta · encoder CPU' if self.projector else 'Modello pronto · llama.cpp CPU'))
                             return
                 except (OSError,http.client.HTTPException):pass
                 finally:conn.close()
@@ -121,6 +123,11 @@ class LocalVisionModel:
                  stop=None,on_text=lambda _:None,cache_prompt=True):
         stop=stop or threading.Event()
         if stop.is_set():raise VisionCancelled()
+        if self.projector is None and any(
+            isinstance(message.get('content'),list) and any(
+                part.get('type') in ('image_url','input_image') for part in message['content'] if isinstance(part,dict))
+            for message in messages):
+            raise ValueError(tr('Per usare immagini seleziona un mmproj compatibile nelle impostazioni.'))
         if self.process is None or self.process.poll() is not None:
             raise RuntimeError(tr('Motore vision chiuso: ricarica il modello'))
         if type(cache_prompt) is not bool:raise ValueError('Invalid prompt-cache option')

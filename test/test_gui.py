@@ -68,6 +68,7 @@ class DesktopTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory()
         self.state=LocalState(self.temp.name)
+        self.state.settings['engine']='optimized'  # Legacy-controller fixtures remain explicit.
         self.windows=[]
 
     def wait(self,predicate):
@@ -90,6 +91,62 @@ class DesktopTests(unittest.TestCase):
         window.show()
         QTest.qWait(30)
         return window
+
+    def test_llama_default_and_one_time_migration_preserve_explicit_legacy_choice(self):
+        root=Path(self.temp.name)/'migration'
+        root.mkdir()
+        self.assertEqual(LocalState(root).settings['engine'],'vision')
+        config=root/'settings.json'
+        config.write_text(json.dumps(dict(engine='optimized',vision_executable=sys.executable)))
+        migrated=LocalState(root)
+        self.assertEqual(migrated.settings['engine'],'vision')
+        migrated.save_settings(dict(migrated.settings,engine='optimized'))
+        self.assertEqual(LocalState(root).settings['engine'],'optimized')
+        config.write_text(json.dumps(dict(engine='optimized',vision_executable='')))
+        self.assertEqual(LocalState(root).settings['engine'],'optimized')
+
+    def test_llama_settings_accept_text_without_projector(self):
+        model=Path(self.temp.name)/'text.gguf';model.touch()
+        values=dict(self.state.settings,engine='vision',model_path=str(model),
+                    vision_executable=sys.executable,vision_projector='')
+        dialog=SettingsDialog(values,lambda:None)
+        with patch('llocalmind.settings_dialog.QMessageBox.warning') as warning:
+            dialog.accept()
+        warning.assert_not_called()
+        self.assertEqual(dialog.result(),QDialog.DialogCode.Accepted)
+        self.assertEqual(dialog.values['vision_projector'],'')
+        self.assertEqual(dialog.engine.itemData(0),'vision')
+
+    def test_llama_web_research_preserves_pixels_and_keeps_images_off_search_api(self):
+        from unittest.mock import Mock
+        from llocalmind.images import import_image
+        from llocalmind.web_search import WebResult
+        source=Path(self.temp.name)/'research.png'
+        Image.new('RGB',(32,32),'blue').save(source)
+        image=import_image(source,self.state.directory)
+        history=[dict(role='user',content='Che cosa significa?',images=[image])]
+        original=copy.deepcopy(history)
+        worker=ModelWorker();worker.vision=Mock()
+        worker.vision.projector=Path(self.temp.name)/'mmproj.gguf'
+        worker.vision.generate.return_value=dict(tokens=2,rate=2)
+        options=dict(self.state.settings,engine='vision',_web_search=True,
+                     _attachment_directory=str(self.state.directory))
+        errors=[];worker.error.connect(errors.append)
+        with patch('llocalmind.web_search.search_and_fetch',return_value=[WebResult('Source','https://example.com','','Evidence',provider='tavily')]) as search, \
+                patch('llocalmind.performance.record'),patch('llocalmind.performance.memory_snapshot',return_value={}):
+            worker.generate(history,options)
+        self.assertFalse(errors,errors)
+        self.assertEqual(search.call_args.args[0],'Che cosa significa?')
+        request=worker.vision.generate.call_args.args[0]
+        self.assertIn('non attendibili',request[0]['content'])
+        self.assertIn('Evidence',request[-1]['content'][0]['text'])
+        self.assertIn('data:image/png;base64,',request[-1]['content'][1]['image_url']['url'])
+        self.assertEqual(history,original)
+        worker.vision.generate.reset_mock();worker.vision.projector=None
+        with patch('llocalmind.web_search.search_and_fetch') as search:
+            worker.generate(history,options)
+        search.assert_not_called();worker.vision.generate.assert_not_called()
+        self.assertIn('mmproj',errors[-1])
 
     def test_language_switch_preserves_draft_history_model_and_pending_images(self):
         window=self.window()
@@ -389,7 +446,7 @@ class DesktopTests(unittest.TestCase):
     def test_image_only_send_persistence_and_text_mode_guard(self):
         self.state.settings['engine']='vision'
         window=self.window()
-        self.assertFalse(window.web_search_button.isEnabled())
+        self.assertTrue(window.web_search_button.isEnabled())
         window.load_model()
         self.wait(lambda:window.ready)
         source=Path(self.temp.name)/'red.png'

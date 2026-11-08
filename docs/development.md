@@ -9,7 +9,7 @@ py -3.14 -m pip install -r requirements-gui.txt
 py -3.14 gui.py
 ```
 
-The CLI is `py -3.14 chat.py default`; `/exit` closes it. Use `--help` for model,
+The experimental native CLI is `py -3.14 chat.py default`; `/exit` closes it. Use `--help` for model,
 context and device options. Set `FLASH_MOE_GGUF` to a GGUF path if automatic
 model discovery does not find your file. GUI model selection is independent.
 
@@ -49,8 +49,12 @@ not a blanket test-discovery target. Results depend on the actual hardware,
 model, power mode, cache and thermal conditions.
 
 See the [performance audit](../test/notes/performance-audit.md) for remaining bottlenecks and
-measurement limits. Text mode uses the optimized Intel/OpenVINO path; image
-requests use the separate CPU llama.cpp path. Their rates are not interchangeable.
+measurement limits. The desktop defaults to llama.cpp CPU for text and optional images. The original
+Intel/OpenVINO route remains experimental; its rates are not interchangeable.
+A configured mmproj is optional for text-only inference. `vision` remains the
+internal settings value for the recommended engine to preserve saved settings.
+Web evidence is attached with the same untrusted-data/citation rules in both
+transports; only question text is sent to the search provider.
 
 ## Windows builds
 
