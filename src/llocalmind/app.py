@@ -20,7 +20,7 @@ from .images import MAX_IMAGES,import_image
 from .metrics import clean_stats, response_summary
 from .settings_dialog import SettingsDialog
 from .state import LocalState, new_chat, engine_signature
-from .theme import apply_theme, ITALIAN_STYLE
+from .theme import apply_theme, ITALIAN_STYLE, DARK_STYLE
 from .update_worker import UpdateTask
 from .updater import UpdateManager
 from .widgets import ASSETS, Composer, Message, ThemeSwitch, action, icon, logo_label
@@ -303,7 +303,11 @@ class MainWindow(QMainWindow):
 
     def _apply_interface_style(self):
         enabled=self.state.settings['italian_interface']
-        self.setStyleSheet(ITALIAN_STYLE if enabled else '')
+        dark=self.state.settings['dark_mode']
+        self.setStyleSheet((ITALIAN_STYLE if enabled else '')+(DARK_STYLE if dark else ''))
+        foreground='#d3eddc' if dark else '#122c40'
+        self.new_button.setIcon(icon('plus',foreground))
+        self.attach.setIcon(icon('clip',foreground))
         self.tricolor_bar.setVisible(enabled)
 
     def set_italian_interface(self,enabled):
@@ -407,7 +411,8 @@ class MainWindow(QMainWindow):
 
     def _add_message(self,role,text,pending=False,stats=None,images=None,web_search=False,web_provider='duckduckgo'):
         widget=Message(role,text,pending,stats,images=images,directory=self.state.directory,
-                       web_search=web_search,web_provider=web_provider,italian_interface=self.state.settings['italian_interface'])
+                       web_search=web_search,web_provider=web_provider,italian_interface=self.state.settings['italian_interface'],
+                       dark_mode=self.state.settings['dark_mode'])
         widget.copy_requested.connect(lambda text:QApplication.clipboard().setText(text))
         widget.regenerate_requested.connect(self.regenerate)
         self._message_widgets.append(widget)
@@ -525,6 +530,9 @@ class MainWindow(QMainWindow):
             return
         if previous['language']!=dialog.values['language']:
             self.change_language(dialog.values['language'],save=False)
+        elif previous['dark_mode']!=dialog.values['dark_mode']:
+            self._apply_interface_style()
+            self._render()
         active=self._loaded_options or previous
         changed=engine_signature(active)!=engine_signature(dialog.values)
         if not self.demo and dialog.values['model_path'] and (changed or not self.ready) and not self.busy and not self.loading:

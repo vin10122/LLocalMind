@@ -3,7 +3,7 @@ from .i18n import tr
 from pathlib import Path
 import re
 from PySide6.QtCore import Qt, QSize, QUrl, Signal, QRectF
-from PySide6.QtGui import QDesktopServices, QFontMetrics, QIcon, QPainter, QPixmap, QTextDocument, QColor, QLinearGradient, QPainterPath, QPen
+from PySide6.QtGui import QDesktopServices, QFontMetrics, QIcon, QPainter, QPixmap, QTextDocument, QColor, QLinearGradient, QPainterPath, QPen, QTextCursor, QTextCharFormat
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (QCheckBox, QFrame, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton,
                                QSizePolicy, QTextBrowser, QToolButton, QVBoxLayout)
@@ -84,6 +84,7 @@ class TextDocument(QTextDocument):
 class Markdown(QTextBrowser):
     def __init__(self):
         super().__init__()
+        self.dark_mode=False
         self.setDocument(TextDocument(self))
         self.setObjectName('markdown')
         self.setFrameShape(QFrame.Shape.NoFrame)
@@ -98,6 +99,25 @@ class Markdown(QTextBrowser):
     def setMarkdown(self,text):
         self.document().setMarkdown(text, QTextDocument.MarkdownFeature.MarkdownDialectGitHub
                                     | QTextDocument.MarkdownFeature.MarkdownNoHTML)
+        if self.dark_mode:
+            # Qt's Markdown parser assigns blue directly to anchor fragments,
+            # so palette/QSS alone cannot provide readable dark-theme links.
+            anchors=[]
+            block=self.document().begin()
+            while block.isValid():
+                iterator=block.begin()
+                while not iterator.atEnd():
+                    fragment=iterator.fragment()
+                    if fragment.isValid() and fragment.charFormat().isAnchor():
+                        anchors.append((fragment.position(),fragment.length()))
+                    iterator+=1
+                block=block.next()
+            color=QTextCharFormat();color.setForeground(QColor('#8be0ae'))
+            for position,length in anchors:
+                cursor=QTextCursor(self.document())
+                cursor.setPosition(position)
+                cursor.setPosition(position+length,QTextCursor.MoveMode.KeepAnchor)
+                cursor.mergeCharFormat(color)
 
     @staticmethod
     def open_link(url):
@@ -145,6 +165,7 @@ class PromptFrame(QFrame):
     def __init__(self,parent=None):
         super().__init__(parent)
         self.italian_interface=False
+        self.dark_mode=False
         self.setObjectName('promptFrame')
         self.setMaximumWidth(732)
         self.content=QVBoxLayout(self)
@@ -171,7 +192,7 @@ class PromptFrame(QFrame):
         outer=QPainterPath();outer.addRoundedRect(QRectF(self.rect()),22,22)
         painter.fillPath(outer,gradient)
         inner=QPainterPath();inner.addRoundedRect(QRectF(self.rect()).adjusted(6,6,-6,-6),16,16)
-        painter.fillPath(inner,QColor('#e4f2ff'))
+        painter.fillPath(inner,QColor('#153d2b' if self.dark_mode else '#e4f2ff'))
 
 
 class Message(QFrame):
@@ -179,7 +200,7 @@ class Message(QFrame):
     regenerate_requested=Signal()
 
     def __init__(self,role,text='',pending=False,stats=None,*,images=None,directory=None,
-                 web_search=False,web_provider='duckduckgo',italian_interface=False):
+                 web_search=False,web_provider='duckduckgo',italian_interface=False,dark_mode=False):
         super().__init__()
         self.role=role
         self.text=text
@@ -195,6 +216,7 @@ class Message(QFrame):
             self.bubble.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             self.bubble.setMaximumWidth(720)
             self.prompt_frame=PromptFrame()
+            self.prompt_frame.dark_mode=dark_mode
             self.prompt_frame.content.addWidget(self.bubble)
             self.prompt_frame.set_italian_interface(italian_interface)
             row.addWidget(self.prompt_frame)
@@ -225,6 +247,7 @@ class Message(QFrame):
             column.setContentsMargins(49,3,0,0)
             column.setSpacing(14)
             self.body=Markdown()
+            self.body.dark_mode=dark_mode
             column.addWidget(self.body)
             self.cards=QFrame()
             self.cards_layout=QHBoxLayout(self.cards)
@@ -235,6 +258,9 @@ class Message(QFrame):
             row.setSpacing(14)
             self.copy_button=action(tr('Copia'),'copy')
             self.regenerate_button=action(tr('Rigenera'),'reload')
+            if dark_mode:
+                self.copy_button.setIcon(icon('copy','#a7d8ba'))
+                self.regenerate_button.setIcon(icon('reload','#a7d8ba'))
             self.copy_button.clicked.connect(lambda:self.copy_requested.emit(self.text))
             self.regenerate_button.clicked.connect(self.regenerate_requested)
             row.addWidget(self.copy_button)

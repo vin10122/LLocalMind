@@ -139,6 +139,8 @@ EN.update({
 
 EN.update({
     'Immagini':'Images',
+    'Aspetto':'Appearance',
+    'Modalità scura · nero e verde':'Dark mode · black and green',
     'Rapida · 2 fonti, estratti brevi':'Fast · 2 sources, short excerpts',
     'Completa · 3 fonti, più dettagli':'Full · 3 sources, more detail',
     'Rapida riduce il testo da elaborare ma può omettere dettagli. Completa mantiene gli estratti più lunghi.':'Fast reduces the text to process but can omit details. Full keeps longer excerpts.',

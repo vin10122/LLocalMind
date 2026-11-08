@@ -54,6 +54,9 @@ are still insufficient to confirm broad compatibility or reliable speeds.
   Dettagliata** for small text and documents. Fast limits transmitted image
   pixels without reloading the model; it can lose fine details. Originals and
   conversation history are preserved. Detailed remains the default.
+- **Dark mode:** enable **Settings → Appearance → Dark mode · black and green**
+  for a pure black background and dark-green sidebar. The preference persists
+  without reloading the model and can be combined with Italian Interface.
 - **English / Italian:** use the separate **Lingua / Language** button or the
   language selector in Settings. English mode guides new answers in English;
   existing messages keep their original text.

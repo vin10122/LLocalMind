@@ -66,6 +66,7 @@ jobs:
           if [ "$RELEASE_TAG" = "v0.2.9" ]; then title="$title - Resilient updater"; fi
           if [ "$RELEASE_TAG" = "v0.3.0" ]; then title="$title - llama.cpp by default"; fi
           if [ "$RELEASE_TAG" = "v0.3.1" ]; then title="$title - Faster web preparation"; fi
+          if [ "$RELEASE_TAG" = "v0.3.2" ]; then title="$title - Black and green dark mode"; fi
           gh release edit "$RELEASE_TAG" --prerelease=false --latest --title "$title" --notes-file stable-notes.md
           python .github/scripts/publish_update_feed.py
           python - <<'PY'

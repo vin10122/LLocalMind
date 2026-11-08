@@ -18,7 +18,14 @@ class SettingsDialog(QDialog):
         self.setMinimumWidth(560)
         self.values=values.copy()
         self.controls={}
-        layout=QVBoxLayout(self)
+        outer=QVBoxLayout(self)
+        scroll=QScrollArea()
+        scroll.setWidgetResizable(True)
+        body=QWidget()
+        body.setObjectName('settingsBody')
+        scroll.setWidget(body)
+        outer.addWidget(scroll,1)
+        layout=QVBoxLayout(body)
         layout.setContentsMargins(24,24,24,24)
         layout.setSpacing(18)
         title=QLabel(tr('Il tuo modello, sul tuo PC'))
@@ -51,6 +58,10 @@ class SettingsDialog(QDialog):
         self.language.setCurrentIndex(self.language.findData(values['language']))
         self.language.setEnabled(not busy)
         vision_form.addRow(tr('Lingua dell’interfaccia'),self.language)
+        self.dark_mode=QCheckBox(tr('Modalità scura · nero e verde'))
+        self.dark_mode.setChecked(values['dark_mode'])
+        self.dark_mode.setEnabled(not busy)
+        vision_form.addRow(tr('Aspetto'),self.dark_mode)
         self.web_profile=QComboBox()
         self.web_profile.addItem(tr('Rapida · 2 fonti, estratti brevi'),'fast')
         self.web_profile.addItem(tr('Completa · 3 fonti, più dettagli'),'detail')
@@ -159,7 +170,7 @@ class SettingsDialog(QDialog):
             check_updates()
         updates.clicked.connect(check_clicked)
         about.addWidget(updates)
-        layout.addLayout(about)
+        outer.addLayout(about)
         if busy:
             note=QLabel(tr('Interrompi la risposta prima di cambiare modello o configurazione.'))
             note.setWordWrap(True)
@@ -169,7 +180,8 @@ class SettingsDialog(QDialog):
         buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(tr('Annulla'))
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
+        outer.addWidget(buttons)
+        self.resize(620,min(840,max(350,self.screen().availableGeometry().height()-80)))
 
     def browse(self):
         filename,_=QFileDialog.getOpenFileName(self,tr('Seleziona modello GGUF'),str(Path.home()),tr('Modelli GGUF (*.gguf)'))
@@ -181,6 +193,7 @@ class SettingsDialog(QDialog):
         values['model_path']=self.path.text().strip()
         values['engine']=self.engine.currentData()
         values['language']=self.language.currentData()
+        values['dark_mode']=self.dark_mode.isChecked()
         values['web_profile']=self.web_profile.currentData()
         for key,edit in self.vision_paths.items():values[key]=edit.text().strip()
         for name,control in self.controls.items():

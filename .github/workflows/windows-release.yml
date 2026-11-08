@@ -178,18 +178,17 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<'NOTES'
-          LLocalMind 0.3.1 - Faster web preparation.
+          LLocalMind 0.3.2 - Black and green dark mode.
 
-          - New Fast web profile (default): at most two 450-character excerpts. Full preserves three 900-character excerpts and remains selectable in Settings without a model reload. Shorter excerpts can omit details.
-          - Tavily still receives one basic API call per search, without remote answer generation or source-page downloads. No new query cache or paid/advanced fallback is used.
-          - Citation metadata no longer triggers serial DNS resolution. Static URL checks remain; actual HTTP fetch/redirect paths retain DNS and public-address validation.
-          - Response metrics now separate web lookup time and model prefill, and record source count/profile. First-token time includes web lookup and input preparation; decode tok/s remains model-only. Old saved metrics are unchanged.
-          - Component tests cover excerpt budgets, one basic request, DNS policy, settings identity and timing accounting. No unmeasured target-PC speedup is claimed.
-          - llama.cpp default, optional mmproj, experimental native engine, Tavily .env, languages/themes and resilient updates are retained.
+          - New Settings → Appearance checkbox: pure #000000 background, dark-green sidebar, light text and green accents.
+          - The saved appearance applies without reloading the inference engine or changing language. It combines with Italian Interface, preserving its tricolour border and controls.
+          - Icons and Markdown links are recoloured for dark backgrounds; input fields, menus, notices, dialogs and response metrics use matching contrast.
+          - Settings content scrolls on smaller displays while Save/Cancel and update controls stay accessible.
+          - Existing light/Italian themes, inference, Tavily .env, web profiles and resilient updates are retained. Tests verify persistence, session/draft preservation, readable link formats and restoration of light mode; screenshots were inspected.
 
           Download the Setup EXE, or extract the entire portable ZIP. Models remain external. Existing chats, settings and .env survive updates. This build is unsigned.
           NOTES
-          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Faster web preparation" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Black and green dark mode" --notes-file release-notes.md
       - name: Publish official updater fallback feed
         env:
           GH_TOKEN: ${{ github.token }}

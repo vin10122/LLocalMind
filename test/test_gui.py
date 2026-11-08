@@ -175,6 +175,47 @@ class DesktopTests(unittest.TestCase):
         search.assert_not_called();worker.vision.generate.assert_not_called()
         self.assertIn('mmproj',errors[-1])
 
+    def test_dark_settings_persist_preserve_session_and_keep_links_readable(self):
+        model=Path(self.temp.name)/'model.gguf';model.touch()
+        self.state.settings['model_path']=str(model)
+        window=self.window();window.load_model();self.wait(lambda:window.ready)
+        window.current['messages']=[dict(role='user',content='Question'),
+            dict(role='assistant',content='[Source](https://example.com)')]
+        window._render();window.input.setPlainText('Keep this draft')
+        thread=window._thread;loads=[]
+        window.load_requested.connect(lambda *args:loads.append(args))
+        def dark(dialog):
+            dialog.dark_mode.setChecked(True);dialog.accept();return dialog.result()
+        with patch('llocalmind.settings_dialog.SettingsDialog.exec',dark):window.settings()
+        self.assertTrue(window.state.settings['dark_mode'])
+        self.assertTrue(LocalState(self.temp.name).settings['dark_mode'])
+        self.assertIn('#000000',window.styleSheet())
+        self.assertEqual(window.input.toPlainText(),'Keep this draft')
+        self.assertIs(window._thread,thread);self.assertFalse(loads)
+        body=window._message_widgets[-1].body
+        iterator=body.document().begin().begin();colors=[]
+        while not iterator.atEnd():
+            fragment=iterator.fragment()
+            if fragment.isValid() and fragment.charFormat().isAnchor():
+                colors.append(fragment.charFormat().foreground().color().name())
+            iterator+=1
+        self.assertEqual(colors,['#8be0ae'])
+        # QTextBlock iterators must not outlive their document when the UI is
+        # rebuilt below for a language/theme change.
+        del iterator,fragment,body
+        window.set_italian_interface(True)
+        self.assertTrue(window._message_widgets[0].prompt_frame.dark_mode)
+        self.assertIn('#000000',window.styleSheet())
+        window.change_language('en')
+        self.assertTrue(window.state.settings['dark_mode'])
+        def light(dialog):
+            dialog.dark_mode.setChecked(False);dialog.accept();return dialog.result()
+        with patch('llocalmind.settings_dialog.SettingsDialog.exec',light):window.settings()
+        self.assertFalse(window.state.settings['dark_mode'])
+        self.assertNotIn('#000000',window.styleSheet())
+        self.assertTrue(window.state.settings['italian_interface'])
+        self.assertFalse(loads)
+
     def test_language_switch_preserves_draft_history_model_and_pending_images(self):
         window=self.window()
         window.ready=True
