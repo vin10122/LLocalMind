@@ -4,7 +4,7 @@
     {
       "tag_name": "v0.3.0",
       "draft": false,
-      "prerelease": true,
+      "prerelease": false,
       "name": "LLocalMind v0.3.0 - llama.cpp by default",
       "body": "LLocalMind 0.3.0 - llama.cpp by default.\n\n- The desktop recommends and defaults to llama.cpp CPU for text and images. The original Intel native/OpenVINO engine remains an experimental option.\n- Text-only use needs a GGUF and llama-server; mmproj is optional and is only required for image input. Text-only startup does not load the image projector/encoder.\n- Web research works with both engines, including llama.cpp image conversations. Only question text is sent to Tavily; images stay local. Retrieved evidence uses the same untrusted-data and citation rules.\n- Existing native configurations with a configured llama-server migrate once. Explicit experimental choices remain saved; setups without the runtime are retained until it is installed/selected. Models and chats are not deleted or moved.\n- Component tests cover text-only transport, image rejection without mmproj, source/image preparation, search privacy, migration and settings. No new full-model speed or quality result is claimed.\n- Tavily .env support, language/theme choices, image profiles and the resilient updater are retained.\n\nDownload the Setup EXE, or extract the entire portable ZIP. Models remain external. Existing chats, settings and .env survive updates. This build is unsigned.\n",
       "assets": [
