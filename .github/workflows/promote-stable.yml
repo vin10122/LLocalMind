@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: stable-release
@@ -74,4 +75,44 @@ jobs:
               message = str(error).replace('%','%25').replace('\r','%0D').replace('\n','%0A')
               print(f'::error title=Stable updater verification::{type(error).__name__}: {message}')
               raise
+          PY
+      - name: Record verified release outcome
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PROMOTION_STATUS: ${{ job.status }}
+        run: |
+          python - <<'PY'
+          import base64, json, os, subprocess
+          from pathlib import Path
+          repo = os.environ['GH_REPO']
+          def api(path):
+              response = subprocess.run(['gh','api',f'repos/{repo}/{path}'],capture_output=True,text=True)
+              return json.loads(response.stdout) if response.returncode == 0 else None
+          tag = json.loads(Path('.github/stable-release.json').read_text())['tag']
+          receipt = dict(tag=tag, promotion=os.environ['PROMOTION_STATUS'], run_id=os.environ['GITHUB_RUN_ID'])
+          release = api(f'releases/tags/{tag}')
+          if release:
+              receipt['release'] = dict(url=release['html_url'], draft=release['draft'], prerelease=release['prerelease'],
+                  assets=[dict(name=a['name'],size=a['size']) for a in release['assets']])
+          ref = api(f'git/ref/tags/{tag}')
+          if ref:
+              runs = api(f'actions/runs?head_sha={ref["object"]["sha"]}&per_page=10') or {}
+              receipt['builds'] = []
+              for run in runs.get('workflow_runs',[]):
+                  if run['path'] != '.github/workflows/windows-release.yml':continue
+                  row = {k:run[k] for k in ('id','head_sha','status','conclusion','html_url')}
+                  jobs = api(f'actions/runs/{run["id"]}/jobs') or {}
+                  row['jobs'] = [dict(name=j['name'],conclusion=j['conclusion'],
+                      failed_steps=[s['name'] for s in j.get('steps',[]) if s['conclusion']=='failure']) for j in jobs.get('jobs',[])]
+                  receipt['builds'].append(row)
+          path = '.github/stable-release-result.json'
+          previous = api(f'contents/{path}?ref=master')
+          request = dict(message=f'Record {tag} release verification outcome',branch='master',
+              content=base64.b64encode((json.dumps(receipt,indent=2)+'\n').encode()).decode())
+          if previous:request['sha']=previous['sha']
+          subprocess.run(['gh','api','--method','PUT',f'repos/{repo}/contents/{path}','--input','-'],
+              input=json.dumps(request).encode(),stdout=subprocess.DEVNULL,check=True)
+          print(json.dumps(receipt,indent=2))
           PY
