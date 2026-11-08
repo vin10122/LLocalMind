@@ -4,7 +4,7 @@
     {
       "tag_name": "v0.3.2",
       "draft": false,
-      "prerelease": true,
+      "prerelease": false,
       "name": "LLocalMind v0.3.2 - Black and green dark mode",
       "body": "LLocalMind 0.3.2 - Black and green dark mode.\n\n- New Settings \u2192 Appearance checkbox: pure #000000 background, dark-green sidebar, light text and green accents.\n- The saved appearance applies without reloading the inference engine or changing language. It combines with Italian Interface, preserving its tricolour border and controls.\n- Icons and Markdown links are recoloured for dark backgrounds; input fields, menus, notices, dialogs and response metrics use matching contrast.\n- Settings content scrolls on smaller displays while Save/Cancel and update controls stay accessible.\n- Existing light/Italian themes, inference, Tavily .env, web profiles and resilient updates are retained. Tests verify persistence, session/draft preservation, readable link formats and restoration of light mode; screenshots were inspected.\n\nDownload the Setup EXE, or extract the entire portable ZIP. Models remain external. Existing chats, settings and .env survive updates. This build is unsigned.\n",
       "assets": [
