@@ -3,6 +3,7 @@ from .i18n import tr
 import base64
 import hashlib
 import io
+import math
 from pathlib import Path
 import re
 from .prompts import system_prompt
@@ -10,6 +11,12 @@ from collections import OrderedDict
 
 MAX_IMAGES=4
 MAX_BYTES=20*1024**2
+IMAGE_PIXEL_LIMITS={"detail":None,"fast":512*512}
+
+
+def validate_image_profile(profile):
+    if not isinstance(profile,str) or profile not in IMAGE_PIXEL_LIMITS:raise ValueError("Invalid image profile")
+    return profile
 
 
 class ImagePayloadCache:
@@ -19,16 +26,30 @@ class ImagePayloadCache:
         self.bytes=0
         self.entries=OrderedDict()
 
-    def encode(self,path,item):
+    def encode(self,path,item,profile="detail"):
+        validate_image_profile(profile)
         info=path.stat()
         if info.st_size>MAX_BYTES:raise ValueError(tr('Immagine troppo grande'))
-        key=(str(path.resolve()),item['id'],info.st_size,info.st_mtime_ns,info.st_ctime_ns)
+        key=(str(path.resolve()),item['id'],info.st_size,info.st_mtime_ns,info.st_ctime_ns,profile)
         if key in self.entries:
             self.entries.move_to_end(key)
             return self.entries[key]
         data=path.read_bytes()
         if hashlib.sha256(data).hexdigest()+'.png'!=item['id']:
             raise ValueError(tr('Immagine salvata danneggiata'))
+        limit=IMAGE_PIXEL_LIMITS[profile]
+        if limit is not None:
+            from PIL import Image
+            with Image.open(io.BytesIO(data)) as source:
+                if source.width*source.height>32_000_000:
+                    raise ValueError(tr('Usa PNG, JPEG o WebP fino a 32 megapixel'))
+                if source.width*source.height>limit:
+                    scale=math.sqrt(limit/(source.width*source.height))
+                    size=(max(1,int(source.width*scale)),max(1,int(source.height*scale)))
+                    source.thumbnail(size,Image.Resampling.LANCZOS,reducing_gap=2)
+                    buffer=io.BytesIO()
+                    source.save(buffer,format='PNG',compress_level=1)
+                    data=buffer.getvalue()
         value='data:image/png;base64,'+base64.b64encode(data).decode('ascii')
         if len(value)<=self.max_bytes:
             while self.entries and self.bytes+len(value)>self.max_bytes:
@@ -86,7 +107,8 @@ def import_image(filename,directory):
     return item
 
 
-def chat_messages(messages,directory,*,cache=None,language='it'):
+def chat_messages(messages,directory,*,cache=None,language='it',image_profile='detail'):
+    validate_image_profile(image_profile)
     if not messages or len(messages)%2!=1:
         raise ValueError(tr('La conversazione deve terminare con una domanda'))
     result=[dict(role='system',content=system_prompt(language))]
@@ -104,7 +126,7 @@ def chat_messages(messages,directory,*,cache=None,language='it'):
             for item in images:
                 path=image_path(directory,item)
                 try:
-                    encoded=cache.encode(path,item)
+                    encoded=cache.encode(path,item,profile=image_profile)
                 except OSError as error:
                     raise ValueError(tr('Immagine non disponibile: ')+item['name']) from error
                 content.append(dict(type='image_url',image_url=dict(url=encoded)))

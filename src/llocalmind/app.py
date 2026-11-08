@@ -11,7 +11,7 @@ import threading
 
 from PySide6.QtCore import Qt, QSize, QThread, QTimer, Signal, Slot
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import (QApplication, QDialog, QFileDialog, QFrame, QHBoxLayout,
+from PySide6.QtWidgets import (QApplication, QComboBox, QDialog, QFileDialog, QFrame, QHBoxLayout,
     QLabel, QListWidget, QListWidgetItem, QMainWindow, QMenu, QMessageBox,
     QProgressBar, QPushButton, QScrollArea, QToolButton, QVBoxLayout, QWidget)
 
@@ -234,6 +234,20 @@ class MainWindow(QMainWindow):
         self.scroll.setWidget(content)
         main.addWidget(self.scroll,1)
         self.scroll.verticalScrollBar().rangeChanged.connect(self._scroll_to_bottom)
+        self.vision_controls=QWidget()
+        vision_row=QHBoxLayout(self.vision_controls)
+        vision_row.setContentsMargins(0,0,0,0)
+        vision_row.addWidget(QLabel(tr('Immagini')))
+        self.vision_quality=QComboBox()
+        self.vision_quality.setObjectName('visionQuality')
+        self.vision_quality.addItem(tr('Dettagliata · testo piccolo'),'detail')
+        self.vision_quality.addItem(tr('Rapida · panoramica'),'fast')
+        self.vision_quality.setCurrentIndex(self.vision_quality.findData(self.state.settings['vision_image_profile']))
+        self.vision_quality.setToolTip(tr('Rapida riduce i dettagli per elaborare meno pixel. Usa Dettagliata per scritte piccole, grafici e documenti. Gli originali sono conservati.'))
+        self.vision_quality.currentIndexChanged.connect(self._image_profile_changed)
+        vision_row.addWidget(self.vision_quality)
+        vision_row.addStretch()
+        main.addWidget(self.vision_controls)
         composer=QFrame()
         composer.setObjectName('composer')
         compose=QHBoxLayout(composer)
@@ -318,8 +332,22 @@ class MainWindow(QMainWindow):
         colors={'ready':'#50b76b','busy':'#76afd0','idle':'#a7b5bf','error':'#c88550'}
         self.status_dot.setStyleSheet('color: '+colors[kind]+';')
 
+    def _image_profile_changed(self):
+        if self.busy or self.loading or self._closing:return
+        previous=self.state.settings['vision_image_profile']
+        try:self.state.save_settings(dict(self.state.settings,vision_image_profile=self.vision_quality.currentData()))
+        except (OSError,ValueError) as error:
+            self.vision_quality.blockSignals(True)
+            self.vision_quality.setCurrentIndex(self.vision_quality.findData(previous))
+            self.vision_quality.blockSignals(False)
+            self._notice(str(error))
+
     def _buttons(self):
         blocked=self.busy or self.loading or self._closing
+        self.vision_controls.setVisible(self.state.settings['engine']=='vision')
+        self.vision_quality.setEnabled(not blocked)
+        self.web_search_button.setVisible(self.state.settings['engine']!='vision')
+        if self.state.settings['engine']=='vision':self.web_search_button.setChecked(False)
         self.language_button.setEnabled(not blocked)
         self.new_button.setEnabled(not blocked)
         self.chat_list.setEnabled(not blocked)
@@ -487,9 +515,9 @@ class MainWindow(QMainWindow):
         if result!=QDialog.DialogCode.Accepted:
             return
         previous=self.state.settings.copy()
-        # Appearance has its own live control; an older runtime-install draft
-        # must not overwrite a theme selected while the download was running.
+        # Live appearance/image controls must survive older runtime-install drafts.
         dialog.values['italian_interface']=previous['italian_interface']
+        dialog.values['vision_image_profile']=previous['vision_image_profile']
         try:
             self.state.save_settings(dialog.values)
         except (OSError,ValueError) as error:

@@ -155,6 +155,31 @@ class DesktopTests(unittest.TestCase):
         self.assertTrue(window.theme_switch.isChecked())
         self.assertEqual(window.send_button.text(),'Dottore, parti 🍕')
 
+    def test_image_profile_changes_next_request_without_reloading_or_rewriting_chat(self):
+        from llocalmind.state import engine_signature
+        self.state.settings['engine']='vision'
+        window=self.window()
+        window.current['messages']=[dict(role='user',content='Keep this history')]
+        window.input.setPlainText('Keep this draft')
+        before=engine_signature(window.state.settings)
+        calls=[]
+        window.load_requested.connect(lambda *args:calls.append(args))
+        window.generate_requested.connect(lambda *args:calls.append(args))
+        window.vision_quality.setCurrentIndex(window.vision_quality.findData('fast'))
+        self.assertEqual(window._options()['vision_image_profile'],'fast')
+        self.assertEqual(LocalState(self.temp.name).settings['vision_image_profile'],'fast')
+        self.assertEqual(engine_signature(window.state.settings),before)
+        self.assertEqual(window.current['messages'][0]['content'],'Keep this history')
+        self.assertEqual(window.input.toPlainText(),'Keep this draft')
+        self.assertFalse(calls)
+        window.busy=True;window._buttons()
+        self.assertFalse(window.vision_quality.isEnabled())
+        window.busy=False
+        window.change_language('en')
+        self.assertEqual(window.vision_quality.currentData(),'fast')
+        self.assertIn('Fast',window.vision_quality.currentText())
+        window.change_language('it')
+
     def test_language_cannot_change_during_generation(self):
         window=self.window()
         window.busy=True

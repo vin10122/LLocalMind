@@ -153,7 +153,11 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<'NOTES'
-          LLocalMind 0.2.3 - Italian Interface.
+          LLocalMind 0.2.4 - Vision image modes.
+
+          - New: Detailed/Fast image selector in Vision mode, saved without reloading the model. Detailed keeps existing behavior; Fast limits image area while preserving the entire scene and original files.
+          - Fast can lose small text and fine details. Its actual benefit depends on the encoder/model; no target-PC speedup is claimed before measurement.
+          - New: --compare-image-profiles in the diagnostics benchmark alternates profiles with prompt reuse disabled, and records first-token/prefill timings plus actual cache counters. --show-answers optionally prints answers for quality checks without storing them in the report.
 
           - Optional Italian Interface sidebar switch: azure theme, thin tricolour top bar and thick tricolour user-bubble borders with solid light-blue interiors.
           - Large Dottore, parti 🍕 / Fratello, fermati 🍝 controls retain normal send/stop behavior. Appearance is saved separately and never changes language, prompts or the loaded model.
@@ -185,4 +189,4 @@ jobs:
           - CI checks the GUI, CPU OpenVINO, native kernels and installer without a GGUF. Full-model quality/performance on the target PC still needs manual validation.
           - SHA-256 sidecars are included. This build is not code-signed. Updaters since v0.1.5 include public previews as well as stable releases.
           NOTES
-          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Italian Interface" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Vision image modes" --notes-file release-notes.md

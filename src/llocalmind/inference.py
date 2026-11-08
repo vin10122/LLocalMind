@@ -120,12 +120,15 @@ class ModelWorker(QObject):
                 from .images import chat_messages
                 try:
                     prepared=time.perf_counter()
-                    request=chat_messages(messages,options['_attachment_directory'],cache=self.image_cache,language=options.get('language','it'))
+                    request=chat_messages(messages,options['_attachment_directory'],cache=self.image_cache,language=options.get('language','it'),
+                        image_profile=options.get('vision_image_profile','detail'))
                     prepare_seconds=time.perf_counter()-prepared
                     stats=dict(self.vision.generate(request,
                         max_tokens=options['max_tokens'],temperature=options['temperature'],
                         stop=self.stop,on_text=self.token.emit))
                     stats['input_seconds']=prepare_seconds
+                    stats['image_profile']=options.get('vision_image_profile','detail')
+                    stats['input_images']=sum(len(message.get('images',[])) for message in messages)
                     if stats.get('first_token') is not None:stats['first_token']+=prepare_seconds
                     from .performance import record,memory_snapshot
                     from .metrics import clean_stats

@@ -118,14 +118,15 @@ class LocalVisionModel:
             raise
 
     def generate(self,messages,*,max_tokens=512,temperature=0,seed=0,
-                 stop=None,on_text=lambda _:None):
+                 stop=None,on_text=lambda _:None,cache_prompt=True):
         stop=stop or threading.Event()
         if stop.is_set():raise VisionCancelled()
         if self.process is None or self.process.poll() is not None:
             raise RuntimeError(tr('Motore vision chiuso: ricarica il modello'))
+        if type(cache_prompt) is not bool:raise ValueError('Invalid prompt-cache option')
         payload=dict(messages=messages,stream=True,stream_options=dict(include_usage=True),
             max_tokens=max_tokens,temperature=temperature,seed=seed,
-            cache_prompt=True,id_slot=0,chat_template_kwargs=dict(enable_thinking=False))
+            cache_prompt=cache_prompt,id_slot=0,chat_template_kwargs=dict(enable_thinking=False))
         conn=self._connection()
         done=threading.Event()
         active_socket=None

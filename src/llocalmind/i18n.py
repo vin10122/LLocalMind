@@ -136,3 +136,12 @@ EN.update({
     'Tempo di caricamento vision superato. Log: {path}':'Vision loading timed out. Log: {path}',
     'Contesto insufficiente: richiesta {count} token, limite {limit}. Riduci i token visivi o la cronologia, oppure aumenta il contesto nelle impostazioni se la RAM lo consente.':'Insufficient context: request has {count} tokens, limit is {limit}. Reduce visual tokens or history, or increase context in Settings if RAM permits.',
 })
+
+EN.update({
+    'Immagini':'Images',
+    'Dettagliata · testo piccolo':'Detailed · small text',
+    'Rapida · panoramica':'Fast · overview',
+    'Modalità immagini: ':'Image mode: ',
+    '\nImmagini nella richiesta: {count}.':'\nImages in request: {count}.',
+    'Rapida riduce i dettagli per elaborare meno pixel. Usa Dettagliata per scritte piccole, grafici e documenti. Gli originali sono conservati.':'Fast reduces detail to process fewer pixels. Use Detailed for small text, charts and documents. Original images are preserved.',
+})

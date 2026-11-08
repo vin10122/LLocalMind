@@ -52,6 +52,29 @@ Installed builds retain the equivalent `LLocalMind-Diagnostics.exe
 can benefit from prefix caching; compare startup, first-token latency, prefill
 and generation separately, keeping power, context and image conditions fixed.
 
+## Compare image modes on the target PC
+
+Close the GUI and compare the same image in the same loaded engine:
+
+```powershell
+py -3.14 test\bench_vision.py --image "C:\path\image.jpg" --compare-image-profiles --runs 2 --show-answers --max-tokens 128
+```
+
+The diagnostics EXE accepts the same flags after `--benchmark-vision`.
+Comparison mode alternates Detailed/Fast order and disables prompt-prefix reuse
+for both profiles. It still shares OS caches and the loaded model: this is not
+a cold-machine comparison. The report includes profile labels, first-token and
+prefill medians, processed/cached prompt tokens when supplied by llama.cpp,
+and memory snapshots. Console answers are opt-in; the JSON report contains no
+answer text. Compare readability/accuracy as well as latency.
+
+Fast bounds the transmitted image area to 262,144 pixels without cropping or
+upscaling. It preserves small/low-area images and keeps the saved original.
+Dynamic-resolution encoders can process fewer visual tokens; fixed-resolution
+encoders may not get faster. The model's startup buffers and configured maximum
+visual-token budget are unchanged. Changing profile can invalidate an existing
+prompt prefix, so avoid treating an ordinary warm/cold chat pair as a fair A/B.
+
 ## Other files
 
 - `test_*.py`: component regressions and model-dependent comparisons.

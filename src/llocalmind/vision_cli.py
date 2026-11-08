@@ -4,7 +4,7 @@ import sys
 import tempfile
 from flash_moe.multimodal import LocalVisionModel
 from .app_paths import data_root
-from .images import chat_messages,import_image
+from .images import ImagePayloadCache,chat_messages,import_image
 from .metrics import response_summary
 
 
@@ -23,9 +23,10 @@ def run(args,model_path):
                 cache_mib=args.vision_cache_mib,warmup=not args.vision_no_warmup)
             print('[Vision] Encoder immagini e modello su CPU. Il motore testo OpenVINO non viene caricato.',flush=True)
             engine.start(progress=lambda _,label:print(label,flush=True))
+            cache=ImagePayloadCache()
             def ask(prompt):
                 print('  ',end='',flush=True)
-                stats=engine.generate(chat_messages([dict(role='user',content=prompt,images=images)],directory,language=args.language),
+                stats=engine.generate(chat_messages([dict(role='user',content=prompt,images=images)],directory,language=args.language,cache=cache,image_profile=args.vision_image_profile),
                     max_tokens=args.max_tokens,temperature=args.temp,seed=args.seed,
                     on_text=lambda text:print(text,end='',flush=True))
                 print('\n'+(response_summary(stats) or 'Conteggio token non disponibile')+'\n',flush=True)

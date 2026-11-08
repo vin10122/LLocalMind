@@ -17,6 +17,36 @@ available, so this release makes no vision speed claim. Existing external
 runtime files are preserved; users upgrading from the preview can use Settings
 to install and select the CPU runtime.
 
+## Per-request image work reduction (0.2.4)
+
+The pinned CPU engine and measured 8-thread / 2048 / 1024 profile remain in use.
+The new opt-in Fast profile caps image area at 512 squared pixels before
+transport. This targets actual pixel/visual-token work for dynamic-resolution
+encoders. It does not quantize or replace the trained projector, crop the scene,
+or discard historical images. It can lose fine text/detail; Detailed preserves
+the previous transmitted bytes and remains the default. Saved originals remain
+unchanged and prepared variants share the bounded 16 MiB payload cache.
+
+Image profiles change without a model restart. The server's upper visual-token
+budget and preallocated startup buffers remain unchanged, so this is not a
+claim of reduced startup RAM. Small/low-area images are sent unchanged.
+Fixed-resolution encoders may perform the same amount of work in both modes.
+
+The upstream b12110 code already hashes media bytes for prefix tracking and
+selects flash attention automatically where supported. A Python base64 cache
+is not an embedding cache. Hybrid/recurrent context rollback can still force
+prefix re-evaluation; actual `cache_n` / `prompt_n` must be inspected rather
+than assuming repeat-image inference is free. This update does not silently
+remove old images or change recurrent-state handling.
+
+The comparison tool uses the same image/question and loaded engine, alternates
+profile order and sends `cache_prompt=false` for each comparison sample. It
+records cache counters, first-token latency and prefill. OS cache, thermal
+state and expert routing remain confounders. It prints answers only when
+explicitly requested and stores no response text in its timing report.
+No real Hermes/mmproj speed or quality result for Fast is available in cloud;
+that still requires the target-PC comparison.
+
 ## Measured CPU prefill profile
 
 On the Core Ultra 5 226V / 16 GiB target, one local image request with the

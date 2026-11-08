@@ -29,7 +29,8 @@ def clean_stats(value):
         result['encoder_device']=value['encoder_device']
     for key in ('input_seconds','startup_seconds'):
         if key in value:result[key]=_number(value[key])
-    for key in ('prompt_tokens','image_max_tokens','evaluated_prompt_tokens','cached_tokens'):
+    if value.get('image_profile') in ('detail','fast'):result['image_profile']=value['image_profile']
+    for key in ('prompt_tokens','image_max_tokens','evaluated_prompt_tokens','cached_tokens','input_images'):
         if type(value.get(key)) is int and value[key]>=0:result[key]=value[key]
     return result
 

@@ -241,6 +241,7 @@ def build_parser() -> argparse.ArgumentParser:
                              "proiettore multimodale (richiede --mmproj).")
     parser.add_argument("--llama-server", type=str,
                         help="Eseguibile llama-server locale per vision; altrimenti cercato nel PATH")
+    parser.add_argument('--vision-image-profile',choices=('detail','fast'),default='detail',help='Fast riduce i pixel inviati; detail mantiene i dettagli originali')
     parser.add_argument('--vision-image-tokens',type=int,default=768,
                         help='Massimo token visivi: meno token velocizzano ma riducono i dettagli')
     parser.add_argument('--vision-threads',type=int,default=8)

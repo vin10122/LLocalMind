@@ -269,6 +269,10 @@ class Message(QFrame):
             tooltip+=tr('\nPrompt: {count} token; cache: {cached}.',count=stats['prompt_tokens'],cached=stats.get('cached_tokens','n/a'))
         if stats and stats.get('encoder_device'):
             tooltip+=tr('\nEncoder immagini: ')+stats['encoder_device']+tr('; modello linguistico: CPU.')
+        if stats and stats.get('image_profile'):
+            tooltip+='\n'+tr('Modalità immagini: ')+(tr('Rapida · panoramica') if stats['image_profile']=='fast' else tr('Dettagliata · testo piccolo'))
+        if stats and stats.get('input_images') is not None:
+            tooltip+=tr('\nImmagini nella richiesta: {count}.',count=stats['input_images'])
         if stats and stats.get('image_max_tokens') is not None:
             tooltip+=tr('\nLimite per immagine: {count} token visivi.',count=stats['image_max_tokens'])
         self.metrics_label.setToolTip(tooltip)

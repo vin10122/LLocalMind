@@ -131,6 +131,15 @@ class MultimodalTests(unittest.TestCase):
         self.server.no_timings=True
         self.assertIsNone(engine.generate(chat_messages(self.history(),self.root/'data'))['rate'])
 
+    def test_benchmark_can_disable_prompt_reuse_without_changing_normal_default(self):
+        engine=self.engine()
+        request=chat_messages(self.history(),self.root/'data')
+        engine.generate(request,cache_prompt=False)
+        self.assertFalse(self.server.payload['cache_prompt'])
+        engine.generate(request)
+        self.assertTrue(self.server.payload['cache_prompt'])
+        with self.assertRaises(ValueError):engine.generate(request,cache_prompt='false')
+
     def test_stop_interrupts_request_even_before_first_token(self):
         engine=self.engine();self.server.stall=True
         stop=threading.Event();errors=[]

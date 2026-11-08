@@ -45,6 +45,10 @@ provide reliable performance figures.
   GGUF, then attach an image. The encoder and language model run on CPU.
   Image history is kept with the chat. Matching filenames alone do not prove
   model/projector compatibility.
+  In Vision mode choose **Fast / Rapida** for overviews or **Detailed /
+  Dettagliata** for small text and documents. Fast limits transmitted image
+  pixels without reloading the model; it can lose fine details. Originals and
+  conversation history are preserved. Detailed remains the default.
 - **English / Italian:** use the separate **Lingua / Language** button or the
   language selector in Settings. English mode guides new answers in English;
   existing messages keep their original text.

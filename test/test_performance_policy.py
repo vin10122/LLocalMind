@@ -103,6 +103,50 @@ class PerformancePolicyTests(unittest.TestCase):
             (Path(directory)/'images'/item['id']).write_bytes(b'changed')
             with self.assertRaisesRegex(ValueError,'danneggiata'):chat_messages(history,directory,cache=cache)
 
+    def test_fast_image_mode_limits_pixels_preserves_scene_and_originals(self):
+        import hashlib
+        with tempfile.TemporaryDirectory() as directory:
+            source=Path(directory)/'source.png'
+            image=Image.new('RGB',(1536,1024),'red')
+            image.paste('blue',(768,0,1536,1024));image.save(source)
+            item=import_image(source,directory)
+            stored=Path(directory)/'images'/item['id']
+            before=stored.read_bytes()
+            history=[dict(role='user',content='Dove sono i colori?',images=[item])]
+            cache=ImagePayloadCache()
+            detailed=chat_messages(history,directory,cache=cache,image_profile='detail')
+            fast=chat_messages(history,directory,cache=cache,image_profile='fast')
+            repeat=chat_messages(history,directory,cache=cache,image_profile='fast')
+            original_url=detailed[1]['content'][1]['image_url']['url']
+            fast_url=fast[1]['content'][1]['image_url']['url']
+            self.assertEqual(base64.b64decode(original_url.split(',')[1]),before)
+            self.assertIs(fast_url,repeat[1]['content'][1]['image_url']['url'])
+            resized=Image.open(io.BytesIO(base64.b64decode(fast_url.split(',')[1])))
+            self.assertLessEqual(resized.width*resized.height,512*512)
+            self.assertAlmostEqual(resized.width/resized.height,1.5,delta=.01)
+            self.assertEqual(resized.getpixel((0,0)),(255,0,0))
+            self.assertEqual(resized.getpixel((resized.width-1,0)),(0,0,255))
+            self.assertEqual(stored.read_bytes(),before)
+            self.assertEqual(hashlib.sha256(before).hexdigest()+'.png',item['id'])
+            self.assertEqual(fast[1]['content'][0]['text'],history[0]['content'])
+            self.assertLessEqual(cache.bytes,cache.max_bytes)
+
+    def test_fast_mode_keeps_small_and_wide_low_area_images_unchanged(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for size in ((64,32),(2048,64)):
+                source=Path(directory)/'source.png'
+                Image.new('RGB',size,'green').save(source)
+                item=import_image(source,directory)
+                messages=[dict(role='user',content='x',images=[item])]
+                a=chat_messages(messages,directory,image_profile='detail')[1]['content'][1]
+                b=chat_messages(messages,directory,image_profile='fast')[1]['content'][1]
+                self.assertEqual(a,b)
+            for invalid in ('unknown',None,[]):
+                with self.assertRaises(ValueError):validate_settings(dict(DEFAULTS,vision_image_profile=invalid))
+            for engine in ('vision','optimized'):
+                original=dict(DEFAULTS,engine=engine)
+                self.assertEqual(engine_signature(original),engine_signature(dict(original,vision_image_profile='fast')))
+
     def test_encoded_image_cache_respects_byte_budget(self):
         with tempfile.TemporaryDirectory() as directory:
             cache=ImagePayloadCache(max_bytes=200)
@@ -179,6 +223,14 @@ class PerformancePolicyTests(unittest.TestCase):
                 saved=json.loads(report.read_text())
                 self.assertEqual(len(saved['samples']),2)
                 self.assertEqual(saved['startup_seconds'],2)
+                engine.close.reset_mock()
+                engine.generate.reset_mock()
+                self.assertEqual(main(['--image',str(image),'--settings',str(config),'--output',str(report),
+                                       '--compare-image-profiles','--runs','1']),0)
+                comparison=json.loads(report.read_text())
+                self.assertEqual([sample['image_profile'] for sample in comparison['samples']],['detail','fast'])
+                self.assertTrue(all(not call.kwargs['cache_prompt'] for call in engine.generate.call_args_list))
+                self.assertIn('first_token_median',comparison['comparison']['fast'])
                 engine.close.reset_mock()
                 engine.generate.side_effect=RuntimeError('failed')
                 self.assertEqual(main(['--image',str(image),'--settings',str(config),'--output',str(report)]),1)
