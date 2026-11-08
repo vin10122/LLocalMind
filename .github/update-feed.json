@@ -2,6 +2,27 @@
   "schema": 1,
   "releases": [
     {
+      "tag_name": "v0.3.1",
+      "draft": false,
+      "prerelease": true,
+      "name": "LLocalMind v0.3.1 - Faster web preparation",
+      "body": "LLocalMind 0.3.1 - Faster web preparation.\n\n- New Fast web profile (default): at most two 450-character excerpts. Full preserves three 900-character excerpts and remains selectable in Settings without a model reload. Shorter excerpts can omit details.\n- Tavily still receives one basic API call per search, without remote answer generation or source-page downloads. No new query cache or paid/advanced fallback is used.\n- Citation metadata no longer triggers serial DNS resolution. Static URL checks remain; actual HTTP fetch/redirect paths retain DNS and public-address validation.\n- Response metrics now separate web lookup time and model prefill, and record source count/profile. First-token time includes web lookup and input preparation; decode tok/s remains model-only. Old saved metrics are unchanged.\n- Component tests cover excerpt budgets, one basic request, DNS policy, settings identity and timing accounting. No unmeasured target-PC speedup is claimed.\n- llama.cpp default, optional mmproj, experimental native engine, Tavily .env, languages/themes and resilient updates are retained.\n\nDownload the Setup EXE, or extract the entire portable ZIP. Models remain external. Existing chats, settings and .env survive updates. This build is unsigned.\n",
+      "assets": [
+        {
+          "name": "LLocalMind-Setup-0.3.1-windows-x64.exe",
+          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.3.1/LLocalMind-Setup-0.3.1-windows-x64.exe",
+          "size": 106022307,
+          "digest": "sha256:ab8d57ecb038d87d6cf0eae952254dfbb558e2cd36f4b761a87799c1eca951bd"
+        },
+        {
+          "name": "LLocalMind-Setup-0.3.1-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.3.1/LLocalMind-Setup-0.3.1-windows-x64.exe.sha256",
+          "size": 106,
+          "digest": "sha256:85371fa4ae11cfb40cba0d475cab7623d7c4825934c9b90f57acdb7e1e14e833"
+        }
+      ]
+    },
+    {
       "tag_name": "v0.3.0",
       "draft": false,
       "prerelease": false,
