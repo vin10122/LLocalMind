@@ -1,0 +1,65 @@
+name: Publish verified Windows build
+
+on:
+  push:
+    branches: [master]
+    paths: ['.github/release-build.json']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify successful build matches release tag
+        run: |
+          python - <<'PY'
+          import json, os, re, subprocess
+          from pathlib import Path
+          request = json.loads(Path('.github/release-build.json').read_text())
+          tag, run_id = request['tag'], request['run_id']
+          assert re.fullmatch(r'v\d+\.\d+\.\d+', tag)
+          assert type(run_id) is int and run_id > 0
+          run = json.loads(subprocess.check_output(['gh','api',f'repos/{os.environ["GH_REPO"]}/actions/runs/{run_id}']))
+          commit = subprocess.check_output(['git','rev-parse',f'{tag}^{{commit}}'],text=True).strip()
+          assert run['status'] == 'completed' and run['conclusion'] == 'success'
+          assert run['event'] == 'push' and run['head_repository']['full_name'] == os.environ['GH_REPO']
+          assert run['path'] == '.github/workflows/windows-release.yml'
+          assert run['head_sha'] == commit, 'Release tag must match the fully verified build exactly'
+          subprocess.run(['gh','run','download',str(run_id),'--name','LLocalMind-Windows-x64','--dir','release'],check=True)
+          version = tag[1:]
+          expected = {f'LLocalMind-Setup-{version}-windows-x64.exe', f'LLocalMind-{version}-windows-x64-portable.zip'}
+          assert {p.name for p in Path('release').iterdir()} == expected | {n+'.sha256' for n in expected}
+          import hashlib
+          for name in expected:
+              digest, filename = (Path('release')/(name+'.sha256')).read_text().strip().split()
+              assert filename == name and re.fullmatch(r'[0-9a-f]{64}',digest)
+              with (Path('release')/name).open('rb') as source:
+                  assert hashlib.file_digest(source,'sha256').hexdigest() == digest
+          with open(os.environ['GITHUB_ENV'],'a') as stream:
+              stream.write(f'RELEASE_TAG={tag}\n')
+          print(f'Verified build {run_id} at {commit}, including source, packaged and installed checks.')
+          PY
+      - name: Publish verified installer and portable package
+        run: |
+          cat > release-notes.md <<'NOTES'
+          Vision image modes: Detailed / Fast.
+
+          - Switch image profiles directly in Vision mode without reloading the model.
+          - Fast limits image area to reduce visual work where supported; it preserves the whole scene and saved originals, but can lose small text and fine details. Detailed keeps previous behavior and remains the default.
+          - Diagnostics can alternate both profiles with prompt reuse disabled, reporting first-token and prefill timings. Actual Hermes/mmproj speed and quality gains still require target-PC measurement.
+          - Temporary official-runtime download failures have bounded retries; size, SHA-256 and executable checks remain mandatory.
+          - Windows source tests, the actual CPU vision runtime, packaged EXE, installer and installed app were verified in the successful build matching this tag. Artifacts were recovered from that exact build and their checksums checked again before publication.
+
+          Download the Setup EXE, or extract the entire portable ZIP. Models are external. Existing chats and settings are preserved when updating. This build is unsigned.
+          NOTES
+          gh release create "$RELEASE_TAG" release/* --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Vision image modes" --notes-file release-notes.md
