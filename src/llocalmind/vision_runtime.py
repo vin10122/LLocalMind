@@ -15,6 +15,7 @@ import tempfile
 import threading
 import time
 from urllib.parse import urlparse
+from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 import uuid
 import zipfile
@@ -122,6 +123,36 @@ class RuntimeInstaller:
         self.open=opener or build_opener(HTTPSOnly()).open
         self.probe=probe
 
+    def _download(self,archive,cancel,progress):
+        request=Request(self.package.url,headers={'User-Agent':'LLocalMind-runtime-installer'})
+        for attempt in range(3):
+            received=0
+            digest=hashlib.sha256()
+            _cancel(cancel)
+            try:
+                with self.open(request,timeout=30) as source,archive.open('wb') as target:
+                    while block:=source.read(256*1024):
+                        _cancel(cancel)
+                        received+=len(block)
+                        if received>self.package.size:raise RuntimeInstallError(tr('Dimensione del download non valida'))
+                        target.write(block)
+                        digest.update(block)
+                        progress(int(received*75/self.package.size))
+                return received,digest.hexdigest()
+            except (URLError,TimeoutError) as error:
+                delay=1+2*attempt
+                if isinstance(error,HTTPError):
+                    if error.code not in (408,429,500,502,503,504):raise
+                    retry_after=error.headers.get('Retry-After') if error.headers else None
+                    # Respect longer/date-based server delays by surfacing the
+                    # error instead of retrying too soon or waiting indefinitely.
+                    if retry_after is not None:
+                        if not retry_after.isdecimal() or int(retry_after)>5:raise
+                        delay=max(delay,int(retry_after))
+                if attempt==2:raise
+                cancel.wait(delay)
+                _cancel(cancel)
+
     def _existing(self,cancel):
         for folder in sorted(self.directory.glob('llama-'+self.package.tag+'-cpu-x64-*'),reverse=True):
             _cancel(cancel)
@@ -158,20 +189,10 @@ class RuntimeInstaller:
             with tempfile.TemporaryDirectory(prefix='.install-',dir=self.directory) as temporary:
                 root=Path(temporary)
                 archive=root/'download.zip'
-                request=Request(self.package.url,headers={'User-Agent':'LLocalMind-runtime-installer'})
-                received=0
-                digest=hashlib.sha256()
                 progress(0)
-                with self.open(request,timeout=30) as source,archive.open('wb') as target:
-                    while block:=source.read(256*1024):
-                        _cancel(cancel)
-                        received+=len(block)
-                        if received>self.package.size:raise RuntimeInstallError(tr('Dimensione del download non valida'))
-                        target.write(block)
-                        digest.update(block)
-                        progress(int(received*75/self.package.size))
+                received,digest=self._download(archive,cancel,progress)
                 _cancel(cancel)
-                if received!=self.package.size or digest.hexdigest()!=self.package.sha256:
+                if received!=self.package.size or digest!=self.package.sha256:
                     raise RuntimeInstallError(tr('Verifica SHA-256 del motore fallita: download incompleto o modificato'))
                 payload=root/'payload'
                 payload.mkdir()

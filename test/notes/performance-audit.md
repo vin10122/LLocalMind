@@ -17,7 +17,7 @@ available, so this release makes no vision speed claim. Existing external
 runtime files are preserved; users upgrading from the preview can use Settings
 to install and select the CPU runtime.
 
-## Per-request image work reduction (0.2.4)
+## Per-request image work reduction (0.2.5)
 
 The pinned CPU engine and measured 8-thread / 2048 / 1024 profile remain in use.
 The new opt-in Fast profile caps image area at 512 squared pixels before

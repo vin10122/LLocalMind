@@ -9,6 +9,7 @@ import tempfile
 import threading
 import unittest
 from unittest.mock import Mock,patch
+from urllib.error import HTTPError,URLError
 import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -142,6 +143,36 @@ class RuntimeTests(unittest.TestCase):
         installer=self.installer();installer.open=Mock(side_effect=OSError('network failed'))
         with self.assertRaisesRegex(RuntimeInstallError,'network'):installer.install()
         self.empty()
+
+    def test_temporary_download_failure_retries_same_pinned_archive(self):
+        installer=self.installer();cancel=threading.Event()
+        installer.open=Mock(side_effect=[HTTPError('https://github.com',504,'timeout',{},None),
+            URLError('temporary connection failure'),io.BytesIO(self.body)])
+        with patch.object(cancel,'wait',return_value=False) as wait:
+            executable=installer.install(cancel=cancel)
+        self.assertEqual(executable.read_bytes(),pe())
+        self.assertEqual(installer.open.call_count,3)
+        self.assertEqual([call.args[0] for call in wait.call_args_list],[1,3])
+        for call in installer.open.call_args_list:
+            self.assertEqual(call.args[0].full_url,installer.package.url)
+
+    def test_download_retry_exhaustion_and_nonretryable_errors_clean_up(self):
+        for status,headers,attempts in ((504,{},3),(403,{},1),(429,{'Retry-After':'120'},1)):
+            with self.subTest(status=status):
+                installer=self.installer();cancel=threading.Event()
+                installer.open=Mock(side_effect=HTTPError('https://github.com',status,'error',headers,None))
+                with patch.object(cancel,'wait',return_value=False):
+                    with self.assertRaises(RuntimeInstallError):installer.install(cancel=cancel)
+                self.assertEqual(installer.open.call_count,attempts)
+                self.empty();self.probe.assert_not_called()
+
+    def test_cancellation_interrupts_download_retry_delay(self):
+        installer=self.installer();cancel=threading.Event()
+        installer.open=Mock(side_effect=URLError('temporary connection failure'))
+        with patch.object(cancel,'wait',side_effect=lambda delay:cancel.set()):
+            with self.assertRaises(RuntimeInstallCancelled):installer.install(cancel=cancel)
+        self.assertEqual(installer.open.call_count,1)
+        self.empty();self.probe.assert_not_called()
 
     def test_reject_untrusted_manifest_platform_and_http_redirect(self):
         with self.assertRaises(RuntimeInstallError):

@@ -153,7 +153,7 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<'NOTES'
-          LLocalMind 0.2.4 - Vision image modes.
+          LLocalMind 0.2.5 - Vision image modes.
 
           - New: Detailed/Fast image selector in Vision mode, saved without reloading the model. Detailed keeps existing behavior; Fast limits image area while preserving the entire scene and original files.
           - Fast can lose small text and fine details. Its actual benefit depends on the encoder/model; no target-PC speedup is claimed before measurement.
