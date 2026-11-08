@@ -5,6 +5,11 @@
 Local AI chat made in Italy 🇮🇹 for Windows and Intel PCs, with GGUF models,
 image input and optional web research. Models are not included.
 
+**Project goal:** make models larger than those normally recommended for a
+PC’s available hardware practical to run locally. Quantization, selective MoE
+expert activation and SSD-backed weight loading help reduce RAM pressure,
+so the whole model does not have to stay in physical memory at once.
+
 ## Install and update
 
 1. Download the installer from **[GitHub Releases](https://github.com/vin10122/LLocalMind/releases/latest)** and run it.
@@ -90,7 +95,12 @@ Use `--language en` for English response mode.
 For native-kernel setup and builds, see [Development](docs/development.md).
 All development tests, benchmarks and probes are in [test/](test/README.md).
 
+## Inspiration
+
+LLocalMind was inspired by **Flash-MoE**, as shown in
+[this Instagram Reel](https://www.instagram.com/reel/DdqjqtAxAk6/).
+It is an independent project, not affiliated with or endorsed by Apple.
+
 ## License
 
 Code: [Apache 2.0](LICENSE). Models and external runtimes have their own licenses.
-Inspired by Flash-MoE; this independent project is not affiliated with Apple.
