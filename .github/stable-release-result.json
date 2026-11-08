@@ -1,0 +1,40 @@
+{
+  "tag": "v0.2.6",
+  "promotion": "failure",
+  "run_id": "42472485454",
+  "builds": [
+    {
+      "id": 42472183437,
+      "head_sha": "189b5821f490154dc602e7bbcb3dd8e232cc6b59",
+      "status": "in_progress",
+      "conclusion": null,
+      "html_url": "https://github.com/vin10122/LLocalMind/actions/runs/42472183437",
+      "jobs": [
+        {
+          "name": "build",
+          "conclusion": null,
+          "failed_steps": []
+        }
+      ]
+    },
+    {
+      "id": 42472144587,
+      "head_sha": "189b5821f490154dc602e7bbcb3dd8e232cc6b59",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/vin10122/LLocalMind/actions/runs/42472144587",
+      "jobs": [
+        {
+          "name": "build",
+          "conclusion": "success",
+          "failed_steps": []
+        },
+        {
+          "name": "release",
+          "conclusion": "skipped",
+          "failed_steps": []
+        }
+      ]
+    }
+  ]
+}
