@@ -139,6 +139,9 @@ EN.update({
 
 EN.update({
     'Immagini':'Images',
+    'Apri GitHub Releases':'Open GitHub Releases',
+    'GitHub è temporaneamente irraggiungibile anche dalla fonte alternativa. Riprova più tardi oppure scarica l’installer da GitHub Releases.':'GitHub is temporarily unreachable, including the fallback source. Try again later or download the installer from GitHub Releases.',
+    'File aggiornamenti ufficiale non valido. Nessun installer è stato scaricato.':'The official update feed is invalid. No installer was downloaded.',
     'Ricerca web · Tavily\n\n':'Web search · Tavily\n\n',
     'Ricerca Tavily':'Searching Tavily',
     'Facoltativa e disattivata di default. Invia solo la domanda a Tavily, usando la chiave nel tuo file .env. La ricerca usa crediti Tavily; la risposta viene generata sul PC.':'Optional and off by default. Sends only your question to Tavily using the key in your .env file. Search uses Tavily credits; the answer is generated on your PC.',

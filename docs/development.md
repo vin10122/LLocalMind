@@ -90,3 +90,21 @@ this path. Explicit legacy DuckDuckGo parsing remains covered by regressions.
 no credential leakage, cancellation and source validation. Synthetic tests do
 not prove live account/service availability. Real requests need provider access
 and a user-owned key; never put real keys in CI fixtures, reports or chat.
+
+## Update availability
+
+Update checks retry temporary failures with bounded waits and 10-second metadata
+request timeouts. If the GitHub releases API is unavailable or rate-limited, the
+client reads the fixed official `.github/update-feed.json` through
+`raw.githubusercontent.com`. The same version, repository URL, size and SHA-256
+validation runs for both sources. Malformed metadata never triggers a download.
+Both sources failing produces an error, never a false "no updates" result.
+
+`.github/scripts/publish_update_feed.py` runs after complete release uploads and
+stable promotion, excluding drafts/incomplete packages and preserving preview
+selection. It writes the manifest with conditional file revisions and rebuilds
+on write conflicts. Real fallback checks can simulate only the API failure and
+read the allowed public feed; no installer is executed by an update check.
+Cancellation interrupts retry backoff; in-flight requests finish or time out.
+Transient installer/checksum connection failures retry, but corrupt or truncated
+installer content is still rejected and the partial file is removed.

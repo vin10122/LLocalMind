@@ -7,6 +7,7 @@ on:
     tags: ['v*']
     paths:
       - '.github/workflows/windows-release.yml'
+      - '.github/scripts/**'
       - 'gui.py'
       - 'chat.py'
       - 'src/**'
@@ -164,6 +165,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: LLocalMind-Windows-x64
@@ -176,19 +178,24 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<'NOTES'
-          LLocalMind 0.2.8 - Tavily API key from .env.
+          LLocalMind 0.2.9 - Resilient updater.
 
-          - Web research now uses your personal Tavily API key from `%LOCALAPPDATA%\LLocalMind\.env`: `TAVILY_API_KEY=tvly-YOUR-KEY`. It replaces anonymous/keyless mode.
-          - The file is read on each search; no model restart is needed. UTF-8/BOM, quoted values, comments and an optional export prefix are supported. Keys are not stored in chats/settings or exported to local engines.
-          - Missing/invalid keys stop before network access. Authentication and quota errors are explicit, without leaking the key. Requests refuse redirects.
-          - One basic request per search, up to three sources, no remote AI answer, no automatic retries, no anonymous or advanced fallback.
-          - Choose Tavily Free and keep pay-as-you-go/automatic top-ups disabled. Billing is controlled by Tavily; the app cannot verify or disable paid account settings. Free quotas can change.
-          - README includes the PowerShell commands and setup instructions. Query text leaves the PC only when web research is selected; model answers stay local.
-          - Windows tests cover file parsing, authentication, error handling, source validation and GUI behavior. Real account/service availability still requires a user-key test.
+          - Update checks retry temporary GitHub failures with bounded waits and shorter metadata timeouts.
+          - If the releases API remains unavailable or rate-limited, the updater uses an official repository-hosted manifest. Both sources enforce the same version, asset URL, size and SHA-256 validation.
+          - If neither source is reachable, the app shows a clear retry message and an Open GitHub Releases button instead of reporting no updates.
+          - Cancellation stops retry backoff. Transient installer/checksum connection errors retry without weakening integrity checks or keeping partial installers.
+          - The official fallback manifest is generated after complete release uploads and refreshed at stable promotion. It excludes drafts and incomplete packages; public previews remain supported.
+          - Tavily .env support and local inference from 0.2.8 are retained. Existing chats, settings, models and the external .env are preserved.
 
-          Download the Setup EXE, or extract the entire portable ZIP. Models are external. Updates preserve chats, settings and the external .env. This build is unsigned.
+          If your current updater fails, download this Setup EXE directly and run it over the installed version. No uninstall is needed. This build is unsigned.
           NOTES
-          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Tavily API key" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Resilient updater" --notes-file release-notes.md
+      - name: Publish official updater fallback feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: python .github/scripts/publish_update_feed.py
       - name: Record published Windows package
         env:
           GH_TOKEN: ${{ github.token }}

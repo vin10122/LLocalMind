@@ -20,6 +20,8 @@ The installer includes Python and dependencies. Updates are available under
 **Settings → Check for updates**, including public previews. You can also run
 a newer installer over the existing installation: chats, settings and external
 models are preserved. No uninstall or model download is needed.
+Temporary GitHub API failures are retried; an official repository-hosted feed
+is used if the API stays unavailable. Installer SHA-256 checks remain required.
 
 For the portable edition, extract the **entire ZIP** and open
 `LLocalMind\LLocalMind.exe`; keep its supporting files together. To update,

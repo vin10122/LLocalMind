@@ -23,7 +23,7 @@ class UpdateTask(QObject):
             else:
                 manager=UpdateManager()
                 if self.action=='check':
-                    self.result=manager.check()
+                    self.result=manager.check(cancel=self.cancel)
                 else:
                     self.result=manager.download(self.release,cancel=self.cancel,
                         progress=lambda received,total:self.progress.emit(int(received*100/total)))

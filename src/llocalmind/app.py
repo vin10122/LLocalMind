@@ -9,8 +9,8 @@ import sys
 import tempfile
 import threading
 
-from PySide6.QtCore import Qt, QSize, QThread, QTimer, Signal, Slot
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import Qt, QSize, QThread, QTimer, Signal, Slot, QUrl
+from PySide6.QtGui import QIcon, QDesktopServices
 from PySide6.QtWidgets import (QApplication, QComboBox, QDialog, QFileDialog, QFrame, QHBoxLayout,
     QLabel, QListWidget, QListWidgetItem, QMainWindow, QMenu, QMessageBox,
     QProgressBar, QPushButton, QScrollArea, QToolButton, QVBoxLayout, QWidget)
@@ -793,7 +793,15 @@ class MainWindow(QMainWindow):
         if job['cancel'].is_set():
             return
         if task.error:
-            QMessageBox.warning(self,tr('Motore vision') if task.action=='runtime' else tr('Aggiornamenti'),task.error)
+            if task.action=='check':
+                box=QMessageBox(QMessageBox.Icon.Warning,tr('Aggiornamenti'),task.error,
+                               QMessageBox.StandardButton.Ok,self)
+                manual=box.addButton(tr('Apri GitHub Releases'),QMessageBox.ButtonRole.ActionRole)
+                box.exec()
+                if box.clickedButton() is manual:
+                    QDesktopServices.openUrl(QUrl('https://github.com/vin10122/LLocalMind/releases'))
+            else:
+                QMessageBox.warning(self,tr('Motore vision') if task.action=='runtime' else tr('Aggiornamenti'),task.error)
             return
         if task.action=='runtime':
             path=str(task.result)

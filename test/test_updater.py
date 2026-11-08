@@ -14,13 +14,15 @@ from unittest.mock import patch
 from urllib.error import HTTPError, URLError
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-from llocalmind.updater import (API_URL, REPOSITORY, DownloadCancelled,
+from llocalmind.updater import (API_URL, FEED_URL, REPOSITORY, DownloadCancelled,
                                 DownloadedUpdate, UpdateError, UpdateManager,
                                 _HTTPSRedirects, version_tuple)
 
 
 class UpdaterTests(unittest.TestCase):
     def setUp(self):
+        pause=patch('llocalmind.updater.time.sleep')
+        pause.start();self.addCleanup(pause.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
@@ -37,7 +39,7 @@ class UpdaterTests(unittest.TestCase):
 
     def open(self, request, timeout):
         self.requests.append(request.full_url)
-        self.assertEqual(timeout, 30)
+        self.assertEqual(timeout,10 if request.full_url in (API_URL,FEED_URL) else 30)
         value = json.dumps([self.metadata]).encode() if request.full_url == API_URL else self.responses[request.full_url]
         if isinstance(value, Exception):
             raise value
@@ -75,6 +77,78 @@ class UpdaterTests(unittest.TestCase):
                 with self.assertRaises(UpdateError): manager.check()
         def offline(request, timeout): raise URLError('offline')
         with self.assertRaises(UpdateError): UpdateManager(opener=offline).check()
+
+    def test_temporary_504_retries_then_recovers_without_fallback(self):
+        calls=[]
+        def open_(request,timeout):
+            calls.append(request.full_url)
+            if len(calls)==1:raise HTTPError(API_URL,504,'timeout',{},None)
+            return io.BytesIO(json.dumps([self.metadata]).encode())
+        self.assertEqual(UpdateManager('0.1.0',opener=open_).check().version,'0.2.0')
+        self.assertEqual(calls,[API_URL,API_URL])
+
+    def test_official_feed_after_api_timeout_preserves_validation(self):
+        calls=[]
+        def open_(request,timeout):
+            calls.append(request.full_url)
+            if request.full_url==API_URL:raise HTTPError(API_URL,504,'timeout',{},None)
+            self.assertEqual(request.full_url,FEED_URL)
+            return io.BytesIO(json.dumps(dict(schema=1,releases=[self.metadata])).encode())
+        manager=UpdateManager('0.1.0',directory=self.root/'updates',opener=open_)
+        self.assertEqual(manager.check().sha256,self.digest)
+        self.assertEqual(calls,[API_URL,API_URL,FEED_URL])
+        self.assertFalse(manager.directory.exists())
+        self.metadata['assets'][0]['browser_download_url']='https://example.com/untrusted.exe'
+        with self.assertRaises(UpdateError):manager.check()
+
+    def test_long_retry_after_uses_feed_without_hammering_api(self):
+        calls=[]
+        def open_(request,timeout):
+            calls.append(request.full_url)
+            if request.full_url==API_URL:raise HTTPError(API_URL,429,'limit',{'Retry-After':'120'},None)
+            return io.BytesIO(json.dumps(dict(schema=1,releases=[self.metadata])).encode())
+        self.assertEqual(UpdateManager('0.1.0',opener=open_).check().version,'0.2.0')
+        self.assertEqual(calls,[API_URL,FEED_URL])
+
+    def test_broken_feed_or_all_hosts_offline_does_not_claim_no_updates(self):
+        for data in (b'not JSON',b'[]',b'{"schema":true,"releases":[]}',b'{"schema":2,"releases":[]}'):
+            def open_(request,timeout):
+                if request.full_url==API_URL:raise URLError('offline')
+                return io.BytesIO(data)
+            with self.assertRaises(UpdateError):UpdateManager(opener=open_).check()
+        def offline(*args,**kwargs):raise URLError('offline')
+        with self.assertRaisesRegex(UpdateError,'temporaneamente'):
+            UpdateManager(opener=offline).check()
+
+    def test_cancel_during_download_retry_backoff(self):
+        manager=self.manager();release=manager.check();stop=threading.Event()
+        calls=[]
+        def open_(request,timeout):
+            calls.append(request.full_url)
+            raise HTTPError(request.full_url,504,'timeout',{},None)
+        manager._open=open_
+        with patch.object(stop,'wait',side_effect=lambda delay:stop.set()):
+            with self.assertRaises(DownloadCancelled):manager.download(release,cancel=stop)
+        self.assertEqual(calls,[release.download_url])
+        self.assertEqual(list(manager.directory.glob('*.part')),[])
+
+    def test_cancel_check_stops_before_another_request_or_feed(self):
+        stop=threading.Event();calls=[]
+        def open_(request,timeout):
+            calls.append(request.full_url)
+            raise HTTPError(API_URL,504,'timeout',{},None)
+        with patch.object(stop,'wait',side_effect=lambda delay:stop.set()):
+            with self.assertRaises(DownloadCancelled):UpdateManager(opener=open_).check(cancel=stop)
+        self.assertEqual(calls,[API_URL])
+
+    def test_feed_generator_skips_drafts_and_requires_complete_release(self):
+        spec=importlib.util.spec_from_file_location('update_feed_builder',Path(__file__).resolve().parents[1]/'.github/scripts/publish_update_feed.py')
+        builder=importlib.util.module_from_spec(spec);spec.loader.exec_module(builder)
+        draft=dict(self.metadata,draft=True,tag_name='v9.0.0')
+        incomplete=dict(self.metadata,tag_name='v8.0.0',assets=[])
+        feed=builder.build_feed([draft,incomplete,self.metadata],'v0.2.0')
+        self.assertEqual([r['tag_name'] for r in feed['releases']],['v0.2.0'])
+        with self.assertRaises(RuntimeError):builder.build_feed([incomplete],'v8.0.0')
 
     def test_invalid_release_metadata(self):
         for value in (b'not JSON', b'{}', b'[null]'):

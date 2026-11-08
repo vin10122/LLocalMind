@@ -17,6 +17,8 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
+from http.client import IncompleteRead
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -26,6 +28,7 @@ from .app_paths import updates_dir
 
 REPOSITORY = "vin10122/LLocalMind"
 API_URL = f"https://api.github.com/repos/{REPOSITORY}/releases?per_page=100"
+FEED_URL = f"https://raw.githubusercontent.com/{REPOSITORY}/master/.github/update-feed.json"
 MAX_INSTALLER_BYTES = 4 * 1024**3
 
 
@@ -78,15 +81,34 @@ class UpdateManager:
         self.directory = Path(directory) if directory is not None else updates_dir()
         self._open = opener or build_opener(_HTTPSRedirects()).open
 
-    def _request(self, url, accept="application/octet-stream"):
+    def _request(self, url, accept="application/octet-stream", *, cancel=None):
         if urlparse(url).scheme != "https":
             raise UpdateError(tr("URL dell'aggiornamento senza HTTPS"))
         request = Request(url, headers={
             "User-Agent": f"LLocalMind/{self.current_version}",
             "Accept": accept,
             "X-GitHub-Api-Version": "2022-11-28",
+            **({'Cache-Control':'no-cache'} if url in (API_URL,FEED_URL) else {}),
         })
-        return self._open(request, timeout=30)
+        metadata=url in (API_URL,FEED_URL)
+        attempts=2 if metadata else 3
+        for attempt in range(attempts):
+            if cancel is not None and cancel.is_set():raise DownloadCancelled('Download annullato')
+            try:
+                return self._open(request, timeout=10 if metadata else 30)
+            except (HTTPError,URLError,TimeoutError) as error:
+                delay=1+2*attempt
+                if isinstance(error,HTTPError):
+                    transient=error.code in (408,429,500,502,503,504)
+                    retry_after=error.headers.get('Retry-After') if error.headers else None
+                    error.close()
+                    if not transient:raise
+                    if retry_after is not None:
+                        if not retry_after.isdecimal() or int(retry_after)>5:raise
+                        delay=max(delay,int(retry_after))
+                if attempt==attempts-1:raise
+                if cancel is None:time.sleep(delay)
+                else:cancel.wait(delay)
 
     @staticmethod
     def _asset_url(asset, tag):
@@ -97,18 +119,42 @@ class UpdateManager:
             raise UpdateError(tr("L'asset non appartiene alla release GitHub prevista"))
         return expected
 
-    def check(self) -> Release | None:
+    def check(self, *, cancel=None) -> Release | None:
         """Highest newer published version, including previews; exclude drafts."""
         try:
-            with self._request(API_URL, "application/vnd.github+json") as response:
+            with self._request(API_URL, "application/vnd.github+json",cancel=cancel) as response:
                 raw = response.read(2 * 1024**2 + 1)
         except HTTPError as error:
             error.close()
             if error.code == 404:
                 return None
-            raise UpdateError(tr('Controllo GitHub fallito (HTTP {code})',code=error.code)) from error
-        except (OSError, URLError) as error:
-            raise UpdateError("Impossibile contattare GitHub") from error
+            if error.code not in (403,408,429,500,502,503,504):
+                raise UpdateError(tr('Controllo GitHub fallito (HTTP {code})',code=error.code)) from error
+            return self._feed_check(cancel=cancel)
+        except (OSError, URLError,IncompleteRead) as error:
+            return self._feed_check(cancel=cancel)
+        if cancel is not None and cancel.is_set():raise DownloadCancelled('Download annullato')
+        return self._parse_releases(raw)
+
+    def _feed_check(self, *, cancel=None):
+        try:
+            with self._request(FEED_URL,'application/json',cancel=cancel) as response:
+                raw=response.read(2*1024**2+1)
+            if cancel is not None and cancel.is_set():raise DownloadCancelled('Download annullato')
+            if len(raw)>2*1024**2:raise ValueError('Oversized feed')
+            feed=json.loads(raw)
+            if not isinstance(feed,dict) or type(feed.get('schema')) is not int or feed['schema']!=1:
+                raise ValueError('Invalid feed schema')
+            return self._parse_releases(json.dumps(feed['releases']).encode())
+        except HTTPError as error:
+            error.close()
+            raise UpdateError(tr('GitHub è temporaneamente irraggiungibile anche dalla fonte alternativa. Riprova più tardi oppure scarica l’installer da GitHub Releases.')) from None
+        except (OSError,URLError,IncompleteRead):
+            raise UpdateError(tr('GitHub è temporaneamente irraggiungibile anche dalla fonte alternativa. Riprova più tardi oppure scarica l’installer da GitHub Releases.')) from None
+        except (ValueError,KeyError,TypeError) as error:
+            raise UpdateError(tr('File aggiornamenti ufficiale non valido. Nessun installer è stato scaricato.')) from error
+
+    def _parse_releases(self,raw):
         if len(raw) > 2 * 1024**2:
             raise UpdateError("Risposta GitHub troppo grande")
         try:
@@ -150,10 +196,10 @@ class UpdateManager:
         except (KeyError, TypeError, ValueError, StopIteration) as error:
             raise UpdateError(tr("Release senza installer Windows valido per LLocalMind")) from error
 
-    def _checksum(self, release):
+    def _checksum(self, release, *, cancel=None):
         if release.sha256 is not None:
             return release.sha256
-        with self._request(release.checksum_url) as response:
+        with self._request(release.checksum_url,cancel=cancel) as response:
             raw = response.read(8193)
         if len(raw) > 8192:
             raise UpdateError(tr("File checksum troppo grande"))
@@ -191,12 +237,12 @@ class UpdateManager:
             self.directory.mkdir(parents=True, exist_ok=True)
             if cancel is not None and cancel.is_set():
                 raise DownloadCancelled("Download annullato")
-            expected = self._checksum(release)
+            expected = self._checksum(release,cancel=cancel)
             digest = hashlib.sha256()
             received = 0
             with tempfile.NamedTemporaryFile(dir=self.directory, suffix=".part", delete=False) as output:
                 temporary = Path(output.name)
-                with self._request(release.download_url) as response:
+                with self._request(release.download_url,cancel=cancel) as response:
                     if progress:
                         progress(0, release.size)
                     while True:
