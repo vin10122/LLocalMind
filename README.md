@@ -9,6 +9,23 @@ and optional web research.
 using quantization, selective MoE expert activation and SSD-backed weight loading
 to reduce RAM pressure.
 
+## Requirements
+
+| Component | Absolute minimum | Minimum | Recommended |
+| --- | --- | --- | --- |
+| **RAM** | **8 GB** | **12 GB** | **32 GB or more** |
+| OS | Windows 10/11, 64-bit | Windows 10/11, 64-bit | Windows 11, 64-bit |
+| CPU | Compatible Intel/AMD x86-64 CPU | Compatible Intel/AMD x86-64 CPU | Recent CPU with good memory bandwidth |
+| Storage | SSD with room for the app and model files | SSD | NVMe SSD with free space |
+| Dedicated GPU | Not required | Not required | Not required for the default CPU engine |
+
+**RAM figures are indicative targets, not guarantees for every model.** The
+8 GB tier is an experimental lower limit for quantized MoE models with SSD-backed
+loading, limited caching and a short context. **Hermes 35B has not yet been
+validated on 8 or 12 GB**; the tested machine has 15.7 GiB RAM. Images and longer
+contexts may need more memory. llama.cpp uses memory mapping and OS paging;
+the experimental native engine manages its own expert cache.
+
 ## Install and update
 
 1. Download and run the installer from **[GitHub Releases](https://github.com/vin10122/LLocalMind/releases/latest)**.
