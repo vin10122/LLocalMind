@@ -15,8 +15,8 @@ to reduce RAM pressure.
 | --- | --- | --- | --- |
 | **RAM** | **8 GB** | **12 GB** | **32 GB or more** |
 | OS | Windows 10/11, 64-bit | Windows 10/11, 64-bit | Windows 11, 64-bit |
-| CPU | Compatible Intel/AMD x86-64 CPU | Compatible Intel/AMD x86-64 CPU | Recent CPU with good memory bandwidth |
-| Storage | SSD with room for the app and model files | SSD | NVMe SSD with free space |
+| CPU | Intel 4th gen or newer, AMD Ryzen 1000 or newer x86-64 CPU, Qualcomm could go via emulation | More recent Intel or AMD x86-64 CPU | Intel core 100+ series with good memory bandwidth and high core count |
+| StorageI | SSD with room for the app and model files | SSD | NVMe SSD with free space |
 | Dedicated GPU | Not required | Not required | Not required for the default CPU engine |
 
 **RAM figures are indicative targets, not guarantees for every model.** The
