@@ -10,13 +10,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.3.2-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.3.2/LLocalMind-Setup-0.3.2-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.3.2/LLocalMind-Setup-0.3.2-windows-x64.exe",
           "size": 106003182,
           "digest": "sha256:089c0288ae1ca7ed7fbd0b7100ea6cb90b91dc98f494c8975dd98f5a9fae7b74"
         },
         {
           "name": "LLocalMind-Setup-0.3.2-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.3.2/LLocalMind-Setup-0.3.2-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.3.2/LLocalMind-Setup-0.3.2-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:35b523ee164253d3a55cfa3a67bf62737017b2cc974710068d9ce383c81cae1c"
         }
@@ -31,13 +31,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.3.1-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.3.1/LLocalMind-Setup-0.3.1-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.3.1/LLocalMind-Setup-0.3.1-windows-x64.exe",
           "size": 106022307,
           "digest": "sha256:ab8d57ecb038d87d6cf0eae952254dfbb558e2cd36f4b761a87799c1eca951bd"
         },
         {
           "name": "LLocalMind-Setup-0.3.1-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.3.1/LLocalMind-Setup-0.3.1-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.3.1/LLocalMind-Setup-0.3.1-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:85371fa4ae11cfb40cba0d475cab7623d7c4825934c9b90f57acdb7e1e14e833"
         }
@@ -52,13 +52,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.3.0-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.3.0/LLocalMind-Setup-0.3.0-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.3.0/LLocalMind-Setup-0.3.0-windows-x64.exe",
           "size": 106020520,
           "digest": "sha256:0f29488da06a123085dba160bbef9137c259b4341e0046b55fed5021b2522017"
         },
         {
           "name": "LLocalMind-Setup-0.3.0-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.3.0/LLocalMind-Setup-0.3.0-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.3.0/LLocalMind-Setup-0.3.0-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:fef7695f4e844c59fb81e107bc0ca8deb279524a2366421993ffdcb10d229c0c"
         }
@@ -73,13 +73,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.2.9-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.9/LLocalMind-Setup-0.2.9-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.2.9/LLocalMind-Setup-0.2.9-windows-x64.exe",
           "size": 106015700,
           "digest": "sha256:580dc14c4e6cecca387bb1b3f2650bbc37eb13e69c83922307620824d748aa02"
         },
         {
           "name": "LLocalMind-Setup-0.2.9-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.9/LLocalMind-Setup-0.2.9-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.2.9/LLocalMind-Setup-0.2.9-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:e842cb0a9cd0d4cddb9a2f0a08a341c9fce328e9bc0f95a426149b49889dc481"
         }
@@ -94,13 +94,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.2.8-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.8/LLocalMind-Setup-0.2.8-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.2.8/LLocalMind-Setup-0.2.8-windows-x64.exe",
           "size": 106022256,
           "digest": "sha256:5b7c2e0eddb3f37e8278bde439d795ddd4ea7d5cc737461e2d3be582c8d20f6b"
         },
         {
           "name": "LLocalMind-Setup-0.2.8-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.8/LLocalMind-Setup-0.2.8-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.2.8/LLocalMind-Setup-0.2.8-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:9ec654ad6db0c1861fddfdf4e2b14904b43fb950b53e2f78cb8059f650ab1f69"
         }
@@ -115,13 +115,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.2.7-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.7/LLocalMind-Setup-0.2.7-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.2.7/LLocalMind-Setup-0.2.7-windows-x64.exe",
           "size": 106001687,
           "digest": "sha256:54d2c367f1b08f9ca73b82ad5102350570be3ebccb14f0677d6a797f4fc7863d"
         },
         {
           "name": "LLocalMind-Setup-0.2.7-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.7/LLocalMind-Setup-0.2.7-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.2.7/LLocalMind-Setup-0.2.7-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:96090ada48fa594571dd7e99a8e0f05a4edbbbfc1df5c1de64a7d442bccf0206"
         }
@@ -136,13 +136,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.2.6-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.6/LLocalMind-Setup-0.2.6-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.2.6/LLocalMind-Setup-0.2.6-windows-x64.exe",
           "size": 106011644,
           "digest": "sha256:e96a0e0e6b5d3b6ccfbd860d9648062bd8d44d39cd3c368dba6e1570be98aeca"
         },
         {
           "name": "LLocalMind-Setup-0.2.6-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.6/LLocalMind-Setup-0.2.6-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.2.6/LLocalMind-Setup-0.2.6-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:c23e6aab15263d37f6b8e316ee85bb39de2994dd05e03d0e7833cbd44bc75741"
         }
@@ -157,13 +157,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.2.5-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.5/LLocalMind-Setup-0.2.5-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.2.5/LLocalMind-Setup-0.2.5-windows-x64.exe",
           "size": 106019101,
           "digest": "sha256:8b35be8a2968308fd062d787fe35a3a1b101255b7b2bded88cb834cce3ae9f91"
         },
         {
           "name": "LLocalMind-Setup-0.2.5-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.5/LLocalMind-Setup-0.2.5-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.2.5/LLocalMind-Setup-0.2.5-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:b7781a34a14d0d9a2d601b1ff014d4d312fe1b1443e0581db740f7efef239c81"
         }
@@ -178,13 +178,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.2.3-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.3/LLocalMind-Setup-0.2.3-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.2.3/LLocalMind-Setup-0.2.3-windows-x64.exe",
           "size": 105998972,
           "digest": "sha256:d62c1cccbad4f6c367f442cc66ea0cf7ac09d73f662bbe71cab1322489351531"
         },
         {
           "name": "LLocalMind-Setup-0.2.3-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.3/LLocalMind-Setup-0.2.3-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.2.3/LLocalMind-Setup-0.2.3-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:4ad36b724f27d46486a0782480cbf6f184e88fb67f685d26138f28096d44b4f2"
         }
@@ -199,13 +199,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.2.1-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.1/LLocalMind-Setup-0.2.1-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.2.1/LLocalMind-Setup-0.2.1-windows-x64.exe",
           "size": 105979517,
           "digest": "sha256:d4aded73c414cb27cd60ce66bc39cef02e7bd71dc236d4752ac1bf7c8ca56068"
         },
         {
           "name": "LLocalMind-Setup-0.2.1-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.1/LLocalMind-Setup-0.2.1-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.2.1/LLocalMind-Setup-0.2.1-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:40a61a5e2824cb8d0791bf13a324c96b08cdbe96c08cfee1e1f293b96c055548"
         }
@@ -220,13 +220,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.2.0-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.0/LLocalMind-Setup-0.2.0-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.2.0/LLocalMind-Setup-0.2.0-windows-x64.exe",
           "size": 105948109,
           "digest": "sha256:d0e591a559852f1cceedd8cd7b5cf06643dec21f4cf3f48c7647778e2d56050c"
         },
         {
           "name": "LLocalMind-Setup-0.2.0-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.2.0/LLocalMind-Setup-0.2.0-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.2.0/LLocalMind-Setup-0.2.0-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:f18e72e5614f28bf3a5b572e60297349841c0a0dd5c55019ce58166665ece3b4"
         }
@@ -241,13 +241,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.1.10-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.1.10/LLocalMind-Setup-0.1.10-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.1.10/LLocalMind-Setup-0.1.10-windows-x64.exe",
           "size": 105899554,
           "digest": "sha256:d6edbb5f5dd9497d2b4ebf28387a0787065ddb572f783a57da8d741800428df9"
         },
         {
           "name": "LLocalMind-Setup-0.1.10-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.1.10/LLocalMind-Setup-0.1.10-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.1.10/LLocalMind-Setup-0.1.10-windows-x64.exe.sha256",
           "size": 107,
           "digest": "sha256:66dad316a77845d6f2a930eaa31847e4da24126699ba7bb46fad5376d441841b"
         }
@@ -262,13 +262,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.1.9-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.1.9/LLocalMind-Setup-0.1.9-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.1.9/LLocalMind-Setup-0.1.9-windows-x64.exe",
           "size": 105901369,
           "digest": "sha256:426b2def50f05cc18ad9c0e2146aaa3c874eba53e2fce3f6ebf441698aa3cb34"
         },
         {
           "name": "LLocalMind-Setup-0.1.9-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.1.9/LLocalMind-Setup-0.1.9-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.1.9/LLocalMind-Setup-0.1.9-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:1375dd6267da2cb3180bbd313f2e891e73cf9c37c6e0a4cbf548e1a7f8fa623e"
         }
@@ -283,13 +283,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.1.8-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.1.8/LLocalMind-Setup-0.1.8-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.1.8/LLocalMind-Setup-0.1.8-windows-x64.exe",
           "size": 105925130,
           "digest": "sha256:b273b0034f37bc4e245eb506500bb989a60ea7c9e6bffd5805e2adc9a2bb27cf"
         },
         {
           "name": "LLocalMind-Setup-0.1.8-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.1.8/LLocalMind-Setup-0.1.8-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.1.8/LLocalMind-Setup-0.1.8-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:8c887d845b6853016187d4f0d5c3817df860e17cfd29da9e1aee3cb039b0e349"
         }
@@ -304,13 +304,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.1.7-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.1.7/LLocalMind-Setup-0.1.7-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.1.7/LLocalMind-Setup-0.1.7-windows-x64.exe",
           "size": 105894476,
           "digest": "sha256:890f8e07908ce7ceddc51692d7c7c853224e53422be0f5f05a32c327cb9b2624"
         },
         {
           "name": "LLocalMind-Setup-0.1.7-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.1.7/LLocalMind-Setup-0.1.7-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.1.7/LLocalMind-Setup-0.1.7-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:4557fb189ca991aadc8e510338cb5fc4746eb52c10debf107a59054e65a022e3"
         }
@@ -325,13 +325,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.1.5-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.1.5/LLocalMind-Setup-0.1.5-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.1.5/LLocalMind-Setup-0.1.5-windows-x64.exe",
           "size": 105837612,
           "digest": "sha256:6f6f3f690384db98ed6d63b09b15c3954dbacd8f66bfff7d7bfdaaa3288d7835"
         },
         {
           "name": "LLocalMind-Setup-0.1.5-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.1.5/LLocalMind-Setup-0.1.5-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.1.5/LLocalMind-Setup-0.1.5-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:43883082168f0504f46924e4d56af9fd8dd7b6a3dff1963c8d1cadc047e3f169"
         }
@@ -346,13 +346,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.1.3-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.1.3/LLocalMind-Setup-0.1.3-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.1.3/LLocalMind-Setup-0.1.3-windows-x64.exe",
           "size": 105807879,
           "digest": "sha256:0511841487c115f597b0e01359d7cff20069125d2c7af7daa91fc8ff2afe8c65"
         },
         {
           "name": "LLocalMind-Setup-0.1.3-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.1.3/LLocalMind-Setup-0.1.3-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.1.3/LLocalMind-Setup-0.1.3-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:a9cf8d6769f1927b8a2e391703a0a40d2072a6fe393ef9bb17bece77b5fd95fa"
         }
@@ -367,13 +367,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.1.2-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.1.2/LLocalMind-Setup-0.1.2-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.1.2/LLocalMind-Setup-0.1.2-windows-x64.exe",
           "size": 105785841,
           "digest": "sha256:d29990e6de8733e5963a0cf8a7b60e09696b251c7551b6638dee82e4d6f2b28e"
         },
         {
           "name": "LLocalMind-Setup-0.1.2-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.1.2/LLocalMind-Setup-0.1.2-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.1.2/LLocalMind-Setup-0.1.2-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:7fc33fc8ee9b226dddac163ca78ba08026443c9949141eab676d0b7d8c9b7c77"
         }
@@ -388,13 +388,13 @@
       "assets": [
         {
           "name": "LLocalMind-Setup-0.1.0-windows-x64.exe",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.1.0/LLocalMind-Setup-0.1.0-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.1.0/LLocalMind-Setup-0.1.0-windows-x64.exe",
           "size": 105776056,
           "digest": "sha256:bf3565369af9b6f582ab1f467c55cac44cbd27a4f52da53651d4bffa30ade652"
         },
         {
           "name": "LLocalMind-Setup-0.1.0-windows-x64.exe.sha256",
-          "browser_download_url": "https://github.com/vin10122/LLocalMind/releases/download/v0.1.0/LLocalMind-Setup-0.1.0-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.1.0/LLocalMind-Setup-0.1.0-windows-x64.exe.sha256",
           "size": 106,
           "digest": "sha256:ec0bfc1cb2dacce3849c501b85aa3885124fbb105e7b66224102f1270aa94be0"
         }
