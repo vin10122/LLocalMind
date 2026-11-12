@@ -2,6 +2,27 @@
   "schema": 1,
   "releases": [
     {
+      "tag_name": "v0.3.4",
+      "draft": false,
+      "prerelease": true,
+      "name": "LLocalMind v0.3.4 - Experimental Intelligent UI",
+      "body": "LLocalMind 0.3.4 - Experimental Intelligent UI and repository migration.\n\n- Optional response cards, comparison tables and checklists. Enable Settings \u2192 Intelligent UI \u00b7 experimental \u2192 Response widgets. Disabled by default.\n- Both engines and Italian/English modes support the compact response format. Light and dark themes use native Qt controls; model output cannot execute code or trigger actions.\n- Copy exports readable text. Checklist checks are temporary and reset on reopening. Malformed or truncated widget responses remain ordinary text.\n- Previous widget answers are passed to the model as readable fallback text. Enabling the feature adds instructions to the prompt; actual model compliance and target-PC performance still require testing.\n- Component validation, rendering, streaming, settings and regression checks run before packaging. This is an experimental feature, not a general-purpose agent interface.\n- Updates now use vincenzo1810/LLocalMind after the repository transfer. Existing installations that reject the new asset URLs need this installer run once manually; no uninstall is needed.\n\nDownload the Setup EXE, or extract the entire portable ZIP. Models remain external. Existing chats, settings and .env survive updates. This build is unsigned.\n",
+      "assets": [
+        {
+          "name": "LLocalMind-Setup-0.3.4-windows-x64.exe",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.3.4/LLocalMind-Setup-0.3.4-windows-x64.exe",
+          "size": 106048188,
+          "digest": "sha256:0f0a277570c418f87b67f4363a9ed47bac202cd45641a82bd4e676d1d31b8738"
+        },
+        {
+          "name": "LLocalMind-Setup-0.3.4-windows-x64.exe.sha256",
+          "browser_download_url": "https://github.com/vincenzo1810/LLocalMind/releases/download/v0.3.4/LLocalMind-Setup-0.3.4-windows-x64.exe.sha256",
+          "size": 106,
+          "digest": "sha256:de03bf15ae0283ee2c169a54519df050a9e2ad70aedb2475668169ebcc85c8e3"
+        }
+      ]
+    },
+    {
       "tag_name": "v0.3.2",
       "draft": false,
       "prerelease": false,
