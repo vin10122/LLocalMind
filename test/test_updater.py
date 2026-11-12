@@ -78,6 +78,16 @@ class UpdaterTests(unittest.TestCase):
         def offline(request, timeout): raise URLError('offline')
         with self.assertRaises(UpdateError): UpdateManager(opener=offline).check()
 
+    def test_repository_transfer_accepts_only_current_and_exact_previous_owner(self):
+        self.assertIn('/vincenzo1810/LLocalMind/',API_URL)
+        self.assertIn('/vincenzo1810/LLocalMind/',FEED_URL)
+        for owner in ('vincenzo1810','vin10122'):
+            self.metadata['assets'][0]['browser_download_url']=self.url.replace('vincenzo1810',owner)
+            self.assertEqual(self.manager().check().download_url,self.metadata['assets'][0]['browser_download_url'])
+        for owner in ('untrusted','vincenzo1810.evil'):
+            self.metadata['assets'][0]['browser_download_url']=self.url.replace('vincenzo1810',owner)
+            with self.assertRaises(UpdateError):self.manager().check()
+
     def test_temporary_504_retries_then_recovers_without_fallback(self):
         calls=[]
         def open_(request,timeout):

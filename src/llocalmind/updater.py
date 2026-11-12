@@ -26,7 +26,8 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 from . import __version__
 from .app_paths import updates_dir
 
-REPOSITORY = "vin10122/LLocalMind"
+REPOSITORY = "vincenzo1810/LLocalMind"
+TRUSTED_REPOSITORIES = (REPOSITORY, "vin10122/LLocalMind")
 API_URL = f"https://api.github.com/repos/{REPOSITORY}/releases?per_page=100"
 FEED_URL = f"https://raw.githubusercontent.com/{REPOSITORY}/master/.github/update-feed.json"
 MAX_INSTALLER_BYTES = 4 * 1024**3
@@ -113,11 +114,12 @@ class UpdateManager:
     @staticmethod
     def _asset_url(asset, tag):
         name = asset.get("name", "")
-        expected = (f"https://github.com/{REPOSITORY}/releases/download/"
-                    f"{quote(tag, safe='')}/{quote(name, safe='')}")
-        if asset.get("browser_download_url") != expected:
-            raise UpdateError(tr("L'asset non appartiene alla release GitHub prevista"))
-        return expected
+        for repository in TRUSTED_REPOSITORIES:
+            expected = (f"https://github.com/{repository}/releases/download/"
+                        f"{quote(tag, safe='')}/{quote(name, safe='')}")
+            if asset.get("browser_download_url") == expected:
+                return expected
+        raise UpdateError(tr("L'asset non appartiene alla release GitHub prevista"))
 
     def check(self, *, cancel=None) -> Release | None:
         """Highest newer published version, including previews; exclude drafts."""

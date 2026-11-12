@@ -28,7 +28,7 @@ the experimental native engine manages its own expert cache.
 
 ## Install and update
 
-1. Download and run the installer from **[GitHub Releases](https://github.com/vin10122/LLocalMind/releases/latest)**.
+1. Download and run the installer from **[GitHub Releases](https://github.com/vincenzo1810/LLocalMind/releases/latest)**.
 2. Open **Settings / Impostazioni** and select your compatible **GGUF**.
 3. Click **Install / update llama.cpp CPU runtime** if the runtime is not configured.
 4. Leave **mmproj** empty for text only, or select a compatible projector for images. Save and wait for **Ready / Pronto**.
@@ -148,7 +148,7 @@ conversations and attachments; keep any backup of `.env` private.
 ## From source
 
 ```powershell
-git clone https://github.com/vin10122/LLocalMind.git
+git clone https://github.com/vincenzo1810/LLocalMind.git
 cd LLocalMind
 py -3.14 -m pip install -r requirements-gui.txt
 py -3.14 gui.py
@@ -159,7 +159,7 @@ Configure the runtime/model in Settings. Experimental native CLI:
 See [Development](docs/development.md) for builds and packaging, and
 [test/](test/README.md) for tests and diagnostics.
 
-## Intelligent UI (experimental, v0.3.3)
+## Intelligent UI (experimental, v0.3.4)
 
 This feature is **experimental and disabled by default**.
 Enable **Settings → Intelligent UI · experimental → Response widgets** to let the model propose

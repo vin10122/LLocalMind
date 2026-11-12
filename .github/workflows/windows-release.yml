@@ -178,13 +178,14 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<'NOTES'
-          LLocalMind 0.3.3 - Experimental Intelligent UI.
+          LLocalMind 0.3.4 - Experimental Intelligent UI and repository migration.
 
           - Optional response cards, comparison tables and checklists. Enable Settings → Intelligent UI · experimental → Response widgets. Disabled by default.
           - Both engines and Italian/English modes support the compact response format. Light and dark themes use native Qt controls; model output cannot execute code or trigger actions.
           - Copy exports readable text. Checklist checks are temporary and reset on reopening. Malformed or truncated widget responses remain ordinary text.
           - Previous widget answers are passed to the model as readable fallback text. Enabling the feature adds instructions to the prompt; actual model compliance and target-PC performance still require testing.
           - Component validation, rendering, streaming, settings and regression checks run before packaging. This is an experimental feature, not a general-purpose agent interface.
+          - Updates now use vincenzo1810/LLocalMind after the repository transfer. Existing installations that reject the new asset URLs need this installer run once manually; no uninstall is needed.
 
           Download the Setup EXE, or extract the entire portable ZIP. Models remain external. Existing chats, settings and .env survive updates. This build is unsigned.
           NOTES
