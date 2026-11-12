@@ -1,37 +1,14 @@
 {
-  "tag": "v0.3.2",
-  "promotion": "success",
-  "run_id": "43263267901",
-  "release": {
-    "url": "https://github.com/vincenzo1810/LLocalMind/releases/tag/v0.3.2",
-    "draft": false,
-    "prerelease": false,
-    "assets": [
-      {
-        "name": "LLocalMind-0.3.2-windows-x64-portable.zip",
-        "size": 168800870
-      },
-      {
-        "name": "LLocalMind-0.3.2-windows-x64-portable.zip.sha256",
-        "size": 109
-      },
-      {
-        "name": "LLocalMind-Setup-0.3.2-windows-x64.exe",
-        "size": 106003182
-      },
-      {
-        "name": "LLocalMind-Setup-0.3.2-windows-x64.exe.sha256",
-        "size": 106
-      }
-    ]
-  },
+  "tag": "v0.3.4",
+  "promotion": "failure",
+  "run_id": "43263343022",
   "builds": [
     {
-      "id": 42492629754,
-      "head_sha": "cdbce6e437f2c8d4e64e3d066009952ad570752b",
-      "status": "completed",
-      "conclusion": "success",
-      "html_url": "https://github.com/vincenzo1810/LLocalMind/actions/runs/42492629754",
+      "id": 43263286775,
+      "head_sha": "673a88f2e8b8594406751980dd412ff7969b2787",
+      "status": "in_progress",
+      "conclusion": null,
+      "html_url": "https://github.com/vincenzo1810/LLocalMind/actions/runs/43263286775",
       "jobs": [
         {
           "name": "build",
@@ -40,17 +17,17 @@
         },
         {
           "name": "release",
-          "conclusion": "success",
+          "conclusion": null,
           "failed_steps": []
         }
       ]
     },
     {
-      "id": 42492627681,
-      "head_sha": "cdbce6e437f2c8d4e64e3d066009952ad570752b",
+      "id": 43263267967,
+      "head_sha": "673a88f2e8b8594406751980dd412ff7969b2787",
       "status": "completed",
       "conclusion": "success",
-      "html_url": "https://github.com/vincenzo1810/LLocalMind/actions/runs/42492627681",
+      "html_url": "https://github.com/vincenzo1810/LLocalMind/actions/runs/43263267967",
       "jobs": [
         {
           "name": "build",
