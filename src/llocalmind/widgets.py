@@ -5,10 +5,11 @@ import re
 from PySide6.QtCore import Qt, QSize, QUrl, Signal, QRectF
 from PySide6.QtGui import QDesktopServices, QFontMetrics, QIcon, QPainter, QPixmap, QTextDocument, QColor, QLinearGradient, QPainterPath, QPen, QTextCursor, QTextCharFormat
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtWidgets import (QCheckBox, QFrame, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton,
+from PySide6.QtWidgets import (QCheckBox, QFrame, QGridLayout, QScrollArea, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton,
                                QSizePolicy, QTextBrowser, QToolButton, QVBoxLayout)
 from .metrics import clean_stats, response_summary
 from .images import image_path
+from .rich_response import parse_response
 
 ASSETS = Path(__file__).with_name('assets')
 NAVY = '#122c40'
@@ -195,6 +196,59 @@ class PromptFrame(QFrame):
         painter.fillPath(inner,QColor('#153d2b' if self.dark_mode else '#e4f2ff'))
 
 
+def response_widget(item):
+    """Render validated data using native Qt controls, with plain text labels."""
+    panel=QFrame()
+    panel.setObjectName('responseWidget')
+    layout=QVBoxLayout(panel)
+    layout.setContentsMargins(18,16,18,16)
+    layout.setSpacing(12)
+    layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+    def label(text,header=False):
+        result=QLabel(text)
+        result.setTextFormat(Qt.TextFormat.PlainText)
+        result.setWordWrap(True)
+        result.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        if header:result.setObjectName('widgetHeading')
+        return result
+
+    layout.addWidget(label(item['title'],True))
+    if item['type']=='card':
+        layout.addWidget(label(item['text']))
+    elif item['type']=='checklist':
+        for text in item['items']:
+            # QLabel supplies wrapping and prevents Qt mnemonic/rich-text interpretation.
+            row=QHBoxLayout()
+            check=QCheckBox()
+            check.setAccessibleName(text)
+            check.setToolTip(tr('Spunta locale temporanea: non esegue operazioni.'))
+            row.addWidget(check,0,Qt.AlignmentFlag.AlignTop)
+            row.addWidget(label(text),1)
+            layout.addLayout(row)
+    else:
+        scroll=QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        grid_widget=QFrame()
+        grid_widget.setObjectName('widgetTable')
+        grid=QGridLayout(grid_widget)
+        grid.setSpacing(12)
+        grid.setAlignment(Qt.AlignmentFlag.AlignTop)
+        for r,row in enumerate([item['columns'],*item['rows']]):
+            for c,text in enumerate(row):
+                cell=label(text,r==0)
+                cell.setMinimumWidth(140)
+                grid.addWidget(cell,r,c,Qt.AlignmentFlag.AlignTop)
+        grid_widget.setMinimumWidth(160*len(item['columns']))
+        scroll.setWidget(grid_widget)
+        scroll.setMinimumHeight(130)
+        scroll.setMaximumHeight(420)
+        scroll.setFixedHeight(min(420,max(130,grid_widget.sizeHint().height()+28)))
+        layout.addWidget(scroll)
+    return panel
+
+
 class Message(QFrame):
     copy_requested=Signal(str)
     regenerate_requested=Signal()
@@ -254,6 +308,10 @@ class Message(QFrame):
             self.cards_layout.setContentsMargins(0,0,0,0)
             self.cards_layout.setSpacing(14)
             column.addWidget(self.cards)
+            self.rich_panel=QFrame()
+            self.rich_layout=QVBoxLayout(self.rich_panel)
+            self.rich_layout.setContentsMargins(0,0,0,0)
+            column.addWidget(self.rich_panel)
             row=QHBoxLayout()
             row.setSpacing(14)
             self.copy_button=action(tr('Copia'),'copy')
@@ -261,7 +319,7 @@ class Message(QFrame):
             if dark_mode:
                 self.copy_button.setIcon(icon('copy','#a7d8ba'))
                 self.regenerate_button.setIcon(icon('reload','#a7d8ba'))
-            self.copy_button.clicked.connect(lambda:self.copy_requested.emit(self.text))
+            self.copy_button.clicked.connect(lambda:self.copy_requested.emit(parse_response(self.text)[2]))
             self.regenerate_button.clicked.connect(self.regenerate_requested)
             row.addWidget(self.copy_button)
             row.addWidget(self.regenerate_button)
@@ -316,7 +374,14 @@ class Message(QFrame):
         self.regenerate_button.setEnabled(not pending)
         while self.cards_layout.count():
             self.cards_layout.takeAt(0).widget().deleteLater()
-        parsed=schedule_parts(text) if not pending else None
+        prose, widgets, _ = parse_response(text,pending=pending)
+        # Widgets are built only after the response is complete, never per token.
+        while self.rich_layout.count():
+            self.rich_layout.takeAt(0).widget().deleteLater()
+        self.rich_panel.setVisible(bool(widgets))
+        for item in widgets:
+            self.rich_layout.addWidget(response_widget(item))
+        parsed=schedule_parts(prose) if not pending and not widgets else None
         self.cards.setVisible(parsed is not None)
         if parsed:
             intro,entries=parsed
@@ -344,7 +409,8 @@ class Message(QFrame):
         else:
             self.body.setVisible(True)
             # Model text is markdown; disable raw HTML and file URLs in Qt.
-            self.body.setMarkdown(text or (tr('Elaborazione del prompt…') if pending else tr('Risposta non completata.')))
+            self.body.setVisible(bool(prose) or not widgets)
+            self.body.setMarkdown(prose or (tr('Elaborazione del prompt…') if pending else tr('Risposta non completata.')))
         self.body.fit()
 
 

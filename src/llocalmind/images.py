@@ -107,11 +107,11 @@ def import_image(filename,directory):
     return item
 
 
-def chat_messages(messages,directory,*,cache=None,language='it',image_profile='detail',web_research=None):
+def chat_messages(messages,directory,*,cache=None,language='it',image_profile='detail',web_research=None,intelligent_ui=False):
     validate_image_profile(image_profile)
     if not messages or len(messages)%2!=1:
         raise ValueError(tr('La conversazione deve terminare con una domanda'))
-    result=[dict(role='system',content=system_prompt(language,web_research))]
+    result=[dict(role='system',content=system_prompt(language,web_research,intelligent_ui=intelligent_ui))]
     cache=cache if cache is not None else ImagePayloadCache(max_bytes=0)
     for index,message in enumerate(messages):
         role='user' if index%2==0 else 'assistant'
@@ -120,6 +120,9 @@ def chat_messages(messages,directory,*,cache=None,language='it',image_profile='d
             raise ValueError(tr('Ordine dei messaggi non valido'))
         images=validate_images(message.get('images',[]))
         content=message['content']
+        if role=='assistant':
+            from .rich_response import parse_response
+            content=parse_response(content)[2]
         if index==len(messages)-1:content=research_content(content,web_research,language)
         if images:
             if role!='user':raise ValueError('Immagini consentite solo nelle domande')

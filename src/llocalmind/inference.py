@@ -143,7 +143,8 @@ class ModelWorker(QObject):
                 try:
                     prepared=time.perf_counter()
                     request=chat_messages(messages,options['_attachment_directory'],cache=self.image_cache,language=options.get('language','it'),
-                        image_profile=options.get('vision_image_profile','detail'),web_research=web_research)
+                        image_profile=options.get('vision_image_profile','detail'),web_research=web_research,
+                        intelligent_ui=options.get('intelligent_ui',False))
                     prepare_seconds=time.perf_counter()-prepared
                     generate_started=time.perf_counter()
                     stats=dict(self.vision.generate(request,
@@ -162,7 +163,8 @@ class ModelWorker(QObject):
                 return
             from flash_moe.tokenizer import StreamingDetokenizer
             ids = self.tokenizer.encode(
-                format_conversation(messages, web_research=web_research,language=options.get('language','it')), add_bos=False)
+                format_conversation(messages, web_research=web_research,language=options.get('language','it'),
+                                    intelligent_ui=options.get('intelligent_ui',False)), add_bos=False)
             if len(ids) + options['max_tokens'] - 1 > self.model.max_seq_len:
                 raise ValueError(tr('La conversazione supera il contesto disponibile. '
                                  'Apri una nuova chat o aumenta il contesto nelle impostazioni.'))

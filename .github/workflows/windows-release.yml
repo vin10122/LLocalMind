@@ -178,17 +178,17 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<'NOTES'
-          LLocalMind 0.3.2 - Black and green dark mode.
+          LLocalMind 0.3.3 - Experimental Intelligent UI.
 
-          - New Settings → Appearance checkbox: pure #000000 background, dark-green sidebar, light text and green accents.
-          - The saved appearance applies without reloading the inference engine or changing language. It combines with Italian Interface, preserving its tricolour border and controls.
-          - Icons and Markdown links are recoloured for dark backgrounds; input fields, menus, notices, dialogs and response metrics use matching contrast.
-          - Settings content scrolls on smaller displays while Save/Cancel and update controls stay accessible.
-          - Existing light/Italian themes, inference, Tavily .env, web profiles and resilient updates are retained. Tests verify persistence, session/draft preservation, readable link formats and restoration of light mode; screenshots were inspected.
+          - Optional response cards, comparison tables and checklists. Enable Settings → Intelligent UI · experimental → Response widgets. Disabled by default.
+          - Both engines and Italian/English modes support the compact response format. Light and dark themes use native Qt controls; model output cannot execute code or trigger actions.
+          - Copy exports readable text. Checklist checks are temporary and reset on reopening. Malformed or truncated widget responses remain ordinary text.
+          - Previous widget answers are passed to the model as readable fallback text. Enabling the feature adds instructions to the prompt; actual model compliance and target-PC performance still require testing.
+          - Component validation, rendering, streaming, settings and regression checks run before packaging. This is an experimental feature, not a general-purpose agent interface.
 
           Download the Setup EXE, or extract the entire portable ZIP. Models remain external. Existing chats, settings and .env survive updates. This build is unsigned.
           NOTES
-          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Black and green dark mode" --notes-file release-notes.md
+          gh release create "$RELEASE_TAG" release/* --repo "$GH_REPO" --verify-tag --prerelease --title "LLocalMind $RELEASE_TAG - Experimental Intelligent UI" --notes-file release-notes.md
       - name: Publish official updater fallback feed
         env:
           GH_TOKEN: ${{ github.token }}

@@ -13,7 +13,8 @@ On Windows, build the native kernels, then run the same suite as CI:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File test\run_source_tests.ps1
 ```
 
-It covers updater behavior, language, GUI, web transport, vision attachments,
+It covers updater behavior, language, GUI, structured response validation and
+widget rendering, web transport, vision attachments,
 runtime installation, optimized inference and memory/cache policy. Real-GGUF
 quality and target-PC throughput are not established by these synthetic checks.
 The `probe_vision_runtime.py` integration check downloads and verifies the pinned

@@ -159,10 +159,20 @@ Configure the runtime/model in Settings. Experimental native CLI:
 See [Development](docs/development.md) for builds and packaging, and
 [test/](test/README.md) for tests and diagnostics.
 
-## Future direction
+## Intelligent UI (experimental, v0.3.3)
 
-We are exploring structured responses such as cards, tables and interactive
-charts. A general model-driven UI is a future idea, not a released feature.
+This feature is **experimental and disabled by default**.
+Enable **Settings → Intelligent UI · experimental → Response widgets** to let the model propose
+cards, comparison tables and interactive checklists inside its answers. Works
+with both engines, in Italian or English and in light or dark mode. Widgets use
+validated data and native controls: they cannot run code or perform actions.
+Copy exports readable fallback text; existing chats keep working. Checklist
+checks are temporary and reset when the answer is reopened.
+
+This adds instructions to the prompt and depends on the model following a small
+JSON format. It is off by default; malformed responses remain ordinary text.
+Model-level reliability and performance still need testing on the target PC.
+Charts and a general model-driven interface remain future work.
 
 ## Inspiration
 

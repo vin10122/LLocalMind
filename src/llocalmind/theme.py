@@ -33,6 +33,9 @@ QLabel#userBubble { background: #acc8dc; border-radius: 20px; padding: 18px 22px
 QLabel#assistantName { font-family: 'Sora'; font-size: 18px; font-weight: 600; }
 QTextBrowser#markdown { background: transparent; border: none; font-size: 16px; selection-background-color: #b5d6e9; }
 QFrame#scheduleCard { background: #ffffff; border-radius: 20px; }
+QFrame#responseWidget { background: #ffffff; border: 1px solid #bfd1df; border-radius: 18px; }
+QFrame#widgetTable { background: transparent; }
+QLabel#widgetHeading { font-family: 'Sora'; font-weight: 600; }
 QFrame#cardAccent { background: #7ab8db; border-radius: 2px; }
 QLabel#cardTime { font-family: 'Sora'; font-size: 22px; font-weight: 650; }
 QPushButton#action { background: transparent; border: none; padding: 8px 2px; color: #375870; }
@@ -114,6 +117,7 @@ QListWidget#chatList::item:hover:!selected { background: #1b4b33; }
 QFrame#localPill { background: #1b4b33; }
 QFrame#line { background: #294b36; }
 QFrame#statusPill, QFrame#scheduleCard { background: #102017; }
+QFrame#responseWidget { background: #102017; border-color: #345b43; }
 QLabel#userBubble { background: #153d2b; color: #eff8f2; }
 QTextEdit, QPlainTextEdit, QTextBrowser { background: #101e16; color: #e7f3eb; border: 1px solid #345b43; selection-background-color: #315f43; }
 QTextBrowser#markdown { background: transparent; border: none; color: #e7f3eb; selection-background-color: #315f43; }

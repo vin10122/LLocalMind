@@ -1,4 +1,5 @@
 """The Qwen chat template, extended to conversation history."""
+from .rich_response import UI_INSTRUCTIONS, parse_response
 SYSTEM = (
     "Rispondi nella lingua dell'utente. Dai una risposta chiara e completa, "
     "con spiegazioni, passaggi o dettagli utili per capire bene l'argomento. "
@@ -17,7 +18,7 @@ EN_SYSTEM = (
 )
 
 
-def system_prompt(language='it', web_research=None):
+def system_prompt(language='it', web_research=None, *, intelligent_ui=False):
     if language not in ('it','en'):raise ValueError('Unsupported language')
     system = EN_SYSTEM if language=='en' else SYSTEM
     if web_research:
@@ -32,7 +33,7 @@ def system_prompt(language='it', web_research=None):
             "relativi URL. Se gli estratti non bastano a verificare l'informazione richiesta, "
             "dichiaralo; non attribuire alle fonti fatti che non contengono."
         )
-    return system
+    return system + (UI_INSTRUCTIONS if intelligent_ui else '')
 
 
 def research_content(content, web_research, language='it'):
@@ -43,10 +44,10 @@ def research_content(content, web_research, language='it'):
         f'{web_research}'))
 
 
-def format_conversation(messages, *, web_research=None, language='it'):
+def format_conversation(messages, *, web_research=None, language='it', intelligent_ui=False):
     if not messages or len(messages) % 2 != 1:
         raise ValueError('La conversazione deve terminare con una domanda')
-    system = system_prompt(language,web_research)
+    system = system_prompt(language,web_research,intelligent_ui=intelligent_ui)
     parts = [f'<|im_start|>system\n{system}<|im_end|>\n']
     for index, message in enumerate(messages):
         role = 'user' if index % 2 == 0 else 'assistant'
@@ -55,6 +56,8 @@ def format_conversation(messages, *, web_research=None, language='it'):
         if message.get('images'):
             raise ValueError('Questa chat contiene immagini: seleziona Vision locale nelle impostazioni.')
         content = message['content']
+        if role == 'assistant':
+            content = parse_response(content)[2]
         if web_research and index == len(messages) - 1:
             content = research_content(content,web_research,language)
         parts.append(f"<|im_start|>{role}\n{content}<|im_end|>\n")

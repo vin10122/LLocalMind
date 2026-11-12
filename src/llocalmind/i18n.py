@@ -17,6 +17,10 @@ def tr(source,**values):
 
 
 EN={
+'Intelligent UI · sperimentale':'Intelligent UI · experimental',
+'Widget nelle risposte · sperimentale':'Response widgets · experimental',
+'Schede, tabelle e checklist. Aggiunge istruzioni al prompt; il modello può non seguirle.':'Cards, tables and checklists. Adds prompt instructions; the model may not follow them.',
+'Spunta locale temporanea: non esegue operazioni.':'Temporary local check: does not perform any actions.',
 'Lingua / Language':'Language',
 'Lingua dell’interfaccia':'Interface language',
 'La modalità inglese usa l’interfaccia e le nuove risposte in inglese. Le conversazioni salvate restano invariate.':'English mode uses English for the interface and new answers. Saved conversations keep their original text.',
