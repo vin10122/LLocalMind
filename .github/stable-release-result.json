@@ -1,7 +1,7 @@
 {
   "tag": "v0.3.2",
-  "promotion": "failure",
-  "run_id": "43262842276",
+  "promotion": "success",
+  "run_id": "43263267901",
   "release": {
     "url": "https://github.com/vincenzo1810/LLocalMind/releases/tag/v0.3.2",
     "draft": false,
