@@ -4,7 +4,7 @@
     {
       "tag_name": "v0.3.4",
       "draft": false,
-      "prerelease": true,
+      "prerelease": false,
       "name": "LLocalMind v0.3.4 - Experimental Intelligent UI",
       "body": "LLocalMind 0.3.4 - Experimental Intelligent UI and repository migration.\n\n- Optional response cards, comparison tables and checklists. Enable Settings \u2192 Intelligent UI \u00b7 experimental \u2192 Response widgets. Disabled by default.\n- Both engines and Italian/English modes support the compact response format. Light and dark themes use native Qt controls; model output cannot execute code or trigger actions.\n- Copy exports readable text. Checklist checks are temporary and reset on reopening. Malformed or truncated widget responses remain ordinary text.\n- Previous widget answers are passed to the model as readable fallback text. Enabling the feature adds instructions to the prompt; actual model compliance and target-PC performance still require testing.\n- Component validation, rendering, streaming, settings and regression checks run before packaging. This is an experimental feature, not a general-purpose agent interface.\n- Updates now use vincenzo1810/LLocalMind after the repository transfer. Existing installations that reject the new asset URLs need this installer run once manually; no uninstall is needed.\n\nDownload the Setup EXE, or extract the entire portable ZIP. Models remain external. Existing chats, settings and .env survive updates. This build is unsigned.\n",
       "assets": [
